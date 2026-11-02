@@ -1,0 +1,122 @@
+import numpy as np
+import pandas as pd
+import pytest
+
+from engine.backtest.engine import run_backtest
+from engine.data import get_candles
+from engine.data.base import resample
+from engine.execution.paper import PaperBroker
+from engine.features import indicators as ta
+from engine.markets import MARKETS, get_market
+from engine.models import Action, Side, Signal
+from engine.risk.manager import RiskManager
+from engine.strategies import REGISTRY, make_strategy
+
+
+@pytest.fixture(scope="module")
+def btc15():
+    return get_candles(get_market("BTC"), "15m", days=40)
+
+
+def test_rsi_bounds_and_ema(btc15):
+    r = ta.rsi(btc15["close"]).dropna()
+    assert r.between(0, 100).all()
+    s = pd.Series([1.0] * 50)
+    assert ta.ema(s, 10).iloc[-1] == pytest.approx(1.0)
+
+
+@pytest.mark.parametrize("tf", ["5m", "10m", "15m", "30m", "1h", "3h"])
+def test_all_timeframes(tf):
+    df = get_candles(get_market("ETH"), tf, bars=250)
+    assert len(df) == 250
+    step = df.index.to_series().diff().dropna().min()
+    from engine.data.base import tf_seconds
+    assert step == pd.Timedelta(seconds=tf_seconds(tf))
+    assert (df.high >= df[["open", "close"]].max(axis=1)).all()
+    assert (df.low <= df[["open", "close"]].min(axis=1)).all()
+
+
+def test_resample_values():
+    idx = pd.date_range("2026-01-01", periods=4, freq="5min", tz="UTC")
+    df = pd.DataFrame({"open": [1, 2, 3, 4], "high": [2, 5, 4, 6], "low": [0.5, 1, 2, 3],
+                       "close": [2, 3, 4, 5], "volume": [1, 1, 1, 1]}, index=idx, dtype=float)
+    out = resample(df, "10m")
+    assert list(out.open) == [1, 3] and list(out.high) == [5, 6] and list(out.close) == [3, 5]
+    assert list(out.volume) == [2, 2]
+
+
+@pytest.mark.parametrize("name", list(REGISTRY))
+def test_no_lookahead(btc15, name):
+    """A signal at bar i must not change when future candles are added."""
+    strat = make_strategy(name)
+    full = strat.prepare(btc15)
+    n = len(btc15)
+    for i in range(n - 400, n - 1, 37):
+        cut = strat.prepare(btc15.iloc[: i + 1])
+        a, b = strat.on_bar(cut, i), strat.on_bar(full, i)
+        assert a.action == b.action
+        if a.is_trade:
+            assert a.stop_loss == pytest.approx(b.stop_loss)
+
+
+def test_paper_broker_stop_first_and_fees():
+    b = PaperBroker(1000)
+    b.set_costs("X", fee_bps=10, slippage_bps=0)
+    b.open("X", Side.LONG, 10, 100, stop_loss=95, take_profit=110)
+    t = b.check_stops("X", open_=100, high=111, low=94)     # both touched → stop assumed first
+    assert t.exit_reason == "stop-loss" and t.exit_price == 95
+    fees = 100 * 10 * 0.001 + 95 * 10 * 0.001
+    assert t.pnl == pytest.approx(-50 - fees)
+    assert b.balance == pytest.approx(1000 - 50 - fees)
+
+
+def test_paper_broker_short_gap():
+    b = PaperBroker(1000)
+    b.open("X", Side.SHORT, 1, 100, stop_loss=105, take_profit=90)
+    t = b.check_stops("X", open_=108, high=109, low=107)      # gapped above stop → filled at open
+    assert t.exit_price == 108 and t.pnl == pytest.approx(-8)
+
+
+def test_risk_sizing_usd_quote():
+    rm = RiskManager({"risk_per_trade_pct": 1})
+    q = rm.position_size(Signal(Action.BUY, price=100, stop_loss=98), 10_000)
+    assert q * 2 == pytest.approx(100)                        # lose $100 at the stop
+
+
+def test_risk_sizing_inverse_quote_and_leverage():
+    """USD/INR: profit is in rupees; sizing must still risk $100."""
+    m = get_market("USDINR")
+    rm = RiskManager({"risk_per_trade_pct": 1})
+    price, stop = 87.0, 86.8
+    q = rm.position_size(Signal(Action.BUY, price=price, stop_loss=stop), 10_000,
+                         leverage=m.leverage, quote_rate=m.to_account(1, price))
+    loss_usd = m.to_account((price - stop) * q, price)
+    assert loss_usd == pytest.approx(100, rel=1e-6)
+
+
+def test_risk_refuses_short_on_spot_and_weak():
+    rm = RiskManager({"min_confidence": 0.6})
+    sig = Signal(Action.SELL, price=100, stop_loss=101, confidence=0.9)
+    assert rm.approve(sig, equity=1, day_start_equity=1, open_positions=0, allow_short=False)[0] is False
+    weak = Signal(Action.BUY, price=100, stop_loss=99, confidence=0.5)
+    assert rm.approve(weak, equity=1, day_start_equity=1, open_positions=0, allow_short=True)[0] is False
+
+
+@pytest.mark.parametrize("code", ["BTC", "EURUSD", "USDJPY"])
+def test_backtest_runs_and_is_intraday(code):
+    m = get_market(code)
+    df = get_candles(m, "15m", days=30)
+    r = run_backtest(df, make_strategy("ema_rsi"), RiskManager(), m, "15m", day_tz="UTC")
+    assert len(r.equity) == len(df)
+    if len(r.trades):
+        same_day = (r.trades.closed_at.dt.date == r.trades.opened_at.dt.date) | \
+                   (r.trades.exit_reason == "day end (intraday)")
+        assert same_day.all()
+        assert r.metrics["final_equity"] == pytest.approx(10_000 + r.trades.pnl.sum(), rel=1e-6)
+
+
+def test_markets_catalog_consistent():
+    for m in MARKETS.values():
+        assert m.leverage >= 1
+        if m.kind == "crypto":
+            assert m.leverage == 1 and not m.allow_short

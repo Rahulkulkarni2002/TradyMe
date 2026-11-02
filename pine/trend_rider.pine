@@ -1,0 +1,54 @@
+//@version=5
+// TradyMe — "Trend Rider" (same rules as engine/strategies/ema_rsi.py)
+// How to use: TradingView → Pine Editor → paste → "Add to chart" → open "Strategy Tester".
+// Compare its results with TradyMe's Backtest tab on the same market, timeframe and dates.
+strategy("TradyMe Trend Rider", overlay=true, initial_capital=10000, currency=currency.USD,
+     commission_type=strategy.commission.percent, commission_value=0.10, slippage=2,
+     default_qty_type=strategy.fixed, default_qty_value=1, process_orders_on_close=false)
+
+fastLen   = input.int(9,   "Fast EMA")
+slowLen   = input.int(21,  "Slow EMA")
+trendLen  = input.int(200, "Trend EMA")
+rsiLen    = input.int(14,  "RSI length")
+atrLen    = input.int(14,  "ATR length")
+stopMult  = input.float(1.5, "Stop = ATR ×")
+rr        = input.float(2.0, "Target = stop distance ×")
+riskPct   = input.float(1.0, "Risk per trade %")
+allowShort = input.bool(false, "Allow SELL (short) trades")
+dayEndHour = input.int(23, "Day end hour (exchange time) — intraday close")
+
+emaF = ta.ema(close, fastLen)
+emaS = ta.ema(close, slowLen)
+emaT = ta.ema(close, trendLen)
+r    = ta.rsi(close, rsiLen)
+a    = ta.atr(atrLen)
+
+buySig  = ta.crossover(emaF, emaS)  and close > emaT and r > 50 and r < 70
+sellSig = ta.crossunder(emaF, emaS) and close < emaT and r > 30 and r < 50
+
+stopDist = stopMult * a
+qty = (strategy.equity * riskPct / 100) / stopDist
+
+// Like TradyMe: decide at candle close, fill at next candle open; opposite signal closes the trade.
+if buySig
+    strategy.close("Sell")
+    if strategy.position_size == 0
+        strategy.entry("Buy", strategy.long, qty=qty)
+        strategy.exit("Buy exit", "Buy", stop=close - stopDist, limit=close + stopDist * rr)
+if sellSig
+    strategy.close("Buy")
+    if allowShort and strategy.position_size == 0
+        strategy.entry("Sell", strategy.short, qty=qty)
+        strategy.exit("Sell exit", "Sell", stop=close + stopDist, limit=close - stopDist * rr)
+
+// Intraday: close everything at day end
+if hour == dayEndHour and minute == 0
+    strategy.close_all(comment="day end")
+
+plot(emaF, "Fast EMA", color=color.new(color.blue, 0))
+plot(emaS, "Slow EMA", color=color.new(color.orange, 0))
+plot(emaT, "Trend EMA", color=color.new(color.gray, 0), linewidth=2)
+plotshape(buySig,  "BUY",  shape.triangleup,   location.belowbar, color.green, size=size.small)
+plotshape(sellSig, "SELL", shape.triangledown, location.abovebar, color.red,   size=size.small)
+alertcondition(buySig,  "TradyMe BUY",  "Trend Rider BUY on {{ticker}} at {{close}}")
+alertcondition(sellSig, "TradyMe SELL", "Trend Rider SELL on {{ticker}} at {{close}}")
