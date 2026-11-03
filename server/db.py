@@ -23,6 +23,8 @@ DEFAULT_SETTINGS = {
     "day_end": "23:00",             # intraday: everything closes at this local time
     "min_confidence": 55,           # auto mode ignores weaker signals
     "paper_start_balance": 10000.0,
+    "live_max_trade": 100.0,        # LIVE safety: never put more than this many dollars in one trade
+    "live_auto_ok": False,          # LIVE: auto mode needs an explicit opt-in
     "journal_started": None,        # ISO date; memory pad resets every 6 months
 }
 

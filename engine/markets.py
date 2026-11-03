@@ -22,6 +22,7 @@ class Market:
     hours: str = "24/7"        # when it trades
     leverage: float = 1.0      # max position size as a multiple of the account (spot crypto = 1)
     quote_is_usd: bool = True  # False for USD/JPY, USD/INR: profit is in yen/rupees → convert
+    alpaca_symbol: str | None = None  # symbol at Alpaca, if Alpaca can trade it (live mode)
 
     def to_account(self, amount_in_quote: float, price: float) -> float:
         """Convert an amount in the quote currency (e.g. INR for USD/INR) to account dollars."""
@@ -29,12 +30,15 @@ class Market:
 
 
 MARKETS: dict[str, Market] = {m.code: m for m in [
-    # ── Crypto (Binance public data — free, no key) ──
-    Market("BTC", "Bitcoin", "crypto", "binance", "BTCUSDT", "₿", fee_bps=10, slippage_bps=2, allow_short=False),
-    Market("ETH", "Ethereum", "crypto", "binance", "ETHUSDT", "Ξ", fee_bps=10, slippage_bps=2, allow_short=False),
-    Market("SOL", "Solana", "crypto", "binance", "SOLUSDT", "◎", fee_bps=10, slippage_bps=3, allow_short=False),
-    Market("XRP", "XRP", "crypto", "binance", "XRPUSDT", "✕", fee_bps=10, slippage_bps=3, allow_short=False,
-           price_decimals=4),
+    # ── Crypto (Binance public data — free, no key). Fee 25 bps = Alpaca's starting taker fee ──
+    Market("BTC", "Bitcoin", "crypto", "binance", "BTCUSDT", "₿", fee_bps=25, slippage_bps=2, allow_short=False,
+           alpaca_symbol="BTC/USD"),
+    Market("ETH", "Ethereum", "crypto", "binance", "ETHUSDT", "Ξ", fee_bps=25, slippage_bps=2, allow_short=False,
+           alpaca_symbol="ETH/USD"),
+    Market("SOL", "Solana", "crypto", "binance", "SOLUSDT", "◎", fee_bps=25, slippage_bps=3, allow_short=False,
+           alpaca_symbol="SOL/USD"),
+    Market("XRP", "XRP", "crypto", "binance", "XRPUSDT", "✕", fee_bps=25, slippage_bps=3, allow_short=False,
+           price_decimals=4, alpaca_symbol="XRP/USD"),
     # ── Gold ──
     Market("GOLD", "Gold", "gold", "yahoo", "GC=F", "🥇", fee_bps=0, slippage_bps=1.2,
            hours="Sun–Fri, almost 24h", leverage=10),

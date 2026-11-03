@@ -1,7 +1,7 @@
 /* TradyMe front-end — plain JavaScript, no build step. */
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
-let META = null, SETTINGS = null, chart = null, candleSeries = null, btChart = null, lastSuggestion = null;
+let META = null, SETTINGS = null, chart = null, candleSeries = null, btChart = null, lastSuggestion = null, BROKER = null;
 
 const TIPS = {
   candle: "Each candle shows how the price moved in that time. '15 min' = one candle every 15 minutes. Smaller candles = faster, noisier trading.",
@@ -89,6 +89,7 @@ function showTab(name) {
   $$(".tab").forEach((t) => t.classList.toggle("hidden", t.id !== `tab-${name}`));
   if (name === "watch") loadWatch();
   if (name === "journal") loadJournal();
+  if (name === "settings") loadBroker();
   if (name === "trade" && chart) setTimeout(() => chart.applyOptions({ width: $("#chart").clientWidth }), 0);
 }
 $$(".tabs button").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
@@ -98,6 +99,28 @@ function paintSwitches() {
   $$("#auto-switch button").forEach((b) => b.classList.toggle("on", (b.dataset.v === "auto") === SETTINGS.auto));
   document.body.classList.toggle("live", SETTINGS.mode === "live");
   $("#live-banner").classList.toggle("hidden", SETTINGS.mode !== "live");
+  paintBanner();
+}
+function paintBanner() {
+  const b = BROKER;
+  $("#live-banner").textContent = !b ? "💰 LIVE MODE — checking your Alpaca connection…"
+    : !b.connected ? "💰 LIVE MODE — Alpaca not connected, so live trading is off. See ⚙️ Settings → Broker connection."
+    : b.paper ? "💰 LIVE MODE — connected to your Alpaca PRACTICE account (fake money, real Alpaca orders). Crypto only."
+    : "💰 LIVE MODE — REAL MONEY on your Alpaca account. Crypto only. Be careful!";
+}
+async function loadBroker() {
+  try { BROKER = await api("/api/broker"); } catch (e) { BROKER = { connected: false, message: e.message }; }
+  paintBanner();
+  const el = $("#broker-status");
+  if (!el) return;
+  el.innerHTML = BROKER.connected
+    ? `<p class="broker-ok">✅ ${esc(BROKER.message)}</p>
+       <div class="stats"><div class="stat">Account value<b>${money(BROKER.equity)}</b></div>
+       <div class="stat">Cash<b>${money(BROKER.cash)}</b></div>
+       <div class="stat">Available for crypto<b>${money(BROKER.buying_power)}</b></div></div>
+       ${BROKER.warning ? `<p class="broker-bad">⚠️ ${esc(BROKER.warning)}</p>` : ""}`
+    : `<p class="broker-bad">❌ Not connected</p><p class="small">${esc(BROKER.message)}</p>`;
+  el.innerHTML += `<p class="small muted">📝 Paper trades done: ${BROKER.paper_trades ?? 0} (Live auto-mode unlocks at ${BROKER.paper_trades_needed ?? 20}).</p>`;
 }
 async function saveSettings(changes) {
   SETTINGS = await api("/api/settings", { method: "PUT", body: JSON.stringify(changes) });
@@ -105,18 +128,26 @@ async function saveSettings(changes) {
 }
 $$("#mode-switch button").forEach((b) => b.addEventListener("click", async () => {
   if (b.dataset.v === "live" && SETTINGS.mode !== "live" &&
-      !confirm("Switch to LIVE mode? This is for REAL money.\n\n(For now no broker is connected, so no real trades can happen.)")) return;
-  await saveSettings({ mode: b.dataset.v }); refreshAccount(); renderSuggestion(lastSuggestion);
+      !confirm("Switch to 💰 LIVE mode?\n\nTrades will be sent to your Alpaca account" +
+               (BROKER?.connected ? (BROKER.paper ? " (PRACTICE account — fake money)." : " — REAL MONEY!") : " (not connected yet).") +
+               "\nOnly crypto can be traded live. Forex & gold stay in Paper mode.")) return;
+  await saveSettings({ mode: b.dataset.v }); await loadBroker(); refreshAccount(); renderSuggestion(lastSuggestion);
 }));
 $$("#auto-switch button").forEach((b) => b.addEventListener("click", async () => {
   const auto = b.dataset.v === "auto";
-  if (auto && !confirm(`Turn on AUTO mode?\n\nThe app will open PAPER trades by itself on: ${SETTINGS.watch.join(", ")}\nusing ${SETTINGS.timeframe} candles, only when it's at least ${SETTINGS.min_confidence}% sure.\n\nYou can stop it anytime.`)) return;
+  if (auto && SETTINGS.mode === "live" && !SETTINGS.live_auto_ok) {
+    toast("🤖 Auto mode for 💰 Live is locked. Turn it on in ⚙️ Settings (needs 20 paper trades first).", 6000); return;
+  }
+  const where = SETTINGS.mode === "live" ? "💰 LIVE trades on your Alpaca account (crypto only)" : "PAPER trades";
+  if (auto && !confirm(`Turn on AUTO mode?\n\nThe app will open ${where} by itself on: ${SETTINGS.watch.join(", ")}\nusing ${SETTINGS.timeframe} candles, only when it's at least ${SETTINGS.min_confidence}% sure.\n\nYou can stop it anytime with 🙋 Manual or 🛑 STOP ALL.`)) return;
   await saveSettings({ auto }); toast(auto ? "🤖 Auto mode ON (paper)" : "🙋 Manual mode");
 }));
 $("#emergency").addEventListener("click", async () => {
   if (!confirm("🛑 Close ALL open trades now and switch to Manual?")) return;
   const r = await api("/api/emergency-stop", { method: "POST" });
-  SETTINGS.auto = false; paintSwitches(); toast(`Closed ${r.closed.length} trade(s).`); refreshAccount();
+  SETTINGS.auto = false; paintSwitches();
+  toast(r.failed.length ? `⚠️ ${r.failed.length} trade(s) could NOT be closed — open the Alpaca app now!` : `Closed ${r.closed.length} trade(s).`, 8000);
+  refreshAccount();
 });
 
 // ───────────────────────── trade tab ─────────────────────────
@@ -178,12 +209,15 @@ function renderSuggestion(s) {
   } else if (s.action !== "WAIT") {
     html += `<div class="small muted">🪤 No trap warning signs found.</div>`;
   }
-  const canTrade = s.action !== "WAIT" && s.can_trade && !live;
+  const liveOk = BROKER?.connected && mk.alpaca;
+  const canTrade = s.action !== "WAIT" && s.can_trade && (!live || liveOk);
   html += `<div class="row" style="justify-content:center">
     ${s.action !== "WAIT" ? `<button class="btn ${s.action === "BUY" ? "buy" : "sell"}" id="do-trade" ${canTrade ? "" : "disabled"}>
       ✅ ${s.action === "BUY" ? "Buy" : "Sell"} (${live ? "live" : "paper"})</button>` : ""}
     <button class="btn" id="test-this">🧪 Test this</button></div>`;
-  if (live && s.action !== "WAIT") html += `<div class="small muted">Live trading switches on once a broker is connected.</div>`;
+  if (live && s.action !== "WAIT" && !BROKER?.connected) html += `<div class="small muted">Connect Alpaca in ⚙️ Settings to trade live.</div>`;
+  else if (live && s.action !== "WAIT" && !mk.alpaca) html += `<div class="small muted">Alpaca can't trade ${esc(mk.name)} — use 📝 Paper for this one.</div>`;
+  else if (live && s.action !== "WAIT") html += `<div class="small muted">Max ${money(SETTINGS.live_max_trade)} per live trade (change in ⚙️ Settings).</div>`;
   const tfSec = { "5m": 300, "10m": 600, "15m": 900, "30m": 1800, "1h": 3600, "3h": 10800 }[s.timeframe];
   const closedAt = new Date(new Date(s.time).getTime() + tfSec * 1000).toISOString();
   html += `<div class="small muted">Last candle closed ${ago(closedAt)} · checks again every 30 s</div>`;
@@ -247,7 +281,7 @@ function renderChart(s) {
 async function refreshAccount() {
   let a;
   try { a = await api("/api/account"); } catch { return; }
-  $("#equity").textContent = money(a.equity);
+  $("#equity").textContent = a.equity == null ? "— (not connected)" : money(a.equity) + (a.mode === "live" ? (BROKER?.paper ? " · Alpaca practice" : " · Alpaca") : "");
   const t = a.today;
   $("#today-pnl").textContent = signed(t.total);
   $("#today-pnl").className = t.total >= 0 ? "pnl-pos" : "pnl-neg";
@@ -368,15 +402,20 @@ async function runBacktest() {
 }
 
 // ───────────────────────── settings & help ─────────────────────────
-const SETTING_FIELDS = ["region", "timezone", "daily_target", "daily_max_loss", "risk_pct", "day_end", "min_confidence", "paper_start_balance"];
+const SETTING_FIELDS = ["region", "timezone", "daily_target", "daily_max_loss", "risk_pct", "day_end", "min_confidence", "paper_start_balance", "live_max_trade"];
 function setupSettings() {
   SETTING_FIELDS.forEach((k) => ($(`#s-${k}`).value = SETTINGS[k]));
+  $("#s-live_auto_ok").checked = !!SETTINGS.live_auto_ok;
   $("#s-watch").innerHTML = META.markets.map((m) => `<label><input type="checkbox" value="${m.code}" ${SETTINGS.watch.includes(m.code) ? "checked" : ""}> ${m.emoji} ${esc(m.name)}</label>`).join("");
   $("#s-save").addEventListener("click", async () => {
     const ch = {};
     SETTING_FIELDS.forEach((k) => { const v = $(`#s-${k}`).value; ch[k] = $(`#s-${k}`).type === "number" ? +v : v; });
     ch.watch = $$("#s-watch input:checked").map((i) => i.value);
-    await saveSettings(ch); $("#s-msg").textContent = "✅ Saved"; refreshAccount();
+    ch.live_auto_ok = $("#s-live_auto_ok").checked;
+    if (ch.live_auto_ok && !SETTINGS.live_auto_ok && !confirm("Allow 🤖 Auto mode to place trades on your 💰 Live Alpaca account by itself?")) ch.live_auto_ok = false;
+    try { await saveSettings(ch); $("#s-msg").textContent = "✅ Saved"; }
+    catch (e) { $("#s-msg").textContent = "⚠️ " + e.message; $("#s-live_auto_ok").checked = false; }
+    refreshAccount();
   });
   $("#s-reset-paper").addEventListener("click", async () => {
     if (!confirm("Reset the paper account? Open paper trades are removed and money goes back to the start amount. The memory pad is kept.")) return;
@@ -397,7 +436,9 @@ function setupSettings() {
   [META, SETTINGS] = await Promise.all([api("/api/meta"), api("/api/settings")]);
   $("#offline-banner").classList.toggle("hidden", !META.offline);
   paintSwitches(); setupFilters(); setupBacktest(); setupSettings();
+  await loadBroker();
   loadSuggestion(); refreshAccount();
+  setInterval(loadBroker, 60000);
   setInterval(loadSuggestion, 30000);
   setInterval(refreshAccount, 10000);
 })();

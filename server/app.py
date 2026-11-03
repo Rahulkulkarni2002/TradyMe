@@ -24,6 +24,7 @@ from engine.settings import offline
 from engine.strategies import REGISTRY, make_strategy
 
 from . import backtest_service
+from . import broker as broker_mod
 from .account import Account, TradeBlocked
 from .db import DB
 
@@ -39,6 +40,7 @@ db = DB()
 account = Account(db)
 activity: deque = deque(maxlen=60)          # recent events shown in the app
 _seen_signals: set = set()                  # auto-trader: don't act on the same candle twice
+MIN_PAPER_TRADES_FOR_LIVE_AUTO = 20         # safety: practise first
 
 
 def note(text: str, kind: str = "info") -> None:
@@ -51,13 +53,24 @@ def tick() -> None:
     if hk.get("reset"):
         note(f"📒 Memory pad archived ({hk['period']}) — fresh 6-month page started.")
     s = db.settings()
-    for mode in ("paper",):
+    for mode in ("paper", "live"):
+        if mode == "live" and not account.positions("live"):
+            continue
         for ev in account.check(mode):
-            note(f"{'✅' if ev['pnl'] >= 0 else '❌'} {ev['market']} closed — {ev['reason']} ({ev['pnl']:+.2f})",
+            tag = "💰 LIVE " if mode == "live" else ""
+            if ev.get("failed"):
+                note(f"⚠️ {tag}{ev['market']}: {ev['reason']}", "warn")
+                continue
+            note(f"{'✅' if ev['pnl'] >= 0 else '❌'} {tag}{ev['market']} closed — {ev['reason']} ({ev['pnl']:+.2f})",
                  "win" if ev["pnl"] >= 0 else "loss")
-    if not s["auto"] or s["mode"] != "paper":
+    mode = s["mode"]
+    if not s["auto"]:
+        return
+    if mode == "live" and not (s["live_auto_ok"] and broker_mod.get_broker()):
         return
     for code in s["watch"]:
+        if mode == "live" and not get_market(code).alpaca_symbol:
+            continue                                     # Alpaca can't trade forex/gold
         try:
             sug = analysis.suggest(get_market(code), s["timeframe"], s["strategy"])
         except Exception as e:
@@ -73,8 +86,9 @@ def tick() -> None:
             note(f"🤖 Skipped {code} {sug['action']} — confidence {sug['confidence']}% is below your {s['min_confidence']}%.")
             continue
         try:
-            account.open("paper", code, sug, timeframe=s["timeframe"], strategy=s["strategy"], how="auto")
-            note(f"🤖 Auto-trader opened {sug['action']} {code} ({sug['confidence']}% sure)", "trade")
+            account.open(mode, code, sug, timeframe=s["timeframe"], strategy=s["strategy"], how="auto")
+            note(f"🤖 Auto-trader opened {'💰 LIVE ' if mode == 'live' else ''}{sug['action']} {code} "
+                 f"({sug['confidence']}% sure)", "trade")
         except TradeBlocked as e:
             note(f"🤖 {code}: {e}")
 
@@ -112,6 +126,7 @@ def meta():
         "offline": offline(),
         "markets": [{"code": m.code, "name": m.name, "kind": m.kind, "emoji": m.emoji, "hours": m.hours,
                      "allow_short": m.allow_short, "decimals": m.price_decimals,
+                     "alpaca": bool(m.alpaca_symbol),
                      "max_days": {tf: backtest_service.max_days(m, tf) for tf in TIMEFRAMES}}
                     for m in MARKETS.values()],
         "timeframes": [{"code": t, "label": TIMEFRAME_LABELS[t]} for t in TIMEFRAMES],
@@ -126,9 +141,23 @@ def get_settings():
 
 @app.put("/api/settings")
 def put_settings(changes: dict):
+    if changes.get("live_auto_ok"):
+        n = len(db.q("SELECT id FROM trades WHERE mode='paper'"))
+        if n < MIN_PAPER_TRADES_FOR_LIVE_AUTO:
+            raise HTTPException(400, f"Live auto-trading unlocks after {MIN_PAPER_TRADES_FOR_LIVE_AUTO} paper trades "
+                                     f"(you have {n}). Practise a bit more first!")
     if changes.get("mode") == "live":
-        note("💰 Switched to LIVE view. Broker connection comes in the next step.", "warn")
+        st = broker_mod.status(fresh=True)
+        note("💰 Switched to LIVE mode — " + st["message"], "warn")
     return db.save_settings(changes)
+
+
+@app.get("/api/broker")
+def broker_status():
+    st = broker_mod.status(fresh=True)
+    st["paper_trades"] = len(db.q("SELECT id FROM trades WHERE mode='paper'"))
+    st["paper_trades_needed"] = MIN_PAPER_TRADES_FOR_LIVE_AUTO
+    return st
 
 
 @app.get("/api/suggest")
@@ -177,7 +206,7 @@ def get_account():
         except Exception as e:
             p["advice"] = {"advice": "?", "color": "gray", "text": f"Couldn't check: {e}"}
     summ["activity"] = list(activity)[:20]
-    summ["live_connected"] = False
+    summ["live_connected"] = bool(summ.get("broker", {}).get("connected")) if mode == "live" else False
     return summ
 
 
@@ -197,7 +226,8 @@ def trade(req: TradeIn):
         pos = account.open(s["mode"], req.market, sug, timeframe=req.timeframe, strategy=req.strategy)
     except TradeBlocked as e:
         raise blocked(e)
-    note(f"🙋 You opened {sug['action']} {req.market} ({sug['confidence']}% sure)", "trade")
+    note(f"🙋 You opened {'💰 LIVE ' if s['mode'] == 'live' else ''}{sug['action']} {req.market} "
+         f"({sug['confidence']}% sure)", "trade")
     return pos
 
 
@@ -224,11 +254,12 @@ def protect(pid: int):
 
 @app.post("/api/emergency-stop")
 def emergency_stop():
-    s = db.settings()
     db.save_settings({"auto": False})
-    closed = account.close_all(s["mode"], "🛑 emergency stop")
-    note(f"🛑 EMERGENCY STOP — closed {len(closed)} trade(s) and switched to Manual.", "warn")
-    return {"closed": closed}
+    closed = account.close_all("live", "🛑 emergency stop") + account.close_all("paper", "🛑 emergency stop")
+    failed = [c for c in closed if c.get("failed")]
+    note(f"🛑 EMERGENCY STOP — closed {len(closed) - len(failed)} trade(s) and switched to Manual."
+         + (f" ⚠️ {len(failed)} could NOT be closed — check the Alpaca app now!" if failed else ""), "warn")
+    return {"closed": closed, "failed": failed}
 
 
 @app.post("/api/paper/reset")

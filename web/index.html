@@ -9,7 +9,7 @@
   <script src="/static/vendor/lightweight-charts.standalone.production.js"></script>
 </head>
 <body>
-  <div id="live-banner" class="live-banner hidden">💰 LIVE MODE — real money. Broker not connected yet, so trading is switched off.</div>
+  <div id="live-banner" class="live-banner hidden">💰 LIVE MODE — checking your Alpaca connection…</div>
   <div id="offline-banner" class="offline-banner hidden">🧪 Demo mode: prices are SIMULATED (no internet data). Results mean nothing for real markets.</div>
 
   <header class="top">
@@ -145,6 +145,19 @@
 
   <!-- ───────────── SETTINGS ───────────── -->
   <main id="tab-settings" class="tab hidden">
+    <section class="card" id="broker-card">
+      <h3>🔌 Broker connection (for 💰 Live mode)</h3>
+      <div id="broker-status" class="muted">Checking…</div>
+      <details class="small"><summary>How do I connect Alpaca?</summary>
+        <ol>
+          <li>Log in at <a href="https://app.alpaca.markets" target="_blank" rel="noopener">app.alpaca.markets</a> and switch to your <b>Paper</b> account (top-left).</li>
+          <li>Find <b>API Keys</b> → <b>Generate New Keys</b>. Copy the <b>Key</b> and the <b>Secret</b> (the secret is shown only once).</li>
+          <li>In the TradyMe folder, copy <code>.env.example</code> to a new file named <code>.env</code> and paste the two keys after <code>ALPACA_API_KEY=</code> and <code>ALPACA_SECRET_KEY=</code>. Keep <code>ALPACA_PAPER=true</code>.</li>
+          <li>Restart TradyMe (Ctrl+C, then <code>python run.py</code>). This box turns green.</li>
+        </ol>
+        <p>🔒 Never share your keys with anyone (not even in chat). The <code>.env</code> file never goes to GitHub.</p>
+      </details>
+    </section>
     <section class="card settings">
       <h3>⚙️ Settings</h3>
       <label>Country
@@ -160,6 +173,9 @@
       <label>🤖 Auto mode: only take signals at least this sure (%) <input type="number" id="s-min_confidence" min="0" max="95" step="5"></label>
       <div><b>🤖 Auto mode may trade:</b><div id="s-watch" class="checks"></div></div>
       <label>📝 Paper money to start with <input type="number" id="s-paper_start_balance" min="100" step="100"></label>
+      <label>💰 Live: never put more than this many dollars in one trade <input type="number" id="s-live_max_trade" min="1" step="10"></label>
+      <label class="inline"><input type="checkbox" id="s-live_auto_ok"> 🤖 Allow Auto mode to trade my 💰 Live account
+        <span class="small muted">(unlocks after 20 paper trades)</span></label>
       <div class="row">
         <button class="btn primary" id="s-save">💾 Save</button>
         <button class="btn" id="s-reset-paper">🔄 Reset paper account</button>

@@ -29,6 +29,41 @@ Your browser opens **http://localhost:8000**. That's it: real prices, paper mone
 - No internet, or just want to look around? `python run.py --demo` uses **simulated** prices.
 - Stop the app with **Ctrl + C**. Next time, just run `source .venv/bin/activate` and `python run.py`.
 
+## 🔌 Connect Alpaca (💰 Live mode, crypto)
+
+TradyMe can send real orders to your **Alpaca** account. Start with Alpaca's **paper** account (fake money):
+the orders go through Alpaca's real system, so you test everything safely.
+
+1. Log in at [app.alpaca.markets](https://app.alpaca.markets) and switch to your **Paper** account (top-left).
+2. Find **API Keys** → **Generate New Keys**. Copy the **Key** and the **Secret** (the secret is shown only once).
+3. In the TradyMe folder, make your private settings file:
+   ```bash
+   cp .env.example .env
+   ```
+   Open `.env` in any text editor and paste the keys:
+   ```
+   ALPACA_API_KEY=your-key-here
+   ALPACA_SECRET_KEY=your-secret-here
+   ALPACA_PAPER=true
+   ```
+4. Restart TradyMe (Ctrl+C, then `python run.py`) → switch to **💰 Live**. The orange banner and
+   ⚙️ Settings → *Broker connection* show ✅ when it's connected.
+
+🔒 **Never share your keys**, not with friends and not in a chat. `.env` is in `.gitignore`, so it never goes to GitHub.
+If a key leaks, delete it in the Alpaca dashboard and generate a new one.
+
+**How Live mode behaves**
+- **Crypto only** (BTC, ETH, SOL, XRP). Alpaca doesn't offer forex or gold, so those stay in 📝 Paper.
+- **Buy only.** Alpaca crypto is spot, so you can't bet on a fall. A SELL signal means "don't buy / exit".
+- **Max per trade** (Settings, default $100): a live trade never uses more than this.
+- **Stops and targets are watched by TradyMe** every 30 s, and it sells at market when one is hit. Alpaca doesn't
+  support stop orders attached to crypto buys, so **TradyMe must be running** to protect live trades.
+- **Fees:** Alpaca charges a crypto fee (about 0.15–0.25% per side at the start). TradyMe's backtests and paper trades use 0.25%.
+- Sold something in the Alpaca app? TradyMe notices and records it in the memory pad.
+- 🛑 STOP ALL sells every live position at Alpaca.
+- 🤖 Auto mode on Live is locked until you've done **20 paper trades** and ticked the box in Settings.
+- **Real money later:** generate keys in your *live* Alpaca account, put them in `.env`, set `ALPACA_PAPER=false`.
+
 ### Where the prices come from (all free, no sign-up)
 | Market | Source | Notes |
 |---|---|---|
@@ -57,7 +92,7 @@ Your browser opens **http://localhost:8000**. That's it: real prices, paper mone
 | 13 | Backtest anytime ("🧪 Test this" button on every suggestion) | ✅ |
 | 14 | 10-year history study + ML model (big moves, news, traps) | ⏳ big next step |
 | 15 | Daily target + daily max loss (stops trading for the day) | ✅ |
-| 16 | Paper trading + Paper/Live switch | ✅ paper · ⏳ live broker connection |
+| 16 | Paper trading + Paper/Live switch | ✅ paper · ✅ live via Alpaca (crypto) · ⏳ OANDA for live forex/gold |
 
 Also included: 🛑 STOP ALL emergency button, trap warning, "move stop to entry" button, light and dark mode,
 works on a phone screen, and a TradingView Pine Script of the same strategy (`pine/trend_rider.pine`).
@@ -89,7 +124,8 @@ Backtests include fees and spread, fill at the next candle's open, and close eve
 run.py                  ← start here
 server/                 ← web server (FastAPI) + SQLite database (data/tradyme.db)
   app.py                  API + background auto-trader (every 30 s)
-  account.py              paper account, stops, daily target, intraday close, memory pad reset
+  account.py              paper + live accounts, stops, daily target, intraday close, memory pad reset
+  broker.py               Alpaca connection status (reads keys from .env)
   backtest_service.py     backtest + exams + plain-English results
 engine/                 ← the trading brain (no web code)
   markets.py              the list of markets (add one here)
@@ -99,10 +135,10 @@ engine/                 ← the trading brain (no web code)
   analysis.py             pre-scan, confidence meter, trap check, live advice, watchlist
   risk/manager.py         position sizing + safety rules
   backtest/               bar-by-bar backtester + metrics
-  execution/              paper broker + Binance testnet / OANDA practice adapters (for the Live step)
+  execution/              paper broker, Alpaca (live crypto), OANDA practice / Binance testnet adapters
 web/                    ← the website (plain HTML/CSS/JS, TradingView Lightweight Charts)
 pine/                   ← TradingView Pine Script versions of the strategies
-tests/                  ← 25 automated tests:  python -m pytest -q
+tests/                  ← 36 automated tests (incl. a fake Alpaca):  python -m pytest -q
 ```
 
 ### Add your own strategy (code version, until the block builder exists)
@@ -118,7 +154,7 @@ tests/                  ← 25 automated tests:  python -m pytest -q
 2. ⏳ **10-year study:** collect 10 years of prices, news and events; find big moves and why they happened;
    ML model for confidence and trap detection; strategy league table by market mood
 3. ⏳ **Strategy builder + news summary + Telegram alerts** (incl. automatic morning watchlist)
-4. ⏳ **🇺🇸 Live trading:** connect a broker (e.g. Alpaca for crypto, OANDA for forex), manual first
+4. 🟡 **🇺🇸 Live trading:** ✅ Alpaca (crypto) · ⏳ OANDA (forex and gold)
 5. ⏳ **🇮🇳 India version:** Indian brokers (Zerodha / Upstox / Dhan), ₹, IST, NSE currency pairs, MCX gold,
    FIU-registered crypto exchanges. Indian residents generally may **not** trade forex through foreign
    brokers; check current RBI/SEBI rules first.

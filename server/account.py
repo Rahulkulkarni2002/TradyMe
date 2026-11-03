@@ -1,5 +1,5 @@
-"""Paper (and later live) account: open/close trades, stops, daily target, intraday close,
-and the 6-month memory-pad reset."""
+"""Accounts: 📝 paper (simulated here) and 💰 live (orders sent to Alpaca).
+Also: stops/targets, daily target & max loss, intraday close, and the 6-month memory-pad reset."""
 from __future__ import annotations
 
 from datetime import date, datetime, time as dtime, timedelta, timezone
@@ -8,8 +8,10 @@ from zoneinfo import ZoneInfo
 from engine.data import get_candles
 from engine.markets import get_market
 from engine.models import Signal, Action
+from engine.execution.alpaca import AlpacaError
 from engine.risk.manager import RiskManager
 
+from . import broker as broker_mod
 from .db import DB
 
 JOURNAL_DAYS = 182          # memory pad resets every ~6 months
@@ -89,17 +91,28 @@ class Account:
             u = self.upnl(p, price)
             unreal += u
             pos.append({**p, "price": price, "upnl": round(u, 2)})
-        return {"mode": mode, "balance": round(acct["balance"], 2), "equity": round(acct["balance"] + unreal, 2),
-                "start_balance": self.db.settings()["paper_start_balance"] if mode == "paper" else None,
-                "positions": pos, "today": self.today(mode)}
+        out = {"mode": mode, "balance": round(acct["balance"], 2), "equity": round(acct["balance"] + unreal, 2),
+               "start_balance": self.db.settings()["paper_start_balance"] if mode == "paper" else None,
+               "positions": pos, "today": self.today(mode)}
+        if mode == "live":
+            st = broker_mod.status()
+            out["broker"] = st
+            out["balance"] = round(st.get("cash", 0.0), 2) if st.get("connected") else None
+            out["equity"] = round(st.get("equity", 0.0), 2) if st.get("connected") else None
+        return out
 
     # ── open / close ────────────────────────────────────
     def open(self, mode: str, code: str, sig: dict, *, timeframe: str, strategy: str,
              how: str = "manual") -> dict:
         s = self.db.settings()
-        if mode == "live":
-            raise TradeBlocked("Live trading needs a connected broker. That's the next step — use Paper for now.")
         market = get_market(code)
+        broker = None
+        if mode == "live":
+            broker = broker_mod.get_broker()
+            if broker is None:
+                raise TradeBlocked("Connect Alpaca first: add your keys to the .env file (see README → Connect Alpaca).")
+            if not market.alpaca_symbol:
+                raise TradeBlocked(f"Alpaca can't trade {market.name}. Forex & gold: use 📝 Paper mode for now.")
         if any(p["market"] == code for p in self.positions(mode)):
             raise TradeBlocked(f"You already have an open {market.name} trade. Close it first.")
         day = self.today(mode)
@@ -121,13 +134,15 @@ class Account:
         stop, target = stop + shift, (target + shift if target else None)
         risk = RiskManager({"risk_per_trade_pct": s["risk_pct"], "max_position_pct": 100,
                             "max_open_positions": 99, "min_confidence": 0, "daily_loss_limit_pct": 100})
+        long = action == Action.BUY
+        if broker is not None:
+            return self._open_live(broker, market, sig, price, stop, target, risk, s, timeframe, strategy, how)
         acct = self.ensure(mode)
         equity = acct["balance"] + sum(self.upnl(p, self.last_price(p["market"])[0]) for p in self.positions(mode))
         qty = risk.position_size(Signal(action, price=price, stop_loss=stop), equity,
                                  leverage=market.leverage, quote_rate=market.to_account(1.0, price))
         if qty <= 0:
             raise TradeBlocked("Position size came out as zero.")
-        long = action == Action.BUY
         slip = price * market.slippage_bps / 10_000
         fill = price + slip if long else price - slip
         fee = market.to_account(fill * qty * market.fee_bps / 10_000, fill)
@@ -139,13 +154,46 @@ class Account:
              timeframe, strategy, sig.get("confidence"), sig.get("reason", ""), how))
         return self.db.q("SELECT * FROM positions WHERE id=?", (pid,))[0]
 
+    def _open_live(self, broker, market, sig: dict, price: float, stop: float, target: float | None,
+                   risk: RiskManager, s: dict, timeframe: str, strategy: str, how: str) -> dict:
+        """Send a real market BUY to Alpaca (spot crypto, long only)."""
+        try:
+            acct = broker.account()
+        except AlpacaError as e:
+            raise TradeBlocked(str(e)) from e
+        if acct.get("crypto_status") not in (None, "ACTIVE"):
+            raise TradeBlocked(f"Crypto trading isn't active on your Alpaca account ({acct['crypto_status']}).")
+        qty = risk.position_size(Signal(Action.BUY, price=price, stop_loss=stop), acct["equity"])
+        caps = {"your live max per trade": s["live_max_trade"] / price,
+                "your available cash": acct["buying_power"] * 0.98 / price}
+        for why, cap in caps.items():
+            if qty > cap:
+                qty = cap
+        if qty * price < 1:
+            raise TradeBlocked("Trade size is under $1 — Alpaca's minimum. Raise 'live max per trade' or add cash.")
+        try:
+            fill = broker.buy(market.alpaca_symbol, qty)
+        except AlpacaError as e:
+            raise TradeBlocked(f"Alpaca didn't fill the order: {e}") from e
+        shift = fill["price"] - price                       # keep stop/target distances from the real fill
+        entry_fee = fill["qty"] * fill["price"] * market.fee_bps / 10_000   # taken in-kind by Alpaca (estimate)
+        pid = self.db.x(
+            "INSERT INTO positions (mode, market, side, qty, entry, stop_loss, take_profit, opened_at, entry_fee,"
+            " timeframe, strategy, confidence, reason, how) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            ("live", market.code, "LONG", fill["held_qty"], fill["price"], stop + shift,
+             (target + shift) if target else None, now_utc().isoformat(), entry_fee,
+             timeframe, strategy, sig.get("confidence"), sig.get("reason", ""), how))
+        return self.db.q("SELECT * FROM positions WHERE id=?", (pid,))[0]
+
     def close(self, pid: int, *, reason: str = "closed by you", price: float | None = None,
-              apply_slippage: bool = True) -> dict:
+              apply_slippage: bool = True, send_order: bool = True) -> dict:
         rows = self.db.q("SELECT * FROM positions WHERE id=?", (pid,))
         if not rows:
             raise TradeBlocked("That trade is already closed.")
         p = rows[0]
         market = get_market(p["market"])
+        if p["mode"] == "live":
+            return self._close_live(p, market, reason, send_order)
         price = price if price is not None else self.last_price(p["market"])[0]
         long = p["side"] == "LONG"
         slip = price * market.slippage_bps / 10_000 if apply_slippage else 0
@@ -163,8 +211,38 @@ class Account:
              p["how"]))
         return {"market": p["market"], "pnl": round(net, 2), "reason": reason}
 
+    def _close_live(self, p: dict, market, reason: str, send_order: bool) -> dict:
+        fill = None
+        if send_order:
+            broker = broker_mod.get_broker()
+            if broker is None:
+                raise TradeBlocked("Alpaca isn't connected — can't close the live trade. Close it in the Alpaca app.")
+            try:
+                fill = broker.sell_all(market.alpaca_symbol)
+            except AlpacaError as e:
+                raise TradeBlocked(f"Alpaca didn't close the trade: {e}. Check the Alpaca app!") from e
+            if fill is None:
+                reason += " (it was already closed at Alpaca)"
+        exit_price = fill["price"] if fill else self.last_price(p["market"])[0]
+        exit_fee = exit_price * p["qty"] * market.fee_bps / 10_000
+        net = (exit_price - p["entry"]) * p["qty"] - exit_fee - p["entry_fee"]
+        self.db.x("DELETE FROM positions WHERE id=?", (p["id"],))
+        self.db.x(
+            "INSERT INTO trades (mode, market, side, qty, entry, exit, opened_at, closed_at, pnl, fees, exit_reason,"
+            " timeframe, strategy, confidence, reason, how) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            ("live", p["market"], p["side"], p["qty"], p["entry"], exit_price, p["opened_at"], now_utc().isoformat(),
+             net, p["entry_fee"] + exit_fee, reason, p["timeframe"], p["strategy"], p["confidence"], p["reason"],
+             p["how"]))
+        return {"market": p["market"], "pnl": round(net, 2), "reason": reason}
+
     def close_all(self, mode: str, reason: str) -> list[dict]:
-        return [self.close(p["id"], reason=reason) for p in self.positions(mode)]
+        out = []
+        for p in self.positions(mode):
+            try:
+                out.append(self.close(p["id"], reason=reason))
+            except TradeBlocked as e:                    # keep closing the others
+                out.append({"market": p["market"], "pnl": 0.0, "reason": f"FAILED: {e}", "failed": True})
+        return out
 
     def update_stop(self, pid: int, stop: float | None, target: float | None) -> None:
         self.db.x("UPDATE positions SET stop_loss=?, take_profit=? WHERE id=?", (stop, target, pid))
@@ -180,20 +258,35 @@ class Account:
         events = []
         s = self.db.settings()
         tz = self.tz()
+        broker = broker_mod.get_broker() if mode == "live" else None
         for p in self.positions(mode):
             try:
                 close_, high, low = self.last_price(p["market"])
             except Exception:
                 continue
+            if broker is not None:
+                try:                                 # sold in the Alpaca app? then just record it
+                    held = broker.position(get_market(p["market"]).alpaca_symbol)
+                except AlpacaError:
+                    held = "unknown"
+                if held is None:
+                    events.append(self.close(p["id"], reason="closed outside TradyMe (in Alpaca)", send_order=False))
+                    continue
             long = p["side"] == "LONG"
             sl, tp = p["stop_loss"], p["take_profit"]
             opened_local = datetime.fromisoformat(p["opened_at"]).astimezone(tz).date()
+            why = None
             if sl is not None and ((long and low <= sl) or (not long and high >= sl)):
-                events.append(self.close(p["id"], reason="stop-loss hit", price=sl))
+                why, px, slip = "stop-loss hit", sl, True
             elif tp is not None and ((long and high >= tp) or (not long and low <= tp)):
-                events.append(self.close(p["id"], reason="target hit 🎯", price=tp, apply_slippage=False))
+                why, px, slip = "target hit 🎯", tp, False
             elif self.past_day_end(s) or opened_local < datetime.now(tz).date():
-                events.append(self.close(p["id"], reason="day end (intraday close)", price=close_))
+                why, px, slip = "day end (intraday close)", close_, True
+            if why:
+                try:                                 # live: sells at market at Alpaca (real fill price)
+                    events.append(self.close(p["id"], reason=why, price=px, apply_slippage=slip))
+                except TradeBlocked as e:
+                    events.append({"market": p["market"], "pnl": 0.0, "reason": f"FAILED to close: {e}", "failed": True})
         return events
 
     def journal_housekeeping(self) -> dict:
