@@ -247,12 +247,24 @@ function chartColors() {
   return { text: cs.getPropertyValue("--muted").trim(), line: cs.getPropertyValue("--line").trim(),
            buy: cs.getPropertyValue("--buy").trim(), sell: cs.getPropertyValue("--sell").trim() };
 }
+// Show chart times in the user's own time zone (the chart library uses UTC by default).
+function tzFormat(t, opts) {
+  try { return new Intl.DateTimeFormat(undefined, { timeZone: SETTINGS?.timezone || undefined, ...opts }).format(new Date(t * 1000)); }
+  catch { return new Date(t * 1000).toLocaleString(undefined, opts); }
+}
 function makeChart(el, height) {
   const c = chartColors();
   return LightweightCharts.createChart(el, {
     width: el.clientWidth, height, layout: { background: { color: "transparent" }, textColor: c.text },
     grid: { vertLines: { color: c.line }, horzLines: { color: c.line } },
-    timeScale: { timeVisible: true, secondsVisible: false }, rightPriceScale: { borderColor: c.line },
+    localization: { timeFormatter: (t) => tzFormat(t, { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) },
+    timeScale: {
+      timeVisible: true, secondsVisible: false,
+      tickMarkFormatter: (t, type) => type <= 1 ? tzFormat(t, { month: "short", year: "numeric" })
+        : type === 2 ? tzFormat(t, { weekday: "short", day: "numeric", month: "short" })
+        : tzFormat(t, { hour: "numeric", minute: "2-digit" }),
+    },
+    rightPriceScale: { borderColor: c.line },
   });
 }
 function renderChart(s) {
@@ -266,6 +278,11 @@ function renderChart(s) {
   const dec = market(s.market).decimals;
   candleSeries.applyOptions({ priceFormat: { type: "price", precision: dec, minMove: 1 / 10 ** dec } });
   candleSeries.setData(s.candles);
+  const last = s.candles.length ? s.candles[s.candles.length - 1].time : null;
+  const tzName = SETTINGS?.timezone || "your time zone";
+  $("#chart-note").textContent = !last ? "" : s.market_closed
+    ? `😴 Market closed — the last candle is from ${tzFormat(last, { weekday: "long", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}. It will move again when the market reopens (${market(s.market).hours}). Times shown in ${tzName}.`
+    : `🟢 Live — a new candle appears every ${META.timeframes.find((t) => t.code === s.timeframe).label}. Times shown in ${tzName}.`;
   candleSeries.setMarkers(s.markers.map((m) => ({ time: m.time, position: m.action === "BUY" ? "belowBar" : "aboveBar",
     color: m.action === "BUY" ? c.buy : c.sell, shape: m.action === "BUY" ? "arrowUp" : "arrowDown", text: m.action })));
   (candleSeries._lines || []).forEach((l) => candleSeries.removePriceLine(l));
