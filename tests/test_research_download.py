@@ -74,3 +74,16 @@ def test_combine_snaps_to_5min_grid(tmp_path, monkeypatch):
     assert list(out.index) == list(pd.to_datetime(["2018-02-09 09:55", "2018-02-09 10:00"], utc=True))
     first = out.iloc[0]                                     # 09:55 and 09:58:14 merged
     assert (first.open, first.high, first.low, first.close, first.volume) == (1, 3, 0.5, 2.5, 2)
+
+
+def test_one_failing_source_does_not_stop_the_rest(monkeypatch):
+    from research import download
+    ran = []
+    monkeypatch.setattr(download, "download_crypto", lambda *a: ran.append("crypto"))
+    def boom(*a):
+        raise ConnectionError("Remote end closed connection")
+    monkeypatch.setattr(download, "download_forex", boom)
+    monkeypatch.setattr(download, "download_mood", lambda *a: ran.append("mood"))
+    monkeypatch.setattr(download, "download_news", lambda *a: ran.append("news"))
+    assert download.main([]) == 0
+    assert ran == ["crypto", "mood", "news"]

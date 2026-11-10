@@ -81,8 +81,9 @@ def download_forex(codes, start: str, session) -> None:
                 continue
             try:
                 df = dukascopy.month(sym, m, session)
-            except requests.HTTPError as e:
-                say(f"   ❌ Dukascopy refused ({e.response.status_code}). It blocks cloud servers — run this on your own computer.")
+            except dukascopy.DukascopyBlocked as e:
+                say(f"   ❌ Dukascopy isn't answering ({e}). Skipping gold & forex for now — "
+                    "everything else continues. Finished months are kept.")
                 return
             if len(df):
                 store.save(df, path)
@@ -154,18 +155,20 @@ def main(argv=None) -> int:
     s.headers["User-Agent"] = store.USER_AGENT
     t0 = time.time()
     say(f"📚 TradyMe history download → {store.HISTORY}")
-    try:
-        if "crypto" in only:
-            download_crypto([c for c in CRYPTO if not wanted or c in wanted], a.start, s)
-        if "forex" in only:
-            download_forex([c for c in FOREX if not wanted or c in wanted], a.start, s)
-        if "mood" in only:
-            download_mood(s)
-        if "news" in only:
-            download_news(s)
-    except KeyboardInterrupt:
-        say("\n⏸️  Stopped. Run the same command again to continue where it left off.")
-        return 1
+    steps = [("crypto", lambda: download_crypto([c for c in CRYPTO if not wanted or c in wanted], a.start, s)),
+             ("forex", lambda: download_forex([c for c in FOREX if not wanted or c in wanted], a.start, s)),
+             ("mood", lambda: download_mood(s)),
+             ("news", lambda: download_news(s))]
+    for name, step in steps:
+        if name not in only:
+            continue
+        try:
+            step()
+        except KeyboardInterrupt:
+            say("\n⏸️  Stopped. Run the same command again to continue where it left off.")
+            return 1
+        except Exception as e:                       # one source failing must not stop the others
+            say(f"\n⚠️ {name} stopped with an error: {type(e).__name__}: {e}\n   Continuing with the next part.")
     say(f"\n🎉 Done in {(time.time() - t0) / 60:.1f} min.")
     return 0
 

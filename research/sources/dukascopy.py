@@ -39,17 +39,27 @@ def decode(payload: bytes, day: pd.Timestamp, point: float) -> pd.DataFrame:
     return df[df["volume"] > 0]                          # flat zero-volume minutes = market closed
 
 
+class DukascopyBlocked(Exception):
+    pass
+
+
 def day(sym: str, d: pd.Timestamp, session: requests.Session) -> pd.DataFrame:
     url = URL.format(sym=sym, y=d.year, m=d.month - 1, d=d.day)      # NB: months are 0-based
+    last = None
     for attempt in range(6):
-        r = session.get(url, timeout=30)
+        try:
+            r = session.get(url, timeout=30)
+        except requests.RequestException as e:                        # dropped / refused connection
+            last = f"connection closed ({type(e).__name__})"
+            time.sleep(2 * (attempt + 1))
+            continue
         if r.status_code == 200:
             return decode(r.content, d, POINT[sym])
         if r.status_code == 404:
             return pd.DataFrame(columns=COLS)
-        time.sleep(1.5 * (attempt + 1))
-    r.raise_for_status()
-    return pd.DataFrame(columns=COLS)
+        last = f"HTTP {r.status_code}"
+        time.sleep(2 * (attempt + 1))
+    raise DukascopyBlocked(last or "no answer")
 
 
 def month(sym: str, start: pd.Timestamp, session: requests.Session | None = None) -> pd.DataFrame:
@@ -62,7 +72,7 @@ def month(sym: str, start: pd.Timestamp, session: requests.Session | None = None
         if d.weekday() == 5:                                 # Saturday: always closed
             continue
         parts.append(day(sym, d, s))
-        time.sleep(0.1)
+        time.sleep(0.3)                                      # be gentle with their servers
     parts = [p for p in parts if len(p)]
     if not parts:
         return pd.DataFrame(columns=COLS + ["source"])
