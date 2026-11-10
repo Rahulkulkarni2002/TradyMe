@@ -10,6 +10,7 @@ import pandas as pd
 
 from engine.data.base import resample
 from engine.features import indicators as ta
+from engine.strategies.candles import NEUTRAL as CANDLE_NEUTRAL, detect as detect_candles
 
 BARS_PER_DAY = {"5m": 288, "10m": 144, "15m": 96, "30m": 48, "1h": 24, "3h": 8}
 
@@ -71,6 +72,13 @@ def build(df: pd.DataFrame, timeframe: str, mood: pd.DataFrame | None = None) ->
     f["hour_cos"] = np.cos(2 * np.pi * hour / 24)
     f["weekday"] = df.index.weekday
     f["weekend"] = (df.index.weekday >= 5).astype(int)
+    # ── candlestick patterns over the last 3 candles (bullish − bearish, and indecision) ──
+    P = detect_candles(df)
+    directional = P[[k for k in P.columns if k not in CANDLE_NEUTRAL]]
+    f["cdl_bull_3"] = (directional == 1).sum(axis=1).rolling(3).sum()
+    f["cdl_bear_3"] = (directional == -1).sum(axis=1).rolling(3).sum()
+    f["cdl_doji_3"] = P["doji"].rolling(3).sum()
+    f["cdl_spin_3"] = P["spinning_top"].rolling(3).sum()
     # ── market mood (Crypto Fear & Greed): yesterday's value, so it's known in advance ──
     if mood is not None and len(mood):
         daily = mood["fear_greed"].copy()

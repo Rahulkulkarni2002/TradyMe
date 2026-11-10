@@ -26,7 +26,8 @@ from .league import FEES, HORIZON, HOLDOUT_START, RESULTS, ece, trade_sim
 
 MODELS = store.ROOT / "research" / "models"
 MOOD_COLS = ["atr_pct", "vol_regime", "vol_ratio", "dist_ema200", "slope_ema50", "day_pos", "week_pos",
-             "ret_96", "vol_z", "hour_sin", "hour_cos", "weekend"]
+             "ret_96", "vol_z", "hour_sin", "hour_cos", "weekend", "cdl_bull_3", "cdl_bear_3", "cdl_doji_3", "cdl_spin_3",
+             "body", "upper_wick", "lower_wick"]
 FAMILY_OF = {k: v[1] for k, v in INFO.items()}
 
 
@@ -156,7 +157,9 @@ def run(code: str, timeframe: str, horizon: int | None = None, barrier: float = 
     tr = (M.index < HOLDOUT_START - pd.Timedelta(days=1)) & lab["label"].notna()
     mdl = new_model().fit(M[tr], lab.loc[tr, "label"].astype(int))
     MODELS.mkdir(parents=True, exist_ok=True)
+    from engine.data.base import tf_seconds
     joblib.dump({"model": mdl, "columns": list(M.columns), "trained_until": str(HOLDOUT_START.date()),
+                 "horizon_hours": round(H * tf_seconds(timeframe) / 3600, 1), "barrier_atr": barrier,
                  "exam_accuracy": float(ex["accuracy"].mean()), "exam_auc": float(ex["auc"].mean())},
                 MODELS / f"{code}_{timeframe}{tag}.joblib", compress=3)
     print(f"\n✅ done in {out['minutes']} min — model saved", flush=True)

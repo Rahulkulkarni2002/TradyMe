@@ -11,7 +11,7 @@ const TIPS = {
   journal: "Every trade you (or the auto-trader) make is written here: what, when, why, and how it ended. It starts a fresh page every 6 months — download it first if you want to keep it.",
   backtest: "A backtest replays the past: 'if I had followed this strategy, what would have happened?' It includes fees, and closes every trade at your day-end (intraday).",
   exams: "Fair test: we split history into 5 periods and check the strategy on each one separately. Passing 1 exam can be luck. Passing 4–5 means it works in different conditions.",
-  verdict: "All 46 strategies vote BUY, SELL or nothing. The AI model (trained on Bitcoin, Ethereum, XRP and Solana since 2015, tested on years it never saw) turns all votes plus the market mood into one % chance. Colours: glowing green/red = strong, yellow = strategies disagree (wait), grey = nothing happening.",
+  verdict: "Every strategy (trend, bounce, breakout, momentum, 17 candlestick patterns, time of day) votes BUY, SELL or nothing. The AI model (trained on Bitcoin, Ethereum, XRP and Solana since 2015, tested on years it never saw) turns all votes plus the market mood into one % chance. Colours: glowing green/red = strong, yellow = strategies disagree (wait), grey = nothing happening.",
   numbers: "Win rate = % of trades that made money. Profit factor = money won ÷ money lost (above 1 is good). Max drawdown = the worst fall from a high point. Avg R = average result compared to what you risked.",
   risk: "If you set 1% and have 10,000, a trade that hits its stop-loss loses about 100. The app sizes every trade so this is true.",
   meter: "How sure the app is. It starts from the strategy's checklist and is then corrected by how often this strategy actually won on this market recently. 70% ≈ 'won about 7 of 10 times lately'. Never a guarantee.",
@@ -198,7 +198,7 @@ function renderVerdict(v) {
   card.className = "card verdict";
   if (!revealed.has(key)) {
     body.innerHTML = `<button class="reveal-btn" id="reveal"><svg><use href="#i-spark"/></svg>Reveal the verdict</button>
-      <div class="small muted">46 strategies have voted${v.model.available ? " and the AI has weighed them" : ""}.</div>`;
+      <div class="small muted">${v.counts.total} strategies have voted${v.model.available ? " and the AI has weighed them" : ""}.</div>`;
     $("#reveal").addEventListener("click", () => { revealed.add(key); renderVerdict(lastVerdict); });
     return;
   }

@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 
 from ..features import indicators as ta
+from .candles import NAMES as CANDLE_NAMES, NEUTRAL as CANDLE_NEUTRAL, detect as detect_candles
 
 FAMILIES = {
     "trend": "🏄 Trend",
@@ -218,20 +219,14 @@ def build_votes(df: pd.DataFrame) -> pd.DataFrame:
     V["obv_trend"] = _sign(ta.ema(obv, 10) - ta.ema(obv, 30))
     V["vwap_trend"] = _where((c > vwap) & (vwap.diff() > 0), (c < vwap) & (vwap.diff() < 0))
 
-    # 🕯️ patterns
-    bull_eng = (c > o) & (c.shift() < o.shift()) & (c >= o.shift()) & (o <= c.shift())
-    bear_eng = (c < o) & (c.shift() > o.shift()) & (c <= o.shift()) & (o >= c.shift())
-    V["engulfing"] = _hold(_where(bull_eng, bear_eng), 3)
-    body = (c - o).abs()
-    rng = (h - l).replace(0, np.nan)
+    # 🕯️ candlestick patterns (full set, see candles.py) — each vote stays on for 3 candles
+    P = detect_candles(df)
+    for k in P.columns:
+        if k not in CANDLE_NEUTRAL:
+            V[f"cdl_{k}"] = _hold(P[k], 3)
     lower_w = np.minimum(c, o) - l
     upper_w = h - np.maximum(c, o)
-    hammer = (lower_w > 2 * body) & (upper_w < body) & (body / rng < 0.35) & (c < e[21])
-    star = (upper_w > 2 * body) & (lower_w < body) & (body / rng < 0.35) & (c > e[21])
-    V["hammer_star"] = _hold(_where(hammer, star), 3)
-    three_up = (c > o) & (c.shift() > o.shift()) & (c.shift(2) > o.shift(2)) & (c > c.shift()) & (c.shift() > c.shift(2))
-    three_dn = (c < o) & (c.shift() < o.shift()) & (c.shift(2) < o.shift(2)) & (c < c.shift()) & (c.shift() < c.shift(2))
-    V["three_soldiers_crows"] = _hold(_where(three_up & (body > 0.5 * atr), three_dn & (body > 0.5 * atr)), 3)
+    body = (c - o).abs()
     V["pin_at_band"] = _hold(_where((lower_w > 2 * body) & (l < bb["bb_lower"]), (upper_w > 2 * body) & (h > bb["bb_upper"])), 3)
 
     # 🕐 sessions (UTC)
@@ -305,13 +300,13 @@ INFO = {
     "momentum_volume": ("Momentum + volume", "momentum", "A strong move backed by extra volume."),
     "obv_trend": ("On-balance volume", "momentum", "Volume flowing in (up) or out (down)."),
     "vwap_trend": ("VWAP trend", "momentum", "Above a rising day-average price = buyers in control."),
-    "engulfing": ("Engulfing candle", "pattern", "A candle that completely 'swallows' the previous one."),
-    "hammer_star": ("Hammer / shooting star", "pattern", "Long tail = the price was pushed back hard."),
-    "three_soldiers_crows": ("Three soldiers / crows", "pattern", "Three strong candles in a row, same direction."),
     "pin_at_band": ("Pin bar at the band", "pattern", "Long-tailed rejection candle at the edge of normal."),
     "london_open_momentum": ("London open momentum", "session", "Follow the first strong move after London opens."),
     "ny_open_momentum": ("New York open momentum", "session", "Follow the first strong move after New York opens."),
 }
+
+
+INFO.update({f"cdl_{k}": (n, "pattern", kid) for k, (n, _size, kid) in CANDLE_NAMES.items() if k not in CANDLE_NEUTRAL})
 
 
 def catalogue() -> list[dict]:

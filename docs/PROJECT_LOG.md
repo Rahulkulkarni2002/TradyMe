@@ -58,6 +58,17 @@ Download history (2015 → today), Mac plugged in: `caffeinate -i python downloa
 - **Website:** 🔮 Reveal card (glow green/red, yellow mixed, grey quiet), vote bar, AI %, all 46 votes with track
   record; all 46 strategies selectable. AI models: BTC/ETH/XRP/SOL 1h (+ BTC 15m).
 
+### 2026-11-10 (night)
+- **Website redesign:** sidebar menu (bottom bar on phones), price + 24h change in the top bar, account cards,
+  chart beside the verdict, Inter font, line icons, light + dark themes.
+- **18 candlestick patterns** added (doji, hammer, hanging man, shooting star, marubozu, engulfing, harami, piercing/
+  dark cloud, tweezer, kicker, morning/evening star, three soldiers/crows, three inside/outside, three methods) →
+  **59 strategies**. On BTC 1h, continuation patterns work (three soldiers/crows 57%) but hammer only 40%.
+- **Retrained 16 models** (BTC/ETH/XRP/SOL × 15m/30m/1h/3h, 6-hour window). Best honest setup: **1h** — BTC 53.8%,
+  ETH 54.0% accurate; profitable before fees every year, after low fees 2 of 6 years. 3h looks better on paper but
+  82% of moments have no clear move and it loses after fees every year. Leak check: 0 differences.
+- News download on my Mac running (~8.6 h); gold/forex to resume afterwards.
+
 ## ⏭️ Next steps
 - [ ] History download finishes on my Mac
 - [x] Strategy library (46) → votes → combined model % → Strategy League

@@ -77,12 +77,13 @@ def verdict(market: Market, timeframe: str) -> dict:
         X = features.build(df, timeframe)
         M = model_inputs(V, A, X).reindex(columns=bundle["columns"])
         p_up = float(bundle["model"].predict_proba(M.iloc[[-1]])[:, 1][0])
-        model = {"available": True, "p_up": p_up, "horizon_hours": HORIZON_HOURS.get((timeframe, bundle["tag"]), 2),
+        model = {"available": True, "p_up": p_up,
+                 "horizon_hours": bundle.get("horizon_hours", HORIZON_HOURS.get((timeframe, bundle["tag"]), 2)),
                  "exam_accuracy": bundle["exam_accuracy"], "exam_auc": bundle["exam_auc"],
                  "trained_until": bundle["trained_until"]}
     else:
         model["reason"] = (f"No AI model for {market.name} on {timeframe} candles yet — showing strategy votes only. "
-                           f"Models so far: Bitcoin, Ethereum, XRP, Solana on 1-hour candles (and Bitcoin 15 min).")
+                           f"Models so far: Bitcoin, Ethereum, XRP, Solana on 15 min, 30 min, 1 hour and 3 hour candles.")
 
     # ── the final answer ──
     if model["available"]:
