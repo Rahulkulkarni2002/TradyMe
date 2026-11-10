@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css?v=2">
+  <link rel="stylesheet" href="/static/style.css?v=3">
   <script src="/static/vendor/lightweight-charts.standalone.production.js"></script>
 </head>
 <body>
@@ -121,7 +121,7 @@
               <h3><svg class="ic"><use href="#i-chart"/></svg>Chart</h3>
               <span class="legend"><i class="dot up"></i>past BUY <i class="dot down"></i>past SELL</span>
             </div>
-            <p id="chart-note" class="small muted"></p>
+            <p class="small muted chart-notes"><span id="chart-note"></span> <span id="chart-live" class="live-dot"></span></p>
             <div id="chart" class="chart"></div>
           </section>
 
@@ -261,6 +261,6 @@
 
   <div id="tip" class="tip hidden"></div>
   <div id="toast" class="toast hidden"></div>
-  <script src="/static/app.js?v=2"></script>
+  <script src="/static/app.js?v=3"></script>
 </body>
 </html>

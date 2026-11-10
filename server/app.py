@@ -205,6 +205,16 @@ def verdict(market: str, timeframe: str):
         raise HTTPException(502, f"Couldn't build the verdict for {market}: {e}")
 
 
+@app.get("/api/live")
+def live_candle(market: str, timeframe: str):
+    """The still-forming candle, for the chart only (signals use closed candles)."""
+    from engine.data.live import forming_candle
+    try:
+        return {"candle": forming_candle(get_market(market), timeframe)}
+    except KeyError as e:
+        raise HTTPException(404, str(e))
+
+
 @app.get("/api/watchlist")
 def watchlist(timeframe: str | None = None, strategy: str | None = None):
     s = db.settings()

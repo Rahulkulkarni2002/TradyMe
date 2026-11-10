@@ -237,6 +237,7 @@ function renderVerdict(v) {
 
 async function loadSuggestion() {
   loadVerdict();
+  if (lastSuggestion && (lastSuggestion.market !== SETTINGS.market || lastSuggestion.timeframe !== SETTINGS.timeframe)) liveCandle = null;
   const m = SETTINGS.market, tf = SETTINGS.timeframe, st = SETTINGS.strategy;
   try {
     const s = await api(`/api/suggest?market=${m}&timeframe=${tf}&strategy=${st}`);
@@ -245,6 +246,22 @@ async function loadSuggestion() {
   } catch (e) {
     $("#suggestion").innerHTML = `<p>😕 ${esc(e.message)}</p><p class="small muted">Check your internet connection. Forex & gold are closed on weekends.</p>`;
   }
+}
+
+// ───────────────────────── live forming candle (chart only) ─────────────────────────
+let liveCandle = null;
+async function loadLive() {
+  if (!lastSuggestion || !candleSeries || document.hidden) return;
+  const m = SETTINGS.market, tf = SETTINGS.timeframe;
+  try {
+    const r = await api(`/api/live?market=${m}&timeframe=${tf}`);
+    if (m !== SETTINGS.market || tf !== SETTINGS.timeframe || !r.candle) return;
+    if (r.candle.time <= (chart._closedLast || 0)) return;          // already closed → the 30 s refresh adds it
+    liveCandle = r.candle;
+    candleSeries.update({ time: r.candle.time, open: r.candle.open, high: r.candle.high, low: r.candle.low, close: r.candle.close });
+    $("#tb-price").textContent = px(m, r.candle.close);
+    $("#chart-live").textContent = `● forming candle · updated ${new Date(r.candle.updated * 1000).toLocaleTimeString()}`;
+  } catch { /* keep the last closed candle */ }
 }
 
 function renderTicker(s) {
@@ -359,6 +376,8 @@ function renderChart(s) {
   const dec = market(s.market).decimals;
   candleSeries.applyOptions({ priceFormat: { type: "price", precision: dec, minMove: 1 / 10 ** dec } });
   candleSeries.setData(s.candles);
+  chart._closedLast = s.candles.length ? s.candles[s.candles.length - 1].time : 0;
+  if (liveCandle && liveCandle.time > chart._closedLast) candleSeries.update(liveCandle);
   const last = s.candles.length ? s.candles[s.candles.length - 1].time : null;
   const tzName = SETTINGS?.timezone || "your time zone";
   $("#chart-note").textContent = !last ? "" : s.market_closed
@@ -538,5 +557,6 @@ function setupSettings() {
   loadSuggestion(); refreshAccount();
   setInterval(loadBroker, 60000);
   setInterval(loadSuggestion, 30000);
+  setInterval(loadLive, 5000);
   setInterval(refreshAccount, 10000);
 })();

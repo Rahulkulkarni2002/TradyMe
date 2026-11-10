@@ -107,3 +107,9 @@ def test_pages_are_never_cached(client):
     c, _ = client
     for path in ("/", "/static/style.css", "/static/app.js"):
         assert c.get(path).headers.get("cache-control") == "no-cache"
+
+
+def test_live_candle_endpoint_is_safe_offline(client):
+    c, _ = client
+    r = c.get("/api/live", params={"market": "BTC", "timeframe": "5m"})
+    assert r.status_code == 200 and "candle" in r.json()
