@@ -101,3 +101,9 @@ def test_library_strategy_selectable(client):
     assert "lib_bollinger_squeeze" in codes and "lib_cdl_morning_evening_star" in codes and len(codes) == len(INFO) + 2
     r = c.post("/api/backtest", json={"market": "BTC", "timeframe": "1h", "strategy": "lib_bollinger_squeeze", "days": 120})
     assert r.status_code == 200 and len(r.json()["exams"]) == 5
+
+
+def test_pages_are_never_cached(client):
+    c, _ = client
+    for path in ("/", "/static/style.css", "/static/app.js"):
+        assert c.get(path).headers.get("cache-control") == "no-cache"
