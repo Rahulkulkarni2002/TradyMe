@@ -108,7 +108,7 @@ def run_backtest(df: pd.DataFrame, strategy: Strategy, risk: RiskManager, market
     equity = pd.Series(equity_curve, index=idx, name="equity")
     trades = pd.DataFrame([t.__dict__ for t in broker.trades])
     if not trades.empty:
-        trades["side"] = trades["side"].map(lambda s: s.value)
+        trades["side"] = trades["side"].map(lambda s: getattr(s, "value", s))   # plain text with pyarrow-backed pandas
         trades = trades.drop(columns=["extra"])
     metrics = compute_metrics(trades, equity, initial_capital, timeframe, data["close"])
     metrics["signals"] = len(signals)
