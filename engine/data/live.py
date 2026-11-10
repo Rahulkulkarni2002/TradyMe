@@ -15,7 +15,7 @@ from ..settings import offline
 from .base import tf_seconds
 
 _cache: dict[tuple, tuple[float, dict | None]] = {}
-CACHE_SECONDS = 3
+CACHE_SECONDS = 1.5
 
 
 def _aggregate(df: pd.DataFrame, start: pd.Timestamp) -> dict | None:
@@ -66,3 +66,13 @@ def forming_candle(market: Market, timeframe: str) -> dict | None:
             candle = None                     # chart simply keeps the last closed candle
     _cache[key] = (time.time(), candle)
     return candle
+
+
+def stream_url(market: Market) -> str | None:
+    """Binance's free real-time trade feed for this coin (the browser connects to it directly).
+    In the US, Binance.com is blocked, so the Binance.US feed is used — the same choice the price feed made."""
+    if offline() or market.provider != "binance":
+        return None
+    from .binance import US, BinanceFeed
+    host = "stream.binance.us:9443" if BinanceFeed._base_url == US else "stream.binance.com:9443"
+    return f"wss://{host}/ws/{market.symbol.lower()}@trade"

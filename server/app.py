@@ -208,9 +208,10 @@ def verdict(market: str, timeframe: str):
 @app.get("/api/live")
 def live_candle(market: str, timeframe: str):
     """The still-forming candle, for the chart only (signals use closed candles)."""
-    from engine.data.live import forming_candle
+    from engine.data.live import forming_candle, stream_url
     try:
-        return {"candle": forming_candle(get_market(market), timeframe)}
+        m = get_market(market)
+        return {"candle": forming_candle(m, timeframe), "stream": stream_url(m)}
     except KeyError as e:
         raise HTTPException(404, str(e))
 

@@ -11,7 +11,7 @@ const TIPS = {
   journal: "Every trade you (or the auto-trader) make is written here: what, when, why, and how it ended. It starts a fresh page every 6 months — download it first if you want to keep it.",
   backtest: "A backtest replays the past: 'if I had followed this strategy, what would have happened?' It includes fees, and closes every trade at your day-end (intraday).",
   exams: "Fair test: we split history into 5 periods and check the strategy on each one separately. Passing 1 exam can be luck. Passing 4–5 means it works in different conditions.",
-  verdict: "Every strategy (trend, bounce, breakout, momentum, 17 candlestick patterns, time of day) votes BUY, SELL or nothing. The AI model (trained on Bitcoin, Ethereum, XRP and Solana since 2015, tested on years it never saw) turns all votes plus the market mood into one % chance. Colours: glowing green/red = strong, yellow = strategies disagree (wait), grey = nothing happening.",
+  verdict: "Every strategy (trend, bounce, breakout, momentum, 17 candlestick patterns, time of day) votes BUY, SELL or nothing. The prediction model (trained on Bitcoin, Ethereum, XRP and Solana since 2015, tested on years it never saw) turns all votes plus the market mood into one % chance. Colours: glowing green/red = strong, yellow = strategies disagree (wait), grey = nothing happening.",
   numbers: "Win rate = % of trades that made money. Profit factor = money won ÷ money lost (above 1 is good). Max drawdown = the worst fall from a high point. Avg R = average result compared to what you risked.",
   risk: "If you set 1% and have 10,000, a trade that hits its stop-loss loses about 100. The app sizes every trade so this is true.",
   meter: "How sure the app is. It starts from the strategy's checklist and is then corrected by how often this strategy actually won on this market recently. 70% ≈ 'won about 7 of 10 times lately'. Never a guarantee.",
@@ -198,7 +198,7 @@ function renderVerdict(v) {
   card.className = "card verdict";
   if (!revealed.has(key)) {
     body.innerHTML = `<button class="reveal-btn" id="reveal"><svg><use href="#i-spark"/></svg>Reveal the verdict</button>
-      <div class="small muted">${v.counts.total} strategies have voted${v.model.available ? " and the AI has weighed them" : ""}.</div>`;
+      <div class="small muted">${v.counts.total} strategies have voted${v.model.available ? " and the prediction model has weighed them" : ""}.</div>`;
     $("#reveal").addEventListener("click", () => { revealed.add(key); renderVerdict(lastVerdict); });
     return;
   }
@@ -208,7 +208,7 @@ function renderVerdict(v) {
   const w = (n) => (100 * n) / c.total;
   let html = `<div class="verdict-word word-${d.action}">${word}</div>`;
   if (v.model.available) {
-    html += `<div class="small">AI: <b>${Math.round(v.model.p_up * 100)}%</b> chance the price goes <b>up</b> first in the next ~${v.model.horizon_hours} h
+    html += `<div class="small">Model: <b>${Math.round(v.model.p_up * 100)}%</b> chance the price goes <b>up</b> first in the next ~${v.model.horizon_hours} h
       (${100 - Math.round(v.model.p_up * 100)}% down first)</div>`;
   }
   html += `<div class="vote-bar" title="${c.buy} BUY · ${c.neutral} no opinion · ${c.sell} SELL">
@@ -218,7 +218,7 @@ function renderVerdict(v) {
     <div class="small muted">Of the strategies with an opinion: <b>${a.buy_pct}% BUY</b> · <b>${a.sell_pct}% SELL</b></div>`;
   html += `<div class="verdict-stats">`;
   if (v.model.available) {
-    html += `<div class="stat">AI exam score<b>${Math.round(v.model.exam_accuracy * 1000) / 10}% right</b><span class="small muted">on years it never saw (coin flip = 50%)</span></div>`;
+    html += `<div class="stat">Model exam score<b>${Math.round(v.model.exam_accuracy * 1000) / 10}% right</b><span class="small muted">on years it never saw (coin flip = 50%)</span></div>`;
   }
   html += `<div class="stat">Agreement<b>${{ strong_buy: "Strong BUY", buy: "Leaning BUY", mixed: "Mixed", sell: "Leaning SELL", strong_sell: "Strong SELL", quiet: "Quiet" }[a.level]}</b></div></div>`;
   if (!v.model.available) html += `<div class="note">${esc(v.model.reason)}</div>`;
@@ -237,7 +237,7 @@ function renderVerdict(v) {
 
 async function loadSuggestion() {
   loadVerdict();
-  if (lastSuggestion && (lastSuggestion.market !== SETTINGS.market || lastSuggestion.timeframe !== SETTINGS.timeframe)) liveCandle = null;
+  if (lastSuggestion && (lastSuggestion.market !== SETTINGS.market || lastSuggestion.timeframe !== SETTINGS.timeframe)) { liveCandle = null; liveKey = ""; }
   const m = SETTINGS.market, tf = SETTINGS.timeframe, st = SETTINGS.strategy;
   try {
     const s = await api(`/api/suggest?market=${m}&timeframe=${tf}&strategy=${st}`);
@@ -248,19 +248,59 @@ async function loadSuggestion() {
   }
 }
 
-// ───────────────────────── live forming candle (chart only) ─────────────────────────
-let liveCandle = null;
+// ───────────────────────── live forming candle (chart only, never used by the model) ─────────────────────────
+let liveCandle = null, liveSocket = null, liveStreamUrl = null, liveKey = "", lastPaint = 0, lastTick = 0, lastResync = 0;
+const TF_SEC = { "5m": 300, "10m": 600, "15m": 900, "30m": 1800, "1h": 3600, "3h": 10800 };
+
+function paintLive() {
+  if (!liveCandle || !candleSeries || liveCandle.time <= (chart._closedLast || 0)) return;
+  candleSeries.update({ time: liveCandle.time, open: liveCandle.open, high: liveCandle.high, low: liveCandle.low, close: liveCandle.close });
+  $("#tb-price").textContent = px(SETTINGS.market, liveCandle.close);
+  const src = liveSocket && liveSocket.readyState === 1 ? "live trades" : "updates every 2 s";
+  $("#chart-live").textContent = `● forming candle · ${src} · ${new Date().toLocaleTimeString()}`;
+}
+
+function onTrade(price, tsMs) {                          // one real trade from the exchange
+  const tf = TF_SEC[SETTINGS.timeframe];
+  const start = Math.floor(tsMs / 1000 / tf) * tf;
+  if (!liveCandle || start > liveCandle.time) liveCandle = { time: start, open: price, high: price, low: price, close: price };
+  else if (start === liveCandle.time) {
+    liveCandle.high = Math.max(liveCandle.high, price); liveCandle.low = Math.min(liveCandle.low, price); liveCandle.close = price;
+  }
+  lastTick = Date.now();
+  const now = performance.now();
+  if (now - lastPaint > 250) { lastPaint = now; paintLive(); }   // ≤ 4 chart updates per second
+}
+
+function openStream(url) {
+  if (liveSocket) { liveSocket.onclose = null; liveSocket.close(); liveSocket = null; }
+  liveStreamUrl = url;
+  if (!url) return;
+  try {
+    liveSocket = new WebSocket(url);
+    liveSocket.onmessage = (e) => { const t = JSON.parse(e.data); if (t.p) onTrade(+t.p, t.T || Date.now()); };
+    liveSocket.onclose = () => { liveSocket = null; setTimeout(() => { if (liveStreamUrl === url) openStream(url); }, 3000); };
+  } catch { liveSocket = null; }
+}
+
 async function loadLive() {
-  if (!lastSuggestion || !candleSeries || document.hidden) return;
-  const m = SETTINGS.market, tf = SETTINGS.timeframe;
+  if (!lastSuggestion || !candleSeries) return;
+  const m = SETTINGS.market, tf = SETTINGS.timeframe, key = m + tf;
+  const streaming = liveSocket && liveSocket.readyState === 1 && Date.now() - lastTick < 15000;
+  if (key === liveKey && streaming && Date.now() - lastResync < 30000) return;   // live feed running → resync every 30 s
+  lastResync = Date.now();
   try {
     const r = await api(`/api/live?market=${m}&timeframe=${tf}`);
-    if (m !== SETTINGS.market || tf !== SETTINGS.timeframe || !r.candle) return;
-    if (r.candle.time <= (chart._closedLast || 0)) return;          // already closed → the 30 s refresh adds it
-    liveCandle = r.candle;
-    candleSeries.update({ time: r.candle.time, open: r.candle.open, high: r.candle.high, low: r.candle.low, close: r.candle.close });
-    $("#tb-price").textContent = px(m, r.candle.close);
-    $("#chart-live").textContent = `● forming candle · updated ${new Date(r.candle.updated * 1000).toLocaleTimeString()}`;
+    if (m !== SETTINGS.market || tf !== SETTINGS.timeframe) return;
+    if (key !== liveKey || r.stream !== liveStreamUrl) { liveKey = key; openStream(r.stream); }
+    if (r.candle && r.candle.time > (chart._closedLast || 0)) {
+      // merge: keep highs/lows already seen from live trades
+      if (liveCandle && liveCandle.time === r.candle.time) {
+        r.candle.high = Math.max(r.candle.high, liveCandle.high); r.candle.low = Math.min(r.candle.low, liveCandle.low);
+        if (streaming) r.candle.close = liveCandle.close;
+      }
+      liveCandle = r.candle; paintLive();
+    }
   } catch { /* keep the last closed candle */ }
 }
 
@@ -557,6 +597,6 @@ function setupSettings() {
   loadSuggestion(); refreshAccount();
   setInterval(loadBroker, 60000);
   setInterval(loadSuggestion, 30000);
-  setInterval(loadLive, 5000);
+  setInterval(loadLive, 2000);
   setInterval(refreshAccount, 10000);
 })();

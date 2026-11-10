@@ -1,4 +1,4 @@
-"""🔮 The all-strategy verdict: 46 strategy votes + agreement % + the AI model's % → one answer + colour."""
+"""🔮 The all-strategy verdict: all strategy votes + agreement % + the prediction model's % → one answer + colour."""
 from __future__ import annotations
 
 import json
@@ -82,7 +82,7 @@ def verdict(market: Market, timeframe: str) -> dict:
                  "exam_accuracy": bundle["exam_accuracy"], "exam_auc": bundle["exam_auc"],
                  "trained_until": bundle["trained_until"]}
     else:
-        model["reason"] = (f"No AI model for {market.name} on {timeframe} candles yet — showing strategy votes only. "
+        model["reason"] = (f"No prediction model for {market.name} on {timeframe} candles yet — showing strategy votes only. "
                            f"Models so far: Bitcoin, Ethereum, XRP, Solana on 15 min, 30 min, 1 hour and 3 hour candles.")
 
     # ── the final answer ──
@@ -110,7 +110,7 @@ def verdict(market: Market, timeframe: str) -> dict:
     notes = []
     if model["available"] and level in ("strong_buy", "strong_sell") and \
             ((level == "strong_buy") != (model["p_up"] >= 0.5)):
-        notes.append("⚠️ Almost all strategies agree, but the AI disagrees: in history, moments when everyone "
+        notes.append("⚠️ Almost all strategies agree, but the prediction model disagrees: in history, moments when everyone "
                      "agreed were often already over-stretched.")
     if action == "WAIT" and level == "mixed":
         notes.append("🟡 Strategies are fighting each other: a confused market. Waiting is the safe choice.")
