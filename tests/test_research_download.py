@@ -109,3 +109,33 @@ def test_dukascopy_rate_limit_waits_then_continues(monkeypatch, tmp_path):
     download.download_forex(["GOLD"], "2016-04", None)
     assert calls["n"] == 3
     assert store.raw_path("GOLD", "2016-04").exists()
+
+
+def test_gdelt_quarter_parses_daily_values(monkeypatch):
+    from research.sources import sentiment
+    monkeypatch.setattr(sentiment.time, "sleep", lambda s: None)
+
+    class Resp:
+        status_code = 200
+        def __init__(self, mode):
+            self.mode = mode
+            vals = [{"date": "20170101T000000Z", "value": -1.5}, {"date": "20170102T000000Z", "value": 0.5}]
+            import json
+            self.text = json.dumps({"timeline": [{"data": vals}]})
+        def json(self):
+            import json
+            return json.loads(self.text)
+
+    class Sess:
+        calls = []
+        def get(self, url, params, timeout):
+            self.calls.append(params["mode"])
+            if len(self.calls) == 1:                      # first try: GDELT says "slow down"
+                r = Resp(params["mode"]); r.status_code = 429; r.text = "Please limit requests"; return r
+            return Resp(params["mode"])
+
+    s = Sess()
+    df = sentiment.gdelt_quarter("crypto", pd.Timestamp("2017-01-01", tz="UTC"), s)
+    assert list(df.columns) == ["news_crypto_tone", "news_crypto_volume"]
+    assert len(df) == 2 and df["news_crypto_tone"].iloc[0] == -1.5
+    assert s.calls.count("timelinetone") == 2          # retried after the 429

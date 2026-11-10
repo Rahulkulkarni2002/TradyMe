@@ -102,46 +102,45 @@ def download_forex(codes, start: str, session) -> None:
 
 
 def download_news(session, topics=None) -> None:
+    """Daily news mood (tone + amount of coverage) per topic, 3 months per request."""
     topics = topics or list(sentiment.TOPICS)
-    weeks = pd.date_range(sentiment.GDELT_START, pd.Timestamp.now(tz="UTC").normalize(), freq="7D")
-    todo = [(t, w) for t in topics for w in weeks if not _week_done(t, w)]
-    say(f"\n📰 News mood (GDELT, hourly since 2017): {len(todo)} weeks to fetch "
-        f"(~{len(todo) * 2 * sentiment.GDELT_PAUSE / 3600:.1f} h — GDELT allows 1 request every 5 s)")
+    quarters = pd.date_range(sentiment.GDELT_DAILY_START, pd.Timestamp.now(tz="UTC"), freq="3MS")
+    todo = [(t, q) for t in topics for q in quarters if not _quarter_done(t, q)]
+    say(f"\n📰 News mood (GDELT, daily since 2017): {len(todo)} pieces to fetch "
+        f"(about {len(todo) * 2 * 25 / 3600:.1f}–{len(todo) * 2 * 45 / 3600:.1f} h — GDELT is slow and limits speed)")
     fails = 0
-    for i, (topic, w) in enumerate(todo, 1):
+    for i, (topic, q) in enumerate(todo, 1):
         try:
-            df = sentiment.gdelt_week(topic, w, session)
+            df = sentiment.gdelt_quarter(topic, q, session)
         except RuntimeError as e:
             fails += 1
-            say(f"   ⚠️ {e} — skipped, will retry next run")
-            if fails >= 5:
-                say("   ❌ GDELT keeps refusing (busy or blocking this network). Try again later — "
-                    "finished weeks are kept.")
+            say(f"   ⚠️ {topic} {q:%Y-%m}: {e} — skipped, will retry next run")
+            if fails >= 6:
+                say("   ❌ GDELT keeps refusing right now. Try again later — finished pieces are kept.")
                 break
             continue
         fails = 0
-        store.save(df, store.RAW / f"news_{topic}" / f"{w:%Y-%m-%d}.parquet")
-        if i % 10 == 0 or i == len(todo):
-            say(f"   {i}/{len(todo)}  {topic} {w:%Y-%m-%d}")
+        store.save(df, store.RAW / f"news_daily_{topic}" / f"{q:%Y-%m}.parquet")
+        say(f"   {i}/{len(todo)}  {topic:<9} {q:%Y-%m} → {len(df)} days")
     combine_news()
 
 
-def _week_done(topic, w) -> bool:
-    p = store.RAW / f"news_{topic}" / f"{w:%Y-%m-%d}.parquet"
-    return p.exists() and w + pd.Timedelta(days=9) < pd.Timestamp.now(tz="UTC")
+def _quarter_done(topic, q) -> bool:
+    p = store.RAW / f"news_daily_{topic}" / f"{q:%Y-%m}.parquet"
+    return p.exists() and q + pd.DateOffset(months=3) + pd.Timedelta(days=2) < pd.Timestamp.now(tz="UTC")
 
 
 def combine_news() -> pd.DataFrame:
     frames = []
     for topic in sentiment.TOPICS:
-        files = sorted((store.RAW / f"news_{topic}").glob("*.parquet"))
+        files = sorted((store.RAW / f"news_daily_{topic}").glob("*.parquet"))
         if files:
             frames.append(pd.concat([pd.read_parquet(f) for f in files]))
     if not frames:
         return pd.DataFrame()
     df = pd.concat(frames, axis=1).sort_index()
     df = df.groupby(level=0).first()
-    store.save(df, store.NEWS / "gdelt_hourly.parquet")
+    store.save(df, store.NEWS / "gdelt_daily.parquet")
     return df
 
 
