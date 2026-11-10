@@ -169,7 +169,7 @@ details.votes summary { margin-top: 10px; }
 .suggestion { text-align: center; }
 .big-action { font-size: 1.9rem; font-weight: 850; letter-spacing: -.03em; margin: 4px 0; }
 .big-action.BUY { color: var(--buy); } .big-action.SELL { color: var(--sell); } .big-action.WAIT { color: var(--wait); }
-.gauge { width: 200px; max-width: 100%; display: block; margin: 0 auto; }
+.gauge { width: 200px; height: auto; max-width: 100%; display: block; margin: 0 auto; }
 .gauge-num { font-size: 1.6rem; font-weight: 800; margin-top: -38px; margin-bottom: 8px; letter-spacing: -.02em; }
 .plain { font-size: .94rem; margin: 10px 0; color: var(--text-2); }
 .levels { display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; margin: 10px 0; }
