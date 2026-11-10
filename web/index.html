@@ -4,206 +4,263 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>TradyMe</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📈</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%236d5efc'/><path d='M7 21l6-6 4 4 8-9' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
   <script src="/static/vendor/lightweight-charts.standalone.production.js"></script>
 </head>
 <body>
-  <div id="live-banner" class="live-banner hidden">💰 LIVE MODE — checking your Alpaca connection…</div>
-  <div id="offline-banner" class="offline-banner hidden">🧪 Demo mode: prices are SIMULATED (no internet data). Results mean nothing for real markets.</div>
+  <!-- line icons (drawn once, reused with <use>) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-trade" viewBox="0 0 24 24"><path d="M7 3v4M7 17v4M17 3v6M17 19v2"/><rect x="5" y="7" width="4" height="10" rx="1"/><rect x="15" y="9" width="4" height="10" rx="1"/></symbol>
+      <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+      <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v17H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M4 21.5A2.5 2.5 0 0 1 6.5 19H20v3H6.5"/><path d="M9 7h7M9 11h5"/></symbol>
+      <symbol id="i-flask" viewBox="0 0 24 24"><path d="M9 2h6M10 2v6L4.5 18.5A2.3 2.3 0 0 0 6.5 22h11a2.3 2.3 0 0 0 2-3.5L14 8V2"/><path d="M7 15h10"/></symbol>
+      <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
+      <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/></symbol>
+      <symbol id="i-stop" viewBox="0 0 24 24"><path d="M7.9 2h8.2L22 7.9v8.2L16.1 22H7.9L2 16.1V7.9z"/><path d="M9 9h6v6H9z"/></symbol>
+      <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></symbol>
+      <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 6-7"/></symbol>
+      <symbol id="i-scan" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></symbol>
+      <symbol id="i-briefcase" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></symbol>
+      <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></symbol>
+      <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></symbol>
+      <symbol id="i-plug" viewBox="0 0 24 24"><path d="M9 2v6M15 2v6M6 8h12v4a6 6 0 0 1-12 0zM12 18v4"/></symbol>
+      <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4L21 8M21 3v5h-5"/></symbol>
+      <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></symbol>
+      <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></symbol>
+    </defs>
+  </svg>
 
-  <header class="top">
-    <div class="brand">📈 <b>TradyMe</b></div>
-    <div class="switches">
-      <div class="seg" id="mode-switch" title="Paper = fake money to practise. Live = real money.">
-        <button data-v="paper">📝 Paper</button><button data-v="live">💰 Live</button>
-      </div>
-      <div class="seg" id="auto-switch" title="Manual = you press the button. Auto = the app trades for you.">
-        <button data-v="manual">🙋 Manual</button><button data-v="auto">🤖 Auto</button>
-      </div>
-      <button class="stop-btn" id="emergency" title="Closes every trade right now and switches to Manual">🛑 STOP ALL</button>
-    </div>
-  </header>
+  <div class="app">
+    <!-- ───────────── sidebar / bottom bar ───────────── -->
+    <aside class="side">
+      <div class="brand"><span class="logo"><svg viewBox="0 0 24 24"><path d="M4 16l5-5 3.5 3.5L20 7"/></svg></span><b>TradyMe</b></div>
+      <nav class="tabs">
+        <button data-tab="trade" class="active"><svg><use href="#i-trade"/></svg><span>Trade</span></button>
+        <button data-tab="watch"><svg><use href="#i-eye"/></svg><span>Watchlist</span></button>
+        <button data-tab="journal"><svg><use href="#i-book"/></svg><span>Memory Pad</span></button>
+        <button data-tab="backtest"><svg><use href="#i-flask"/></svg><span>Backtest</span></button>
+        <button data-tab="settings"><svg><use href="#i-gear"/></svg><span>Settings</span></button>
+        <button data-tab="help"><svg><use href="#i-help"/></svg><span>Help</span></button>
+      </nav>
+      <p class="side-note">Suggestions, not guarantees. Never trade money you can't afford to lose.</p>
+    </aside>
 
-  <section class="today card">
-    <div class="today-row">
-      <div><span class="muted">Today</span> <b id="today-pnl">—</b></div>
-      <div class="muted small" id="today-goal"></div>
-      <div><span class="muted">Account</span> <b id="equity">—</b></div>
-    </div>
-    <div class="bar"><div class="bar-fill" id="goal-bar"></div></div>
-    <div class="small" id="today-status"></div>
-  </section>
+    <div class="main">
+      <!-- ───────────── top bar ───────────── -->
+      <header class="topbar">
+        <div class="ticker" id="ticker">
+          <span class="ticker-sym" id="tb-sym">—</span>
+          <span class="ticker-price num" id="tb-price">—</span>
+          <span class="ticker-chg num" id="tb-chg"></span>
+        </div>
+        <div class="switches">
+          <div class="seg" id="mode-switch" title="Paper = fake money to practise. Live = real money.">
+            <button data-v="paper">Paper</button><button data-v="live">Live</button>
+          </div>
+          <div class="seg" id="auto-switch" title="Manual = you press the button. Auto = the app trades for you.">
+            <button data-v="manual">Manual</button><button data-v="auto">Auto</button>
+          </div>
+          <button class="stop-btn" id="emergency" title="Closes every trade right now and switches to Manual">
+            <svg><use href="#i-stop"/></svg><span>Stop all</span></button>
+        </div>
+      </header>
 
-  <nav class="tabs">
-    <button data-tab="trade" class="active">🏠 Trade</button>
-    <button data-tab="watch">👀 Today's Watch</button>
-    <button data-tab="journal">📒 Memory Pad</button>
-    <button data-tab="backtest">🧪 Backtest</button>
-    <button data-tab="settings">⚙️ Settings</button>
-    <button data-tab="help">❓ Help</button>
-  </nav>
+      <div id="live-banner" class="banner live-banner hidden">LIVE MODE — checking your Alpaca connection…</div>
+      <div id="offline-banner" class="banner offline-banner hidden">Demo mode: prices are simulated (no internet data). Results mean nothing for real markets.</div>
 
-  <!-- ───────────── TRADE ───────────── -->
-  <main id="tab-trade" class="tab">
-    <div class="filters card">
-      <label>What <select id="f-market"></select></label>
-      <label><span>Candle size <span class="q" data-tip="candle">❓</span></span>
-        <div class="pills" id="f-tf"></div></label>
-      <label><span>Strategy <span class="q" data-tip="strategy">❓</span></span> <select id="f-strategy"></select></label>
-    </div>
-
-    <section class="card verdict" id="verdict">
-      <div class="verdict-head">
-        <h3>🔮 All 46 strategies + AI <span class="q" data-tip="verdict">❓</span></h3>
-        <span class="muted small" id="verdict-sub"></span>
-      </div>
-      <div id="verdict-body"><p class="muted">Loading…</p></div>
-    </section>
-
-    <div class="grid">
-      <section class="card suggestion" id="suggestion">
-        <div class="muted">Loading suggestion…</div>
+      <!-- ───────────── account strip ───────────── -->
+      <section class="kpis">
+        <div class="kpi">
+          <span class="kpi-label">Account</span>
+          <b class="kpi-value num" id="equity">—</b>
+        </div>
+        <div class="kpi">
+          <span class="kpi-label">Today</span>
+          <b class="kpi-value num" id="today-pnl">—</b>
+        </div>
+        <div class="kpi kpi-wide">
+          <div class="kpi-row"><span class="kpi-label">Daily goal</span><span class="kpi-sub" id="today-goal"></span></div>
+          <div class="bar"><div class="bar-fill" id="goal-bar"></div></div>
+          <span class="kpi-sub" id="today-status"></span>
+        </div>
       </section>
 
-      <section class="card">
-        <h3>🔎 Pre-scan: what happened lately <span class="q" data-tip="prescan">❓</span></h3>
-        <ul id="prescan" class="points"><li class="muted">…</li></ul>
-      </section>
-    </div>
+      <!-- ───────────── TRADE ───────────── -->
+      <main id="tab-trade" class="tab">
+        <div class="toolbar">
+          <label class="field"><span>Market</span><select id="f-market"></select></label>
+          <div class="field"><span>Candle size <span class="q" data-tip="candle">?</span></span><div class="pills" id="f-tf"></div></div>
+          <label class="field"><span>Focus strategy <span class="q" data-tip="strategy">?</span></span><select id="f-strategy"></select></label>
+        </div>
 
-    <section class="card">
-      <h3>📊 Chart <span class="muted small">— ▲ green = past BUY signals, ▼ red = past SELL signals</span></h3>
-      <p id="chart-note" class="small"></p>
-      <div id="chart" class="chart"></div>
-    </section>
+        <div class="trade-grid">
+          <div class="col-side">
+          <section class="card verdict" id="verdict">
+            <div class="card-head">
+              <h3><svg class="ic"><use href="#i-spark"/></svg>All 46 strategies + AI <span class="q" data-tip="verdict">?</span></h3>
+              <span class="muted small" id="verdict-sub"></span>
+            </div>
+            <div id="verdict-body"><div class="skeleton"></div></div>
+          </section>
 
-    <div class="grid">
-      <section class="card">
-        <h3>📂 My open trades <span class="q" data-tip="live">❓</span></h3>
-        <div id="positions"><p class="muted">No open trades.</p></div>
-      </section>
-      <section class="card">
-        <h3>🔔 What's happening</h3>
-        <ul id="activity" class="activity"></ul>
-      </section>
-    </div>
-  </main>
+          <section class="card suggestion" id="suggestion"><div class="skeleton"></div></section>
 
-  <!-- ───────────── WATCH ───────────── -->
-  <main id="tab-watch" class="tab hidden">
-    <section class="card">
-      <h3>👀 Today's watchlist <span class="muted small" id="watch-time"></span></h3>
-      <p class="muted">The 5 markets moving most clearly right now. Tap one to look closer. Markets that are closed are shown at the bottom.</p>
-      <div id="watch-list" class="watch-list"><p class="muted">Scanning all markets…</p></div>
-      <button class="btn" id="watch-refresh">🔄 Scan again</button>
-    </section>
-    <section class="card muted small">📰 Daily news summary arrives in the next step (needs a news source + AI summary).</section>
-  </main>
+          <section class="card prescan-card">
+            <div class="card-head"><h3><svg class="ic"><use href="#i-scan"/></svg>Last 30 days <span class="q" data-tip="prescan">?</span></h3></div>
+            <ul id="prescan" class="points"><li class="muted">…</li></ul>
+          </section>
+          </div>
+          <div class="col-main">
+          <section class="card chart-card">
+            <div class="card-head">
+              <h3><svg class="ic"><use href="#i-chart"/></svg>Chart</h3>
+              <span class="legend"><i class="dot up"></i>past BUY <i class="dot down"></i>past SELL</span>
+            </div>
+            <p id="chart-note" class="small muted"></p>
+            <div id="chart" class="chart"></div>
+          </section>
 
-  <!-- ───────────── JOURNAL ───────────── -->
-  <main id="tab-journal" class="tab hidden">
-    <section class="card">
-      <h3>📒 Memory Pad <span class="q" data-tip="journal">❓</span></h3>
-      <div id="journal-stats" class="stats"></div>
-      <p class="small muted" id="journal-reset"></p>
-      <div class="row">
-        <select id="journal-period"><option value="0">Current 6 months</option></select>
-        <a class="btn" href="/api/journal.csv">⬇️ Download all (CSV)</a>
-      </div>
-      <div class="table-wrap"><table id="journal-table"></table></div>
-    </section>
-  </main>
+          <section class="card trades-card">
+            <div class="card-head"><h3><svg class="ic"><use href="#i-briefcase"/></svg>Open trades <span class="q" data-tip="live">?</span></h3></div>
+            <div id="positions"><p class="muted">No open trades.</p></div>
+          </section>
 
-  <!-- ───────────── BACKTEST ───────────── -->
-  <main id="tab-backtest" class="tab hidden">
-    <section class="card">
-      <h3>🧪 Backtest — "what if I had used this before?" <span class="q" data-tip="backtest">❓</span></h3>
-      <div class="filters">
-        <label>What <select id="b-market"></select></label>
-        <label>Candle size <select id="b-tf"></select></label>
-        <label>Strategy <select id="b-strategy"></select></label>
-        <label>How far back: <b id="b-days-label"></b>
-          <input type="range" id="b-days" min="5" max="180" value="60"></label>
-        <button class="btn primary" id="b-run">▶️ Run backtest</button>
-      </div>
-    </section>
-    <section id="b-result" class="hidden">
-      <div class="grid">
+          <section class="card activity-card">
+            <div class="card-head"><h3><svg class="ic"><use href="#i-bell"/></svg>Activity</h3></div>
+            <ul id="activity" class="activity"></ul>
+          </section>
+          </div>
+        </div>
+      </main>
+
+      <!-- ───────────── WATCH ───────────── -->
+      <main id="tab-watch" class="tab hidden">
         <section class="card">
-          <h3>📋 Results in plain words</h3>
-          <ul id="b-plain" class="points big"></ul>
+          <div class="card-head">
+            <h3><svg class="ic"><use href="#i-eye"/></svg>Today's watchlist <span class="muted small" id="watch-time"></span></h3>
+            <button class="btn ghost" id="watch-refresh"><svg class="ic"><use href="#i-refresh"/></svg>Scan again</button>
+          </div>
+          <p class="muted">The markets moving most clearly right now. Tap one to look closer. Closed markets are listed last.</p>
+          <div id="watch-list" class="watch-list"><div class="skeleton"></div></div>
         </section>
+        <section class="card muted small">Daily news summary arrives in a later step.</section>
+      </main>
+
+      <!-- ───────────── JOURNAL ───────────── -->
+      <main id="tab-journal" class="tab hidden">
         <section class="card">
-          <h3>📝 Exams <span class="q" data-tip="exams">❓</span></h3>
-          <p class="small muted">We cut the history into 5 pieces and test each piece on its own — like 5 separate exams.</p>
-          <div id="b-exams" class="exams"></div>
+          <div class="card-head">
+            <h3><svg class="ic"><use href="#i-book"/></svg>Memory Pad <span class="q" data-tip="journal">?</span></h3>
+            <div class="row tight">
+              <select id="journal-period"><option value="0">Current 6 months</option></select>
+              <a class="btn ghost" href="/api/journal.csv"><svg class="ic"><use href="#i-download"/></svg>CSV</a>
+            </div>
+          </div>
+          <div id="journal-stats" class="stats"></div>
+          <p class="small muted" id="journal-reset"></p>
+          <div class="table-wrap"><table id="journal-table"></table></div>
         </section>
-      </div>
-      <section class="card">
-        <h3>💰 Account over time</h3>
-        <div id="b-chart" class="chart small-chart"></div>
-      </section>
-      <section class="card">
-        <h3>🔢 Numbers <span class="q" data-tip="numbers">❓</span></h3>
-        <div id="b-metrics" class="stats"></div>
-        <details><summary>Show every trade</summary><div class="table-wrap"><table id="b-trades"></table></div></details>
-      </section>
-    </section>
-  </main>
+      </main>
 
-  <!-- ───────────── SETTINGS ───────────── -->
-  <main id="tab-settings" class="tab hidden">
-    <section class="card" id="broker-card">
-      <h3>🔌 Broker connection (for 💰 Live mode)</h3>
-      <div id="broker-status" class="muted">Checking…</div>
-      <details class="small"><summary>How do I connect Alpaca?</summary>
-        <ol>
-          <li>Log in at <a href="https://app.alpaca.markets" target="_blank" rel="noopener">app.alpaca.markets</a> and switch to your <b>Paper</b> account (top-left).</li>
-          <li>Find <b>API Keys</b> → <b>Generate New Keys</b>. Copy the <b>Key</b> and the <b>Secret</b> (the secret is shown only once).</li>
-          <li>In the TradyMe folder, copy <code>.env.example</code> to a new file named <code>.env</code> and paste the two keys after <code>ALPACA_API_KEY=</code> and <code>ALPACA_SECRET_KEY=</code>. Keep <code>ALPACA_PAPER=true</code>.</li>
-          <li>Restart TradyMe (Ctrl+C, then <code>python run.py</code>). This box turns green.</li>
-        </ol>
-        <p>🔒 Never share your keys with anyone (not even in chat). The <code>.env</code> file never goes to GitHub.</p>
-      </details>
-    </section>
-    <section class="card settings">
-      <h3>⚙️ Settings</h3>
-      <label>Country
-        <select id="s-region"><option value="US">🇺🇸 United States</option><option value="IN">🇮🇳 India (brokers coming soon)</option></select></label>
-      <label>My time zone <select id="s-timezone">
-        <option>America/Los_Angeles</option><option>America/New_York</option><option>America/Chicago</option>
-        <option>Asia/Kolkata</option><option>Europe/London</option><option>UTC</option></select></label>
-      <label>🎯 Daily target (stop when I've made this much) <input type="number" id="s-daily_target" min="0" step="10"></label>
-      <label>🛑 Daily max loss (stop when I've lost this much) <input type="number" id="s-daily_max_loss" min="0" step="10"></label>
-      <label><span>Risk per trade (% of my account I'm OK losing if the stop is hit) <span class="q" data-tip="risk">❓</span></span>
-        <input type="number" id="s-risk_pct" min="0.1" max="5" step="0.1"></label>
-      <label>🌙 Day end — all trades close at (intraday only) <input type="time" id="s-day_end"></label>
-      <label>🤖 Auto mode: only take signals at least this sure (%) <input type="number" id="s-min_confidence" min="0" max="95" step="5"></label>
-      <div><b>🤖 Auto mode may trade:</b><div id="s-watch" class="checks"></div></div>
-      <label>📝 Paper money to start with <input type="number" id="s-paper_start_balance" min="100" step="100"></label>
-      <label>💰 Live: never put more than this many dollars in one trade <input type="number" id="s-live_max_trade" min="1" step="10"></label>
-      <label class="inline"><input type="checkbox" id="s-live_auto_ok"> 🤖 Allow Auto mode to trade my 💰 Live account
-        <span class="small muted">(unlocks after 20 paper trades)</span></label>
-      <div class="row">
-        <button class="btn primary" id="s-save">💾 Save</button>
-        <button class="btn" id="s-reset-paper">🔄 Reset paper account</button>
-      </div>
-      <p class="small" id="s-msg"></p>
-    </section>
-  </main>
+      <!-- ───────────── BACKTEST ───────────── -->
+      <main id="tab-backtest" class="tab hidden">
+        <section class="card">
+          <div class="card-head"><h3><svg class="ic"><use href="#i-flask"/></svg>Backtest — what if I had used this before? <span class="q" data-tip="backtest">?</span></h3></div>
+          <div class="toolbar flat">
+            <label class="field"><span>Market</span><select id="b-market"></select></label>
+            <label class="field"><span>Candle size</span><select id="b-tf"></select></label>
+            <label class="field"><span>Strategy</span><select id="b-strategy"></select></label>
+            <label class="field grow"><span>How far back: <b id="b-days-label"></b></span>
+              <input type="range" id="b-days" min="5" max="180" value="60"></label>
+            <button class="btn primary" id="b-run"><svg class="ic"><use href="#i-play"/></svg>Run backtest</button>
+          </div>
+        </section>
+        <section id="b-result" class="hidden">
+          <div class="grid">
+            <section class="card">
+              <div class="card-head"><h3>Results in plain words</h3></div>
+              <ul id="b-plain" class="points big"></ul>
+            </section>
+            <section class="card">
+              <div class="card-head"><h3>Exams <span class="q" data-tip="exams">?</span></h3></div>
+              <p class="small muted">History is cut into 5 pieces and each piece is tested on its own — like 5 separate exams.</p>
+              <div id="b-exams" class="exams"></div>
+            </section>
+          </div>
+          <section class="card">
+            <div class="card-head"><h3>Account over time</h3></div>
+            <div id="b-chart" class="chart small-chart"></div>
+          </section>
+          <section class="card">
+            <div class="card-head"><h3>Numbers <span class="q" data-tip="numbers">?</span></h3></div>
+            <div id="b-metrics" class="stats"></div>
+            <details><summary>Show every trade</summary><div class="table-wrap"><table id="b-trades"></table></div></details>
+          </section>
+        </section>
+      </main>
 
-  <!-- ───────────── HELP ───────────── -->
-  <main id="tab-help" class="tab hidden">
-    <section class="card help" id="help"></section>
-  </main>
+      <!-- ───────────── SETTINGS ───────────── -->
+      <main id="tab-settings" class="tab hidden">
+        <div class="grid">
+          <section class="card settings">
+            <div class="card-head"><h3><svg class="ic"><use href="#i-gear"/></svg>Settings</h3></div>
+            <label>Country
+              <select id="s-region"><option value="US">United States</option><option value="IN">India (brokers coming soon)</option></select></label>
+            <label>My time zone <select id="s-timezone">
+              <option>America/Los_Angeles</option><option>America/New_York</option><option>America/Chicago</option>
+              <option>Asia/Kolkata</option><option>Europe/London</option><option>UTC</option></select></label>
+            <label>Daily target — stop when I've made this much <input type="number" id="s-daily_target" min="0" step="10"></label>
+            <label>Daily max loss — stop when I've lost this much <input type="number" id="s-daily_max_loss" min="0" step="10"></label>
+            <label><span>Risk per trade — % of my account I'm OK losing if the stop is hit <span class="q" data-tip="risk">?</span></span>
+              <input type="number" id="s-risk_pct" min="0.1" max="5" step="0.1"></label>
+            <label>Day end — all trades close at (intraday only) <input type="time" id="s-day_end"></label>
+            <label>Auto mode: only take signals at least this sure (%) <input type="number" id="s-min_confidence" min="0" max="95" step="5"></label>
+            <div class="field-block"><span class="label">Auto mode may trade</span><div id="s-watch" class="checks"></div></div>
+            <label>Paper money to start with <input type="number" id="s-paper_start_balance" min="100" step="100"></label>
+            <label>Live: never put more than this many dollars in one trade <input type="number" id="s-live_max_trade" min="1" step="10"></label>
+            <label class="inline"><input type="checkbox" id="s-live_auto_ok"> Allow Auto mode to trade my Live account
+              <span class="small muted">(unlocks after 20 paper trades)</span></label>
+            <div class="row">
+              <button class="btn primary" id="s-save">Save</button>
+              <button class="btn ghost" id="s-reset-paper">Reset paper account</button>
+            </div>
+            <p class="small" id="s-msg"></p>
+          </section>
+          <section class="card" id="broker-card">
+            <div class="card-head"><h3><svg class="ic"><use href="#i-plug"/></svg>Broker connection (Live mode)</h3></div>
+            <div id="broker-status" class="muted">Checking…</div>
+            <details class="small"><summary>How do I connect Alpaca?</summary>
+              <ol>
+                <li>Log in at <a href="https://app.alpaca.markets" target="_blank" rel="noopener">app.alpaca.markets</a> and switch to your <b>Paper</b> account (top-left).</li>
+                <li>Find <b>API Keys</b> → <b>Generate New Keys</b>. Copy the <b>Key</b> and the <b>Secret</b> (the secret is shown only once).</li>
+                <li>In the TradyMe folder, copy <code>.env.example</code> to a new file named <code>.env</code> and paste the two keys after <code>ALPACA_API_KEY=</code> and <code>ALPACA_SECRET_KEY=</code>. Keep <code>ALPACA_PAPER=true</code>.</li>
+                <li>Restart TradyMe (Ctrl+C, then <code>python run.py</code>). This box turns green.</li>
+              </ol>
+              <p>Never share your keys with anyone (not even in chat). The <code>.env</code> file never goes to GitHub.</p>
+            </details>
+          </section>
+        </div>
+      </main>
+
+      <!-- ───────────── HELP ───────────── -->
+      <main id="tab-help" class="tab hidden">
+        <section class="card help" id="help"></section>
+      </main>
+
+      <footer class="muted small">
+        TradyMe gives suggestions, not guarantees. Never trade money you can't afford to lose.
+        · Charts by <a href="https://www.tradingview.com/" target="_blank" rel="noopener">TradingView Lightweight Charts™</a>
+      </footer>
+    </div>
+  </div>
 
   <div id="tip" class="tip hidden"></div>
   <div id="toast" class="toast hidden"></div>
-  <footer class="muted small">
-    ⚠️ TradyMe gives suggestions, not guarantees. Never trade money you can't afford to lose.
-    · Charts by <a href="https://www.tradingview.com/" target="_blank" rel="noopener">TradingView Lightweight Charts™</a>
-  </footer>
   <script src="/static/app.js"></script>
 </body>
 </html>

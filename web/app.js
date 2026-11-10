@@ -60,16 +60,14 @@ const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<
 
 // ───────────────────────── gauge (confidence meter) ─────────────────────────
 function gauge(pct, color) {
-  const a = Math.PI * (1 - (pct ?? 0) / 100);
-  const x = 100 + 75 * Math.cos(a), y = 100 - 75 * Math.sin(a);
-  const arc = (from, to, col) => {
-    const a1 = Math.PI * (1 - from / 100), a2 = Math.PI * (1 - to / 100);
-    return `<path d="M ${100 + 85 * Math.cos(a1)} ${100 - 85 * Math.sin(a1)} A 85 85 0 0 1 ${100 + 85 * Math.cos(a2)} ${100 - 85 * Math.sin(a2)}" stroke="${col}" stroke-width="16" fill="none"/>`;
-  };
-  return `<svg class="gauge" viewBox="0 0 200 110" aria-label="confidence ${pct ?? 0}%">
-    ${arc(0, 40, "var(--sell)")}${arc(40.5, 65, "var(--warn)")}${arc(65.5, 100, "var(--buy)")}
-    ${pct == null ? "" : `<line x1="100" y1="100" x2="${x}" y2="${y}" stroke="${color}" stroke-width="5" stroke-linecap="round"/>`}
-    <circle cx="100" cy="100" r="7" fill="var(--text)"/></svg>`;
+  const R = 80, cx = 100, cy = 100;
+  const pt = (v) => { const a = Math.PI * (1 - v / 100); return [cx + R * Math.cos(a), cy - R * Math.sin(a)]; };
+  const arc = (from, to) => { const [x1, y1] = pt(from), [x2, y2] = pt(to); return `M ${x1} ${y1} A ${R} ${R} 0 0 1 ${x2} ${y2}`; };
+  const ticks = [40, 65].map((v) => { const [x, y] = pt(v); const [x2, y2] = [cx + (R - 16) * (x - cx) / R, cy + (R - 16) * (y - cy) / R]; return `<line x1="${x}" y1="${y}" x2="${x2}" y2="${y2}" stroke="var(--surface)" stroke-width="3"/>`; }).join("");
+  return `<svg class="gauge" viewBox="0 0 200 112" aria-label="confidence ${pct ?? 0}%">
+    <path d="${arc(0, 100)}" stroke="var(--surface-2)" stroke-width="16" fill="none" stroke-linecap="round"/>
+    ${pct == null ? "" : `<path d="${arc(0, Math.max(1, Math.min(100, pct)))}" stroke="${color}" stroke-width="16" fill="none" stroke-linecap="round"/>`}
+    ${ticks}</svg>`;
 }
 
 // ───────────────────────── tooltips ─────────────────────────
@@ -196,39 +194,39 @@ function renderVerdict(v) {
   const card = $("#verdict"), body = $("#verdict-body");
   const key = v.market + v.timeframe;
   const mk = market(v.market);
-  $("#verdict-sub").textContent = `${mk.emoji} ${mk.name} · ${META.timeframes.find((t) => t.code === v.timeframe).label} candles`;
+  $("#verdict-sub").textContent = `${META.timeframes.find((t) => t.code === v.timeframe).label} candles`;
   card.className = "card verdict";
   if (!revealed.has(key)) {
-    body.innerHTML = `<button class="reveal-btn" id="reveal">🔮 Reveal the verdict</button>
+    body.innerHTML = `<button class="reveal-btn" id="reveal"><svg><use href="#i-spark"/></svg>Reveal the verdict</button>
       <div class="small muted">46 strategies have voted${v.model.available ? " and the AI has weighed them" : ""}.</div>`;
     $("#reveal").addEventListener("click", () => { revealed.add(key); renderVerdict(lastVerdict); });
     return;
   }
   const d = v.verdict, c = v.counts, a = v.agreement;
   card.classList.add("c-" + d.colour);
-  const word = d.action === "BUY" ? (d.strong ? "🟢🟢 STRONG BUY" : "🟢 BUY") : d.action === "SELL" ? (d.strong ? "🔴🔴 STRONG SELL" : "🔴 SELL") : "⏸️ WAIT";
+  const word = d.action === "BUY" ? (d.strong ? "STRONG BUY" : "BUY") : d.action === "SELL" ? (d.strong ? "STRONG SELL" : "SELL") : "WAIT";
   const w = (n) => (100 * n) / c.total;
   let html = `<div class="verdict-word word-${d.action}">${word}</div>`;
   if (v.model.available) {
-    html += `<div class="small">🧠 AI: <b>${Math.round(v.model.p_up * 100)}%</b> chance the price goes <b>up</b> first in the next ~${v.model.horizon_hours} h
+    html += `<div class="small">AI: <b>${Math.round(v.model.p_up * 100)}%</b> chance the price goes <b>up</b> first in the next ~${v.model.horizon_hours} h
       (${100 - Math.round(v.model.p_up * 100)}% down first)</div>`;
   }
   html += `<div class="vote-bar" title="${c.buy} BUY · ${c.neutral} no opinion · ${c.sell} SELL">
       <div class="vb" style="width:${w(c.buy)}%">${c.buy >= 4 ? c.buy + " BUY" : c.buy || ""}</div>
       <div class="vn" style="width:${w(c.neutral)}%">${c.neutral >= 6 ? c.neutral + " —" : ""}</div>
       <div class="vs" style="width:${w(c.sell)}%">${c.sell >= 4 ? c.sell + " SELL" : c.sell || ""}</div></div>
-    <div class="small muted">🗳️ Of the strategies with an opinion: <b>${a.buy_pct}% BUY</b> · <b>${a.sell_pct}% SELL</b></div>`;
+    <div class="small muted">Of the strategies with an opinion: <b>${a.buy_pct}% BUY</b> · <b>${a.sell_pct}% SELL</b></div>`;
   html += `<div class="verdict-stats">`;
   if (v.model.available) {
     html += `<div class="stat">AI exam score<b>${Math.round(v.model.exam_accuracy * 1000) / 10}% right</b><span class="small muted">on years it never saw (coin flip = 50%)</span></div>`;
   }
   html += `<div class="stat">Agreement<b>${{ strong_buy: "Strong BUY", buy: "Leaning BUY", mixed: "Mixed", sell: "Leaning SELL", strong_sell: "Strong SELL", quiet: "Quiet" }[a.level]}</b></div></div>`;
-  if (!v.model.available) html += `<div class="note">ℹ️ ${esc(v.model.reason)}</div>`;
+  if (!v.model.available) html += `<div class="note">${esc(v.model.reason)}</div>`;
   v.notes.forEach((n) => (html += `<div class="note">${esc(n)}</div>`));
   html += `<details class="votes"><summary>See all ${c.total} votes</summary>`;
   Object.entries(v.families).forEach(([fam, label]) => {
     const rows = v.votes.filter((x) => x.family === fam).sort((x, y) => Math.abs(y.vote) - Math.abs(x.vote));
-    html += `<h4 style="text-align:left;margin:12px 0 2px">${esc(label)}</h4><div class="votes-grid">` + rows.map((x) =>
+    html += `<h4 style="text-align:left;margin:14px 0 4px">${esc(label)}</h4><div class="votes-grid">` + rows.map((x) =>
       `<div class="vote-row" title="${esc(x.kid)}"><span class="vote-pill v${x.vote}">${x.vote === 1 ? "BUY" : x.vote === -1 ? "SELL" : "—"}</span>
        <span>${esc(x.name)}</span>${x.hit_rate != null ? `<span class="hr">won ${Math.round(x.hit_rate * 100)}%</span>` : ""}</div>`).join("") + `</div>`;
   });
@@ -243,10 +241,22 @@ async function loadSuggestion() {
   try {
     const s = await api(`/api/suggest?market=${m}&timeframe=${tf}&strategy=${st}`);
     if (s.market !== SETTINGS.market) return;      // user switched meanwhile
-    lastSuggestion = s; renderSuggestion(s); renderPrescan(s.prescan); renderChart(s);
+    lastSuggestion = s; renderSuggestion(s); renderPrescan(s.prescan); renderChart(s); renderTicker(s);
   } catch (e) {
     $("#suggestion").innerHTML = `<p>😕 ${esc(e.message)}</p><p class="small muted">Check your internet connection. Forex & gold are closed on weekends.</p>`;
   }
+}
+
+function renderTicker(s) {
+  const mk = market(s.market);
+  $("#tb-sym").textContent = `${mk.emoji} ${mk.name}`;
+  $("#tb-price").textContent = px(s.market, s.price);
+  const last = s.candles[s.candles.length - 1];
+  const dayAgo = s.candles.find((c) => c.time >= last.time - 86400) || s.candles[0];
+  const chg = (s.price / dayAgo.open - 1) * 100;
+  const el = $("#tb-chg");
+  el.textContent = `${chg >= 0 ? "+" : ""}${chg.toFixed(2)}% · 24h`;
+  el.className = "ticker-chg num " + (chg >= 0 ? "up" : "down");
 }
 
 function renderSuggestion(s) {
@@ -255,36 +265,36 @@ function renderSuggestion(s) {
   const mk = market(s.market);
   const stratLabel = META.strategies.find((x) => x.code === s.strategy)?.label || s.strategy;
   const live = SETTINGS.mode === "live";
-  let html = `<div class="muted small">${mk.emoji} ${esc(mk.name)} · ${META.timeframes.find((t) => t.code === s.timeframe).label} candles · ${esc(stratLabel)}</div>`;
-  if (s.market_closed) html += `<div class="trap">😴 This market looks closed right now (no new prices). Hours: ${esc(mk.hours)}.</div>`;
-  html += `<div class="big-action ${s.action}">${s.action === "BUY" ? "🟢 BUY" : s.action === "SELL" ? "🔴 SELL" : "⏸️ WAIT"}</div>`;
+  let html = `<div class="card-head"><h3><svg class="ic"><use href="#i-target"/></svg>Focus strategy</h3><span class="muted small">${esc(stratLabel)}</span></div>`;
+  if (s.market_closed) html += `<div class="trap">This market looks closed right now (no new prices). Hours: ${esc(mk.hours)}.</div>`;
+  html += `<div class="big-action ${s.action}">${s.action}</div>`;
 
   if (s.action === "WAIT") {
-    html += gauge(null) + `<div class="gauge-num muted">—</div>`;
+    html += `<div class="small muted" style="margin:-2px 0 6px">No signal from this strategy right now</div>`;
   } else {
     const c = s.confidence >= 65 ? "var(--buy)" : s.confidence >= 40 ? "var(--warn)" : "var(--sell)";
     html += gauge(s.confidence, c) + `<div class="gauge-num">${s.confidence}%</div>
-      <div class="small muted">sure <span class="q" data-tip="meter">❓</span> — ${esc(s.confidence_why)}</div>`;
+      <div class="small muted">sure <span class="q" data-tip="meter">?</span> — ${esc(s.confidence_why)}</div>`;
   }
   html += `<p class="plain">${esc(s.plain)}</p>`;
   html += `<div class="tug" title="${esc(s.lean_reasons.join(' · '))}">
       <div class="b" style="width:${s.buyers_pct}%">${s.buyers_pct >= 28 ? "Buyers " + s.buyers_pct + "%" : s.buyers_pct >= 8 ? s.buyers_pct + "%" : ""}</div>
       <div class="s" style="width:${s.sellers_pct}%">${s.sellers_pct >= 28 ? "Sellers " + s.sellers_pct + "%" : s.sellers_pct >= 8 ? s.sellers_pct + "%" : ""}</div></div>
-      <div class="small muted">tug of war <span class="q" data-tip="tug">❓</span></div>`;
+      <div class="small muted">buyers vs sellers right now <span class="q" data-tip="tug">?</span></div>`;
   html += `<div class="levels"><span class="level now">Now ${px(s.market, s.price)}</span>`;
-  if (s.action !== "WAIT") html += `<span class="level sl">🛑 Stop ${px(s.market, s.stop_loss)}</span><span class="level tp">🎯 Target ${px(s.market, s.take_profit)}</span>`;
+  if (s.action !== "WAIT") html += `<span class="level sl">Stop ${px(s.market, s.stop_loss)}</span><span class="level tp">Target ${px(s.market, s.take_profit)}</span>`;
   html += `</div>`;
   if (s.trap && s.trap.score > 0) {
-    html += `<div class="trap">🪤 <b>Trap warning: ${s.trap.score}%</b> <span class="q" data-tip="trap">❓</span><ul>${s.trap.reasons.map((r) => `<li>${esc(r)}</li>`).join("")}</ul></div>`;
+    html += `<div class="trap"><b>Trap warning: ${s.trap.score}%</b> <span class="q" data-tip="trap">?</span><ul>${s.trap.reasons.map((r) => `<li>${esc(r)}</li>`).join("")}</ul></div>`;
   } else if (s.action !== "WAIT") {
-    html += `<div class="small muted">🪤 No trap warning signs found.</div>`;
+    html += `<div class="small muted">No trap warning signs found.</div>`;
   }
   const liveOk = BROKER?.connected && mk.alpaca;
   const canTrade = s.action !== "WAIT" && s.can_trade && (!live || liveOk);
   html += `<div class="row" style="justify-content:center">
     ${s.action !== "WAIT" ? `<button class="btn ${s.action === "BUY" ? "buy" : "sell"}" id="do-trade" ${canTrade ? "" : "disabled"}>
-      ✅ ${s.action === "BUY" ? "Buy" : "Sell"} (${live ? "live" : "paper"})</button>` : ""}
-    <button class="btn" id="test-this">🧪 Test this</button></div>`;
+      ${s.action === "BUY" ? "Buy" : "Sell"} · ${live ? "live" : "paper"}</button>` : ""}
+    <button class="btn ghost" id="test-this"><svg class="ic"><use href="#i-flask"/></svg>Test this</button></div>`;
   if (live && s.action !== "WAIT" && !BROKER?.connected) html += `<div class="small muted">Connect Alpaca in ⚙️ Settings to trade live.</div>`;
   else if (live && s.action !== "WAIT" && !mk.alpaca) html += `<div class="small muted">Alpaca can't trade ${esc(mk.name)} — use 📝 Paper for this one.</div>`;
   else if (live && s.action !== "WAIT") html += `<div class="small muted">Max ${money(SETTINGS.live_max_trade)} per live trade (change in ⚙️ Settings).</div>`;
@@ -325,8 +335,9 @@ function tzFormat(t, opts) {
 function makeChart(el, height) {
   const c = chartColors();
   return LightweightCharts.createChart(el, {
-    width: el.clientWidth, height, layout: { background: { color: "transparent" }, textColor: c.text },
-    grid: { vertLines: { color: c.line }, horzLines: { color: c.line } },
+    width: el.clientWidth, height: el.clientHeight || height, layout: { background: { color: "transparent" }, textColor: c.text, fontFamily: getComputedStyle(document.body).fontFamily },
+    grid: { vertLines: { visible: false }, horzLines: { color: c.line } },
+    crosshair: { mode: 1 },
     localization: { timeFormatter: (t) => tzFormat(t, { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) },
     timeScale: {
       timeVisible: true, secondsVisible: false,
@@ -343,7 +354,7 @@ function renderChart(s) {
   if (!chart) {
     chart = makeChart($("#chart"), 380);
     candleSeries = chart.addCandlestickSeries({ upColor: c.buy, downColor: c.sell, borderVisible: false, wickUpColor: c.buy, wickDownColor: c.sell });
-    window.addEventListener("resize", () => chart.applyOptions({ width: $("#chart").clientWidth }));
+    window.addEventListener("resize", () => chart.applyOptions({ width: $("#chart").clientWidth, height: $("#chart").clientHeight }));
   }
   const dec = market(s.market).decimals;
   candleSeries.applyOptions({ priceFormat: { type: "price", precision: dec, minMove: 1 / 10 ** dec } });
@@ -354,7 +365,7 @@ function renderChart(s) {
     ? `😴 Market closed — the last candle is from ${tzFormat(last, { weekday: "long", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}. It will move again when the market reopens (${market(s.market).hours}). Times shown in ${tzName}.`
     : `🟢 Live — a new candle appears every ${META.timeframes.find((t) => t.code === s.timeframe).label}. Times shown in ${tzName}.`;
   candleSeries.setMarkers(s.markers.map((m) => ({ time: m.time, position: m.action === "BUY" ? "belowBar" : "aboveBar",
-    color: m.action === "BUY" ? c.buy : c.sell, shape: m.action === "BUY" ? "arrowUp" : "arrowDown", text: m.action })));
+    color: m.action === "BUY" ? c.buy : c.sell, shape: m.action === "BUY" ? "arrowUp" : "arrowDown" })));
   (candleSeries._lines || []).forEach((l) => candleSeries.removePriceLine(l));
   candleSeries._lines = [];
   if (s.action !== "WAIT") {
@@ -372,7 +383,7 @@ async function refreshAccount() {
   const t = a.today;
   $("#today-pnl").textContent = signed(t.total);
   $("#today-pnl").className = t.total >= 0 ? "pnl-pos" : "pnl-neg";
-  $("#today-goal").textContent = `🎯 goal ${money(t.target)} · 🛑 max loss ${money(t.max_loss)}`;
+  $("#today-goal").textContent = `goal ${money(t.target)} · max loss ${money(t.max_loss)}`;
   const pct = t.total >= 0 ? Math.min(100, (t.total / (t.target || 1)) * 100) : Math.min(100, (-t.total / (t.max_loss || 1)) * 100);
   $("#goal-bar").style.width = pct + "%";
   $("#goal-bar").style.background = t.total >= 0 ? "var(--buy)" : "var(--sell)";
@@ -383,7 +394,7 @@ async function refreshAccount() {
 
   $("#positions").innerHTML = a.positions.length ? a.positions.map((p) => `
     <div class="pos">
-      <div class="pos-head"><span>${market(p.market).emoji} ${p.side === "LONG" ? "🟢 BUY" : "🔴 SELL"} ${esc(market(p.market).name)}</span>
+      <div class="pos-head"><span>${market(p.market).emoji} ${esc(market(p.market).name)} · <span class="${p.side === "LONG" ? "pnl-pos" : "pnl-neg"}">${p.side === "LONG" ? "BUY" : "SELL"}</span></span>
         <span class="${p.upnl >= 0 ? "pnl-pos" : "pnl-neg"}">${signed(p.upnl)}</span></div>
       <div class="small muted">In at ${px(p.market, p.entry)} → now ${px(p.market, p.price)} · 🛑 ${px(p.market, p.stop_loss)} · 🎯 ${px(p.market, p.take_profit)} · ${p.how === "auto" ? "🤖 auto" : "🙋 you"} · ${ago(p.opened_at)}</div>
       <div class="advice ${p.advice.color}">${esc(p.advice.text)}</div>
@@ -459,7 +470,7 @@ function updateDays() {
   $("#b-days-label").textContent = `${r.value} days (max ${max})`;
 }
 async function runBacktest() {
-  const btn = $("#b-run"); btn.disabled = true; btn.textContent = "⏳ Running…";
+  const btn = $("#b-run"); const label = btn.innerHTML; btn.disabled = true; btn.textContent = "Running…";
   try {
     const r = await api("/api/backtest", { method: "POST", body: JSON.stringify({
       market: $("#b-market").value, timeframe: $("#b-tf").value, strategy: $("#b-strategy").value, days: +$("#b-days").value }) });
@@ -485,7 +496,7 @@ async function runBacktest() {
       btChart._s.setData(r.equity); btChart.timeScale().fitContent();
     }
   } catch (e) { toast("⚠️ " + e.message, 5000); }
-  finally { btn.disabled = false; btn.textContent = "▶️ Run backtest"; }
+  finally { btn.disabled = false; btn.innerHTML = label; }
 }
 
 // ───────────────────────── settings & help ─────────────────────────
@@ -508,7 +519,7 @@ function setupSettings() {
     if (!confirm("Reset the paper account? Open paper trades are removed and money goes back to the start amount. The memory pad is kept.")) return;
     await api("/api/paper/reset", { method: "POST" }); toast("🔄 Paper account reset"); refreshAccount();
   });
-  $("#help").innerHTML = `<h3>❓ How TradyMe works</h3>
+  $("#help").innerHTML = `<h3>How TradyMe works</h3>
     <ol><li>Pick <b>what</b> to trade, the <b>candle size</b>, and a <b>strategy</b>.</li>
     <li>The app does a <b>pre-scan</b> of the last 30 days, then says <b>BUY</b>, <b>SELL</b> or <b>WAIT</b> with a <b>confidence meter</b> and a <b>trap warning</b>.</li>
     <li>Not sure? Press <b>🧪 Test this</b> to see how it did in the past.</li>
