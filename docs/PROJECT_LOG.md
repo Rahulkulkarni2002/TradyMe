@@ -48,10 +48,22 @@ Download history (2015 → today), Mac plugged in: `caffeinate -i python downloa
 - First Model League exam (BTC 15m, 2024): ~51.8% vs 50% coin flip. Small edge, **fees wiped out profit**.
 - Decided the strategy plan: 20–50 strategies → votes → one combined % → colour reveal.
 
+### 2026-11-10 (evening)
+- On my Mac: crypto ✅; gold 2015-01 → 2016-03 before Dukascopy rate-limited; news (GDELT, ~8.6 h) running overnight.
+- **46 strategies** built (trend, bounce, breakout, momentum, candle patterns, sessions); no-peek check passed.
+- **Strategy League, BTC 15m (2015–2024):** bounce best (RSI-2 55.7%), trend < 50%; ≥80% agree BUY → up first
+  only 46% (over-stretched). All lose after fees.
+- **1h candles / 6h window work better:** Bollinger squeeze 57–58% on all coins; combined AI 51–56%, 53–64% right
+  when ≥65% sure. After fees: 2 of 21 exam-years positive → more research before real money.
+- **Website:** 🔮 Reveal card (glow green/red, yellow mixed, grey quiet), vote bar, AI %, all 46 votes with track
+  record; all 46 strategies selectable. AI models: BTC/ETH/XRP/SOL 1h (+ BTC 15m).
+
 ## ⏭️ Next steps
 - [ ] History download finishes on my Mac
-- [ ] Strategy library (20–50) → votes → combined model % → Strategy League
-- [ ] Website: Reveal button, colour verdict, all votes
+- [x] Strategy library (46) → votes → combined model % → Strategy League
+- [x] Website: Reveal button, colour verdict, all votes
+- [ ] After news finishes: `python download_history.py --only forex` (gold/forex resume)
+- [ ] Research: beat fees (bigger moves, higher confidence, low-fee venue), add news to the model, gold/forex models
 - [ ] Connect Alpaca paper keys
 - [ ] Telegram alerts + morning watchlist; daily news feed
 - [ ] Strategy builder; India version for Dad
