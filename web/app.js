@@ -11,6 +11,7 @@ const TIPS = {
   journal: "Every trade you (or the auto-trader) make is written here: what, when, why, and how it ended. It starts a fresh page every 6 months — download it first if you want to keep it.",
   backtest: "A backtest replays the past: 'if I had followed this strategy, what would have happened?' It includes fees, and closes every trade at your day-end (intraday).",
   exams: "Fair test: we split history into 5 periods and check the strategy on each one separately. Passing 1 exam can be luck. Passing 4–5 means it works in different conditions.",
+  verdict: "All 46 strategies vote BUY, SELL or nothing. The AI model (trained on Bitcoin, Ethereum, XRP and Solana since 2015, tested on years it never saw) turns all votes plus the market mood into one % chance. Colours: glowing green/red = strong, yellow = strategies disagree (wait), grey = nothing happening.",
   numbers: "Win rate = % of trades that made money. Profit factor = money won ÷ money lost (above 1 is good). Max drawdown = the worst fall from a high point. Avg R = average result compared to what you risked.",
   risk: "If you set 1% and have 10,000, a trade that hits its stop-loss loses about 100. The app sizes every trade so this is true.",
   meter: "How sure the app is. It starts from the strategy's checklist and is then corrected by how often this strategy actually won on this market recently. 70% ≈ 'won about 7 of 10 times lately'. Never a guarantee.",
@@ -155,11 +156,21 @@ function fillSelect(sel, items, value) {
   sel.innerHTML = items.map((i) => `<option value="${i.code}">${esc(i.label)}</option>`).join("");
   if (value) sel.value = value;
 }
+function fillStrategies(sel, value) {
+  const groups = { "⭐ Classic": META.strategies.filter((s) => !s.code.startsWith("lib_")) };
+  META.strategies.filter((s) => s.code.startsWith("lib_")).forEach((s) => {
+    const g = { trend: "🏄 Trend", reversion: "🏀 Bounce", breakout: "💥 Breakout", momentum: "⚡ Momentum", pattern: "🕯️ Candle pattern", session: "🕐 Time of day" }[s.family] || "Other";
+    (groups[g] = groups[g] || []).push(s);
+  });
+  sel.innerHTML = Object.entries(groups).map(([g, items]) =>
+    `<optgroup label="${esc(g)}">${items.map((i) => `<option value="${i.code}">${esc(i.label)}</option>`).join("")}</optgroup>`).join("");
+  if (value) sel.value = value;
+}
 function marketItems() { return META.markets.map((m) => ({ code: m.code, label: `${m.emoji} ${m.name}` })); }
 
 function setupFilters() {
   fillSelect($("#f-market"), marketItems(), SETTINGS.market);
-  fillSelect($("#f-strategy"), META.strategies, SETTINGS.strategy);
+  fillStrategies($("#f-strategy"), SETTINGS.strategy);
   $("#f-tf").innerHTML = META.timeframes.map((t) => `<button data-v="${t.code}">${t.label}</button>`).join("");
   const paintTf = () => $$("#f-tf button").forEach((b) => b.classList.toggle("on", b.dataset.v === SETTINGS.timeframe));
   paintTf();
@@ -168,7 +179,66 @@ function setupFilters() {
   $("#f-strategy").addEventListener("change", async (e) => { await saveSettings({ strategy: e.target.value }); loadSuggestion(); });
 }
 
+// ───────────────────────── 🔮 all-strategy verdict ─────────────────────────
+const revealed = new Set();
+let lastVerdict = null;
+async function loadVerdict() {
+  const m = SETTINGS.market, tf = SETTINGS.timeframe;
+  try {
+    const v = await api(`/api/verdict?market=${m}&timeframe=${tf}`);
+    if (v.market !== SETTINGS.market || v.timeframe !== SETTINGS.timeframe) return;
+    lastVerdict = v; renderVerdict(v);
+  } catch (e) {
+    $("#verdict-body").innerHTML = `<p class="muted">😕 ${esc(e.message)}</p>`;
+  }
+}
+function renderVerdict(v) {
+  const card = $("#verdict"), body = $("#verdict-body");
+  const key = v.market + v.timeframe;
+  const mk = market(v.market);
+  $("#verdict-sub").textContent = `${mk.emoji} ${mk.name} · ${META.timeframes.find((t) => t.code === v.timeframe).label} candles`;
+  card.className = "card verdict";
+  if (!revealed.has(key)) {
+    body.innerHTML = `<button class="reveal-btn" id="reveal">🔮 Reveal the verdict</button>
+      <div class="small muted">46 strategies have voted${v.model.available ? " and the AI has weighed them" : ""}.</div>`;
+    $("#reveal").addEventListener("click", () => { revealed.add(key); renderVerdict(lastVerdict); });
+    return;
+  }
+  const d = v.verdict, c = v.counts, a = v.agreement;
+  card.classList.add("c-" + d.colour);
+  const word = d.action === "BUY" ? (d.strong ? "🟢🟢 STRONG BUY" : "🟢 BUY") : d.action === "SELL" ? (d.strong ? "🔴🔴 STRONG SELL" : "🔴 SELL") : "⏸️ WAIT";
+  const w = (n) => (100 * n) / c.total;
+  let html = `<div class="verdict-word word-${d.action}">${word}</div>`;
+  if (v.model.available) {
+    html += `<div class="small">🧠 AI: <b>${Math.round(v.model.p_up * 100)}%</b> chance the price goes <b>up</b> first in the next ~${v.model.horizon_hours} h
+      (${100 - Math.round(v.model.p_up * 100)}% down first)</div>`;
+  }
+  html += `<div class="vote-bar" title="${c.buy} BUY · ${c.neutral} no opinion · ${c.sell} SELL">
+      <div class="vb" style="width:${w(c.buy)}%">${c.buy >= 4 ? c.buy + " BUY" : c.buy || ""}</div>
+      <div class="vn" style="width:${w(c.neutral)}%">${c.neutral >= 6 ? c.neutral + " —" : ""}</div>
+      <div class="vs" style="width:${w(c.sell)}%">${c.sell >= 4 ? c.sell + " SELL" : c.sell || ""}</div></div>
+    <div class="small muted">🗳️ Of the strategies with an opinion: <b>${a.buy_pct}% BUY</b> · <b>${a.sell_pct}% SELL</b></div>`;
+  html += `<div class="verdict-stats">`;
+  if (v.model.available) {
+    html += `<div class="stat">AI exam score<b>${Math.round(v.model.exam_accuracy * 1000) / 10}% right</b><span class="small muted">on years it never saw (coin flip = 50%)</span></div>`;
+  }
+  html += `<div class="stat">Agreement<b>${{ strong_buy: "Strong BUY", buy: "Leaning BUY", mixed: "Mixed", sell: "Leaning SELL", strong_sell: "Strong SELL", quiet: "Quiet" }[a.level]}</b></div></div>`;
+  if (!v.model.available) html += `<div class="note">ℹ️ ${esc(v.model.reason)}</div>`;
+  v.notes.forEach((n) => (html += `<div class="note">${esc(n)}</div>`));
+  html += `<details class="votes"><summary>See all ${c.total} votes</summary>`;
+  Object.entries(v.families).forEach(([fam, label]) => {
+    const rows = v.votes.filter((x) => x.family === fam).sort((x, y) => Math.abs(y.vote) - Math.abs(x.vote));
+    html += `<h4 style="text-align:left;margin:12px 0 2px">${esc(label)}</h4><div class="votes-grid">` + rows.map((x) =>
+      `<div class="vote-row" title="${esc(x.kid)}"><span class="vote-pill v${x.vote}">${x.vote === 1 ? "BUY" : x.vote === -1 ? "SELL" : "—"}</span>
+       <span>${esc(x.name)}</span>${x.hit_rate != null ? `<span class="hr">won ${Math.round(x.hit_rate * 100)}%</span>` : ""}</div>`).join("") + `</div>`;
+  });
+  html += `<p class="small muted" style="text-align:left">"won X%" = how often this strategy's signals went the right way on this market, 2015–2024 (before fees). 2025 onward is kept aside as the final exam.</p></details>`;
+  html += `<div class="small muted">Last candle ${ago(new Date(new Date(v.time).getTime()).toISOString())} · updates every 30 s</div>`;
+  body.innerHTML = html;
+}
+
 async function loadSuggestion() {
+  loadVerdict();
   const m = SETTINGS.market, tf = SETTINGS.timeframe, st = SETTINGS.strategy;
   try {
     const s = await api(`/api/suggest?market=${m}&timeframe=${tf}&strategy=${st}`);
@@ -377,7 +447,7 @@ $("#journal-period").addEventListener("change", loadJournal);
 function setupBacktest() {
   fillSelect($("#b-market"), marketItems(), SETTINGS.market);
   fillSelect($("#b-tf"), META.timeframes.map((t) => ({ code: t.code, label: t.label })), SETTINGS.timeframe);
-  fillSelect($("#b-strategy"), META.strategies, SETTINGS.strategy);
+  fillStrategies($("#b-strategy"), SETTINGS.strategy);
   ["#b-market", "#b-tf"].forEach((s) => $(s).addEventListener("change", updateDays));
   $("#b-days").addEventListener("input", updateDays);
   $("#b-run").addEventListener("click", runBacktest);

@@ -134,3 +134,35 @@ footer { text-align: center; margin-top: 20px; }
 .settings label.inline { flex-direction: row; align-items: center; gap: 8px; flex-wrap: wrap; color: var(--text); }
 .broker-ok { color: var(--buy); font-weight: 700; } .broker-bad { color: var(--sell); font-weight: 700; }
 code { background: var(--bg); padding: 1px 5px; border-radius: 6px; }
+
+/* ───── 🔮 verdict ───── */
+.verdict { text-align: center; transition: background .5s, box-shadow .5s, border-color .5s; }
+.verdict-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 6px; text-align: left; }
+.reveal-btn { font-size: 1.25rem; font-weight: 800; padding: 16px 28px; border-radius: 16px; border: 0; cursor: pointer;
+  color: #fff; background: linear-gradient(135deg, #7b5cff, #2f6fed); box-shadow: 0 6px 20px rgba(47,111,237,.35); margin: 10px 0; }
+.reveal-btn:hover { transform: translateY(-1px); }
+.verdict-word { font-size: 2.4rem; font-weight: 900; margin: 6px 0 2px; animation: pop .45s ease-out; }
+@keyframes pop { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.verdict.c-green { background: var(--buy-soft); border-color: var(--buy); }
+.verdict.c-red { background: var(--sell-soft); border-color: var(--sell); }
+.verdict.c-yellow { background: var(--warn-soft); border-color: var(--warn); }
+.verdict.c-grey { background: var(--card); }
+.verdict.c-glow-green { background: var(--buy-soft); border-color: var(--buy); animation: glowG 1.6s ease-in-out infinite; }
+.verdict.c-glow-red { background: var(--sell-soft); border-color: var(--sell); animation: glowR 1.6s ease-in-out infinite; }
+@keyframes glowG { 0%,100% { box-shadow: 0 0 6px rgba(18,161,80,.35); } 50% { box-shadow: 0 0 30px rgba(18,161,80,.85); } }
+@keyframes glowR { 0%,100% { box-shadow: 0 0 6px rgba(224,56,62,.35); } 50% { box-shadow: 0 0 30px rgba(224,56,62,.85); } }
+@media (prefers-reduced-motion: reduce) { .verdict, .verdict-word { animation: none !important; } }
+.word-BUY { color: var(--buy); } .word-SELL { color: var(--sell); } .word-WAIT { color: var(--wait); }
+.vote-bar { display: flex; height: 28px; border-radius: 999px; overflow: hidden; max-width: 520px; margin: 10px auto 4px;
+  font-size: .78rem; font-weight: 700; color: #fff; background: var(--line); }
+.vote-bar div { display: flex; align-items: center; justify-content: center; white-space: nowrap; overflow: hidden; }
+.vote-bar .vb { background: var(--buy); } .vote-bar .vn { background: var(--wait); } .vote-bar .vs { background: var(--sell); }
+.verdict-stats { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin: 8px 0; }
+.verdict-stats .stat { min-width: 150px; }
+.verdict .note { text-align: left; background: var(--card); border-radius: 12px; padding: 8px 12px; margin: 8px auto; max-width: 620px; font-size: .92rem; }
+.votes-grid { text-align: left; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 6px; margin-top: 8px; }
+.vote-row { display: flex; gap: 8px; align-items: center; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 6px 8px; font-size: .86rem; }
+.vote-pill { font-weight: 800; border-radius: 8px; padding: 2px 7px; font-size: .75rem; min-width: 46px; text-align: center; }
+.vote-pill.v1 { background: var(--buy); color: #fff; } .vote-pill.v-1 { background: var(--sell); color: #fff; } .vote-pill.v0 { background: var(--line); color: var(--muted); }
+.vote-row .hr { margin-left: auto; color: var(--muted); font-size: .78rem; white-space: nowrap; }
+details.votes summary { cursor: pointer; margin-top: 8px; font-weight: 600; }

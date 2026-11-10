@@ -87,3 +87,25 @@ def test_one_failing_source_does_not_stop_the_rest(monkeypatch):
     monkeypatch.setattr(download, "download_news", lambda *a: ran.append("news"))
     assert download.main([]) == 0
     assert ran == ["crypto", "mood", "news"]
+
+
+def test_dukascopy_rate_limit_waits_then_continues(monkeypatch, tmp_path):
+    from research import download
+    from research.sources import dukascopy as duka
+    monkeypatch.setattr(store, "RAW", tmp_path / "raw")
+    monkeypatch.setattr(store, "PRICES", tmp_path / "prices")
+    monkeypatch.setattr(download.time, "sleep", lambda s: None)
+    monkeypatch.setattr(download, "months", lambda first, last: [pd.Timestamp("2016-04-01", tz="UTC")])
+    calls = {"n": 0}
+
+    def flaky(sym, m, session):
+        calls["n"] += 1
+        if calls["n"] < 3:
+            raise duka.DukascopyBlocked("connection closed (ConnectTimeout)")
+        idx = pd.date_range(m, periods=3, freq="5min")
+        return pd.DataFrame({"open": 1.0, "high": 1.1, "low": 0.9, "close": 1.0, "volume": 1.0,
+                             "source": "dukascopy"}, index=idx)
+    monkeypatch.setattr(duka, "month", flaky)
+    download.download_forex(["GOLD"], "2016-04", None)
+    assert calls["n"] == 3
+    assert store.raw_path("GOLD", "2016-04").exists()

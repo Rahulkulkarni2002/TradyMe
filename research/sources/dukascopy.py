@@ -72,7 +72,7 @@ def month(sym: str, start: pd.Timestamp, session: requests.Session | None = None
         if d.weekday() == 5:                                 # Saturday: always closed
             continue
         parts.append(day(sym, d, s))
-        time.sleep(0.3)                                      # be gentle with their servers
+        time.sleep(0.6)                                      # be gentle: Dukascopy limits request speed
     parts = [p for p in parts if len(p)]
     if not parts:
         return pd.DataFrame(columns=COLS + ["source"])

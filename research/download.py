@@ -79,11 +79,19 @@ def download_forex(codes, start: str, session) -> None:
             path = store.raw_path(code, m.strftime("%Y-%m"))
             if _done(path, m):
                 continue
-            try:
-                df = dukascopy.month(sym, m, session)
-            except dukascopy.DukascopyBlocked as e:
-                say(f"   ❌ Dukascopy isn't answering ({e}). Skipping gold & forex for now — "
-                    "everything else continues. Finished months are kept.")
+            df = None
+            for wait in (0, 120, 300, 600):          # Dukascopy limits speed: pause and try again
+                if wait:
+                    say(f"   ⏳ Dukascopy is resting us — waiting {wait // 60} min, then retrying {m:%Y-%m}…")
+                    time.sleep(wait)
+                try:
+                    df = dukascopy.month(sym, m, session)
+                    break
+                except dukascopy.DukascopyBlocked as e:
+                    last_err = e
+            if df is None:
+                say(f"   ❌ Dukascopy isn't answering ({last_err}). Skipping gold & forex for now — "
+                    "everything else continues. Run again later: finished months are kept.")
                 return
             if len(df):
                 store.save(df, path)

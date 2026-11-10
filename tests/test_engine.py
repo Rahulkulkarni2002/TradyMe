@@ -45,7 +45,10 @@ def test_resample_values():
     assert list(out.volume) == [2, 2]
 
 
-@pytest.mark.parametrize("name", list(REGISTRY))
+CHECKED = [k for k in REGISTRY if not k.startswith("lib_")] + ["lib_bollinger_squeeze", "lib_supertrend", "lib_rsi2_connors"]
+
+
+@pytest.mark.parametrize("name", CHECKED)
 def test_no_lookahead(btc15, name):
     """A signal at bar i must not change when future candles are added."""
     strat = make_strategy(name)
@@ -120,3 +123,14 @@ def test_markets_catalog_consistent():
         assert m.leverage >= 1
         if m.kind == "crypto":
             assert m.leverage == 1 and not m.allow_short
+
+
+def test_library_votes_never_peek(btc15):
+    """All 46 library strategies at once: votes at a candle must not change when later candles are removed."""
+    from engine.strategies.library import INFO, build_votes
+    full = build_votes(btc15)
+    assert set(full.columns) == set(INFO)
+    assert full.isin([-1, 0, 1]).all().all()
+    cut = build_votes(btc15.iloc[:-300])
+    tail = cut.index[-200:]
+    assert (cut.loc[tail] == full.loc[tail]).all().all()

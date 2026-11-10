@@ -11,7 +11,7 @@ import pandas as pd
 from engine.data.base import resample
 from engine.features import indicators as ta
 
-BARS_PER_DAY = {"5m": 288, "15m": 96, "30m": 48, "1h": 24}
+BARS_PER_DAY = {"5m": 288, "10m": 144, "15m": 96, "30m": 48, "1h": 24, "3h": 8}
 
 
 def candles(df5: pd.DataFrame, timeframe: str) -> pd.DataFrame:

@@ -79,3 +79,23 @@ def test_backtest_endpoint(client):
     c, _ = client
     r = c.post("/api/backtest", json={"market": "BTC", "timeframe": "1h", "strategy": "ema_rsi", "days": 120}).json()
     assert len(r["exams"]) == 5 and r["plain"] and r["equity"]
+
+
+def test_verdict_endpoint(client):
+    c, _ = client
+    for tf in ("1h", "5m"):
+        v = c.get("/api/verdict", params={"market": "BTC", "timeframe": tf}).json()
+        assert v["counts"]["total"] == 46 and len(v["votes"]) == 46
+        assert v["verdict"]["action"] in ("BUY", "SELL", "WAIT")
+        assert v["verdict"]["colour"] in ("glow-green", "green", "yellow", "grey", "red", "glow-red")
+    assert c.get("/api/verdict", params={"market": "BTC", "timeframe": "1h"}).json()["model"]["available"]
+    gold = c.get("/api/verdict", params={"market": "GOLD", "timeframe": "1h"}).json()
+    assert gold["model"]["available"] is False and "reason" in gold["model"]
+
+
+def test_library_strategy_selectable(client):
+    c, _ = client
+    codes = {s["code"] for s in c.get("/api/meta").json()["strategies"]}
+    assert "lib_bollinger_squeeze" in codes and len(codes) == 48
+    r = c.post("/api/backtest", json={"market": "BTC", "timeframe": "1h", "strategy": "lib_bollinger_squeeze", "days": 120})
+    assert r.status_code == 200 and len(r.json()["exams"]) == 5

@@ -25,16 +25,21 @@ from engine.strategies import REGISTRY, make_strategy
 
 from . import backtest_service
 from . import broker as broker_mod
+from . import verdict as verdict_mod
 from .account import Account, TradeBlocked
 from .db import DB
 
 log = logging.getLogger("tradyme")
 WEB = Path(__file__).resolve().parent.parent / "web"
 
+from engine.strategies.library import FAMILIES as _FAM, INFO as _LIB  # noqa: E402
+
 STRATEGY_INFO = {
     "ema_rsi": {"label": "🏄 Trend Rider", "kid": "Waits for the price to start a new wave in the direction of the big trend, then rides it."},
     "bb_reversion": {"label": "🏀 Bounce Trader", "kid": "When the price stretches too far from normal, it bets on it bouncing back to the middle."},
 }
+STRATEGY_INFO.update({f"lib_{k}": {"label": f"{_FAM[f].split()[0]} {n}", "kid": kid, "family": f}
+                      for k, (n, f, kid) in _LIB.items()})
 
 db = DB()
 account = Account(db)
@@ -131,6 +136,7 @@ def meta():
                     for m in MARKETS.values()],
         "timeframes": [{"code": t, "label": TIMEFRAME_LABELS[t]} for t in TIMEFRAMES],
         "strategies": [{"code": k, **STRATEGY_INFO.get(k, {"label": k, "kid": ""})} for k in REGISTRY],
+        "models": verdict_mod.available_models(),
     }
 
 
@@ -185,6 +191,18 @@ def suggest(market: str, timeframe: str, strategy: str):
     except Exception as e:
         log.exception("suggest failed")
         raise HTTPException(502, f"Couldn't get prices for {market}: {e}")
+
+
+@app.get("/api/verdict")
+def verdict(market: str, timeframe: str):
+    """🔮 All strategies + AI model → one answer, with a colour."""
+    try:
+        return verdict_mod.verdict(get_market(market), timeframe)
+    except KeyError as e:
+        raise HTTPException(404, str(e))
+    except Exception as e:
+        log.exception("verdict failed")
+        raise HTTPException(502, f"Couldn't build the verdict for {market}: {e}")
 
 
 @app.get("/api/watchlist")
