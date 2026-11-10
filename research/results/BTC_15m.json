@@ -1,0 +1,427 @@
+{
+ "market": "BTC",
+ "timeframe": "15m",
+ "horizon_candles": 8,
+ "exams": [
+  2024
+ ],
+ "candles": 414706,
+ "features": 40,
+ "interactions": 12,
+ "winner": "Neural network",
+ "summary": [
+  {
+   "model": "Neural network",
+   "accuracy": 0.5176916735366859,
+   "auc": 0.5271957188465389,
+   "auc_std": NaN,
+   "log_loss": 0.7148795825674099,
+   "calibration_error": 0.08219508930885094,
+   "trades_per_year": 4102.0,
+   "win_rate": 0.5192588980984886,
+   "profit_no_fees": 69.02221307448775,
+   "profit_low_fees": -751.3777869255123,
+   "profit_alpaca": -1981.9777869255124,
+   "exams_passed_low_fees": 0
+  },
+  {
+   "model": "Neural network + interactions",
+   "accuracy": 0.5101401483924155,
+   "auc": 0.5202073970787287,
+   "auc_std": NaN,
+   "log_loss": 0.7082028925905348,
+   "calibration_error": 0.07339434517799538,
+   "trades_per_year": 3994.0,
+   "win_rate": 0.5112669003505258,
+   "profit_no_fees": 31.62832835841548,
+   "profit_low_fees": -767.1716716415846,
+   "profit_alpaca": -1965.3716716415847,
+   "exams_passed_low_fees": 0
+  },
+  {
+   "model": "Gradient boosting + market-mood clusters",
+   "accuracy": 0.5095136026380874,
+   "auc": 0.5187384238963724,
+   "auc_std": NaN,
+   "log_loss": 0.6943849787805068,
+   "calibration_error": 0.025050375892834126,
+   "trades_per_year": 2598.0,
+   "win_rate": 0.5207852193995381,
+   "profit_no_fees": 55.621981750246064,
+   "profit_low_fees": -463.97801824975386,
+   "profit_alpaca": -1243.378018249754,
+   "exams_passed_low_fees": 0
+  },
+  {
+   "model": "Random forest",
+   "accuracy": 0.5114591920857379,
+   "auc": 0.5185809128979403,
+   "auc_std": NaN,
+   "log_loss": 0.6941463554727916,
+   "calibration_error": 0.019696623781618433,
+   "trades_per_year": 2589.0,
+   "win_rate": 0.5125531093086134,
+   "profit_no_fees": 11.39982978036338,
+   "profit_low_fees": -506.4001702196366,
+   "profit_alpaca": -1283.1001702196368,
+   "exams_passed_low_fees": 0
+  },
+  {
+   "model": "Gradient boosting + interactions",
+   "accuracy": 0.51040395713108,
+   "auc": 0.5174852649661481,
+   "auc_std": NaN,
+   "log_loss": 0.6938886504951352,
+   "calibration_error": 0.017710391886834813,
+   "trades_per_year": 1976.0,
+   "win_rate": 0.5247975708502024,
+   "profit_no_fees": 45.88643622163933,
+   "profit_low_fees": -349.3135637783607,
+   "profit_alpaca": -942.1135637783607,
+   "exams_passed_low_fees": 0
+  },
+  {
+   "model": "Random forest + interactions",
+   "accuracy": 0.5090849134377576,
+   "auc": 0.5158036180083214,
+   "auc_std": NaN,
+   "log_loss": 0.6943588304699436,
+   "calibration_error": 0.02234948868007351,
+   "trades_per_year": 2630.0,
+   "win_rate": 0.5300380228136882,
+   "profit_no_fees": 49.05252278064444,
+   "profit_low_fees": -476.9474772193556,
+   "profit_alpaca": -1265.9474772193555,
+   "exams_passed_low_fees": 0
+  },
+  {
+   "model": "Gradient boosting",
+   "accuracy": 0.5080956306677659,
+   "auc": 0.5155902047854375,
+   "auc_std": NaN,
+   "log_loss": 0.6939450773851469,
+   "calibration_error": 0.01901974581159853,
+   "trades_per_year": 1762.0,
+   "win_rate": 0.5198637911464246,
+   "profit_no_fees": 30.533364171127232,
+   "profit_low_fees": -321.86663582887275,
+   "profit_alpaca": -850.4666358288727,
+   "exams_passed_low_fees": 0
+  },
+  {
+   "model": "Team (average of 3 best kinds)",
+   "accuracy": 0.5108985985160759,
+   "auc": 0.5154317020575334,
+   "auc_std": NaN,
+   "log_loss": 0.6950711336885422,
+   "calibration_error": 0.025320520549380193,
+   "trades_per_year": 3099.0,
+   "win_rate": 0.5208131655372701,
+   "profit_no_fees": 42.175466105175005,
+   "profit_low_fees": -577.624533894825,
+   "profit_alpaca": -1507.324533894825,
+   "exams_passed_low_fees": 0
+  },
+  {
+   "model": "Logistic + interactions",
+   "accuracy": 0.5085243198680957,
+   "auc": 0.5115577066109809,
+   "auc_std": NaN,
+   "log_loss": 0.6999356966576487,
+   "calibration_error": 0.0464771190050263,
+   "trades_per_year": 3861.0,
+   "win_rate": 0.5167055167055167,
+   "profit_no_fees": 35.928624206575364,
+   "profit_low_fees": -736.2713757934247,
+   "profit_alpaca": -1894.5713757934247,
+   "exams_passed_low_fees": 0
+  },
+  {
+   "model": "Logistic regression",
+   "accuracy": 0.5094476504534212,
+   "auc": 0.5102265533774073,
+   "auc_std": NaN,
+   "log_loss": 0.698760599465694,
+   "calibration_error": 0.0409730665031465,
+   "trades_per_year": 3778.0,
+   "win_rate": 0.5005293806246691,
+   "profit_no_fees": -5.5798730044851546,
+   "profit_low_fees": -761.1798730044851,
+   "profit_alpaca": -1894.5798730044849,
+   "exams_passed_low_fees": 0
+  },
+  {
+   "model": "Always 'up' (baseline)",
+   "accuracy": 0.49998351195383345,
+   "auc": 0.5,
+   "auc_std": NaN,
+   "log_loss": 0.6939702144684889,
+   "calibration_error": 0.020277560307238762,
+   "trades_per_year": 0.0,
+   "win_rate": NaN,
+   "profit_no_fees": 0.0,
+   "profit_low_fees": 0.0,
+   "profit_alpaca": 0.0,
+   "exams_passed_low_fees": 0
+  },
+  {
+   "model": "Coin flip (baseline)",
+   "accuracy": 0.5000164880461665,
+   "auc": 0.5,
+   "auc_std": NaN,
+   "log_loss": 0.6931471805599454,
+   "calibration_error": 1.648804616649624e-05,
+   "trades_per_year": 0.0,
+   "win_rate": NaN,
+   "profit_no_fees": 0.0,
+   "profit_low_fees": 0.0,
+   "profit_alpaca": 0.0,
+   "exams_passed_low_fees": 0
+  }
+ ],
+ "per_exam": [
+  {
+   "year": 2024,
+   "model": "Coin flip (baseline)",
+   "accuracy": 0.5000164880461665,
+   "auc": 0.5,
+   "log_loss": 0.6931471805599454,
+   "brier": 0.25,
+   "calibration_error": 1.648804616649624e-05,
+   "sure_share": 0.0,
+   "trades": 0,
+   "win_rate": null,
+   "no fees": 0.0,
+   "low-fee exchange (0.1%/side)": 0.0,
+   "Alpaca (0.25%/side)": 0.0
+  },
+  {
+   "year": 2024,
+   "model": "Always 'up' (baseline)",
+   "accuracy": 0.49998351195383345,
+   "auc": 0.5,
+   "log_loss": 0.6939702144684889,
+   "brier": 0.25041117918015804,
+   "calibration_error": 0.020277560307238762,
+   "sure_share": 0.0,
+   "trades": 0,
+   "win_rate": null,
+   "no fees": 0.0,
+   "low-fee exchange (0.1%/side)": 0.0,
+   "Alpaca (0.25%/side)": 0.0
+  },
+  {
+   "year": 2024,
+   "model": "Logistic regression",
+   "accuracy": 0.5094476504534212,
+   "auc": 0.5102265533774073,
+   "log_loss": 0.698760599465694,
+   "brier": 0.2527443294821494,
+   "calibration_error": 0.0409730665031465,
+   "sure_share": 0.45338114754098363,
+   "trades": 3778,
+   "win_rate": 0.5005293806246691,
+   "no fees": -5.5798730044851546,
+   "low-fee exchange (0.1%/side)": -761.1798730044851,
+   "Alpaca (0.25%/side)": -1894.5798730044849
+  },
+  {
+   "year": 2024,
+   "model": "Logistic + interactions",
+   "accuracy": 0.5085243198680957,
+   "auc": 0.5115577066109809,
+   "log_loss": 0.6999356966576487,
+   "brier": 0.25330010292438193,
+   "calibration_error": 0.0464771190050263,
+   "sure_share": 0.490721766848816,
+   "trades": 3861,
+   "win_rate": 0.5167055167055167,
+   "no fees": 35.928624206575364,
+   "low-fee exchange (0.1%/side)": -736.2713757934247,
+   "Alpaca (0.25%/side)": -1894.5713757934247
+  },
+  {
+   "year": 2024,
+   "model": "Random forest",
+   "accuracy": 0.5114591920857379,
+   "auc": 0.5185809128979403,
+   "log_loss": 0.6941463554727916,
+   "brier": 0.2504905447283045,
+   "calibration_error": 0.019696623781618433,
+   "sure_share": 0.20258424408014572,
+   "trades": 2589,
+   "win_rate": 0.5125531093086134,
+   "no fees": 11.39982978036338,
+   "low-fee exchange (0.1%/side)": -506.4001702196366,
+   "Alpaca (0.25%/side)": -1283.1001702196368
+  },
+  {
+   "year": 2024,
+   "model": "Random forest + interactions",
+   "accuracy": 0.5090849134377576,
+   "auc": 0.5158036180083214,
+   "log_loss": 0.6943588304699436,
+   "brier": 0.2505966693718961,
+   "calibration_error": 0.02234948868007351,
+   "sure_share": 0.20420651183970856,
+   "trades": 2630,
+   "win_rate": 0.5300380228136882,
+   "no fees": 49.05252278064444,
+   "low-fee exchange (0.1%/side)": -476.9474772193556,
+   "Alpaca (0.25%/side)": -1265.9474772193555
+  },
+  {
+   "year": 2024,
+   "model": "Gradient boosting",
+   "accuracy": 0.5080956306677659,
+   "auc": 0.5155902047854375,
+   "log_loss": 0.6939450773851469,
+   "brier": 0.2503916328788026,
+   "calibration_error": 0.01901974581159853,
+   "sure_share": 0.13726662112932606,
+   "trades": 1762,
+   "win_rate": 0.5198637911464246,
+   "no fees": 30.533364171127232,
+   "low-fee exchange (0.1%/side)": -321.86663582887275,
+   "Alpaca (0.25%/side)": -850.4666358288727
+  },
+  {
+   "year": 2024,
+   "model": "Gradient boosting + interactions",
+   "accuracy": 0.51040395713108,
+   "auc": 0.5174852649661481,
+   "log_loss": 0.6938886504951352,
+   "brier": 0.2503621447559148,
+   "calibration_error": 0.017710391886834813,
+   "sure_share": 0.1502163023679417,
+   "trades": 1976,
+   "win_rate": 0.5247975708502024,
+   "no fees": 45.88643622163933,
+   "low-fee exchange (0.1%/side)": -349.3135637783607,
+   "Alpaca (0.25%/side)": -942.1135637783607
+  },
+  {
+   "year": 2024,
+   "model": "Gradient boosting + market-mood clusters",
+   "accuracy": 0.5095136026380874,
+   "auc": 0.5187384238963724,
+   "log_loss": 0.6943849787805068,
+   "brier": 0.2506001597688289,
+   "calibration_error": 0.025050375892834126,
+   "sure_share": 0.24080714936247724,
+   "trades": 2598,
+   "win_rate": 0.5207852193995381,
+   "no fees": 55.621981750246064,
+   "low-fee exchange (0.1%/side)": -463.97801824975386,
+   "Alpaca (0.25%/side)": -1243.378018249754
+  },
+  {
+   "year": 2024,
+   "model": "Neural network",
+   "accuracy": 0.5176916735366859,
+   "auc": 0.5271957188465389,
+   "log_loss": 0.7148795825674099,
+   "brier": 0.2595351282371203,
+   "calibration_error": 0.08219508930885094,
+   "sure_share": 0.690033014571949,
+   "trades": 4102,
+   "win_rate": 0.5192588980984886,
+   "no fees": 69.02221307448775,
+   "low-fee exchange (0.1%/side)": -751.3777869255123,
+   "Alpaca (0.25%/side)": -1981.9777869255124
+  },
+  {
+   "year": 2024,
+   "model": "Neural network + interactions",
+   "accuracy": 0.5101401483924155,
+   "auc": 0.5202073970787287,
+   "log_loss": 0.7082028925905348,
+   "brier": 0.25690859618411777,
+   "calibration_error": 0.07339434517799538,
+   "sure_share": 0.6288706739526412,
+   "trades": 3994,
+   "win_rate": 0.5112669003505258,
+   "no fees": 31.62832835841548,
+   "low-fee exchange (0.1%/side)": -767.1716716415846,
+   "Alpaca (0.25%/side)": -1965.3716716415847
+  },
+  {
+   "year": 2024,
+   "model": "Team (average of 3 best kinds)",
+   "accuracy": 0.5108985985160759,
+   "auc": 0.5154317020575334,
+   "log_loss": 0.6950711336885422,
+   "brier": 0.2509467904973574,
+   "calibration_error": 0.025320520549380193,
+   "sure_share": 0.27752163023679416,
+   "trades": 3099,
+   "win_rate": 0.5208131655372701,
+   "no fees": 42.175466105175005,
+   "low-fee exchange (0.1%/side)": -577.624533894825,
+   "Alpaca (0.25%/side)": -1507.324533894825
+  }
+ ],
+ "importance": [
+  [
+   "ret_96",
+   0.011557399615820437
+  ],
+  [
+   "slope_ema200",
+   0.0078024831025439445
+  ],
+  [
+   "bb_pos",
+   0.0075127464270109785
+  ],
+  [
+   "week_pos",
+   0.006874355051807039
+  ],
+  [
+   "slope_ema9",
+   0.006789986441287588
+  ],
+  [
+   "bb_width",
+   0.006311522084135472
+  ],
+  [
+   "slope_ema21",
+   0.0061992094964534354
+  ],
+  [
+   "slope_ema50",
+   0.005694397865593485
+  ],
+  [
+   "dist_day_high",
+   0.005691874474121191
+  ],
+  [
+   "weekend",
+   0.00548726976002852
+  ],
+  [
+   "dist_ema50",
+   0.0054714860630388955
+  ],
+  [
+   "vol_ratio",
+   0.004998318494591462
+  ],
+  [
+   "ret_8",
+   0.004882595828341237
+  ],
+  [
+   "weekday",
+   0.004803630675650705
+  ],
+  [
+   "rsi_14",
+   0.004755682904267459
+  ]
+ ],
+ "minutes": 2.5
+}

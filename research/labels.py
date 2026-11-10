@@ -23,6 +23,7 @@ def triple_barrier(df: pd.DataFrame, horizon: int, barrier: float = 1.0, day_tz:
 
     label = np.full(n, np.nan)
     outcome = np.full(n, np.nan)              # result in % of price if traded LONG at the close
+    ambiguous = np.zeros(n, dtype=bool)       # up AND down hit inside one candle → a loss either way
     done = np.zeros(n, dtype=bool)
     for k in range(1, horizon + 1):
         idx = np.arange(n) + k
@@ -32,7 +33,7 @@ def triple_barrier(df: pd.DataFrame, horizon: int, barrier: float = 1.0, day_tz:
         active = ~done & same_day
         up = active & (h[j] >= up_lvl)
         dn = active & (l[j] <= dn_lvl)
-        both = up & dn
+        ambiguous |= up & dn
         label[up & ~dn] = 1
         label[dn & ~up] = 0
         outcome[up & ~dn] = b[up & ~dn] / c[up & ~dn]
@@ -42,6 +43,6 @@ def triple_barrier(df: pd.DataFrame, horizon: int, barrier: float = 1.0, day_tz:
         last = active & ~(up | dn) & ((k == horizon) | ~(np.where(idx + 1 < n, days[np.minimum(idx + 1, n - 1)] == days, False)))
         outcome[last] = c[j][last] / c[last] - 1
         done |= last
-        del both
-    out = pd.DataFrame({"label": label, "outcome": outcome, "barrier_pct": b / c}, index=df.index)
+    out = pd.DataFrame({"label": label, "outcome": outcome, "ambiguous": ambiguous, "barrier_pct": b / c},
+                       index=df.index)
     return out
