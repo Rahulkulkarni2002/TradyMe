@@ -76,12 +76,32 @@ Download history (2015 → today), Mac plugged in: `caffeinate -i python downloa
 - Decided **Option B**: TradyMe predicts, I trade on **TradingView** later via a broker (OANDA for gold/forex).
   Alpaca not needed for now. Practice only.
 - Downloads: news now **daily** mood (3-month requests; GDELT rate-limits hourly); gold/forex continues slowly.
+- **Chart tools:** model arrows (next ~6 h or next 1/2/3/5 candles) with a click-for-details popup; "NOW" arrow
+  always on the newest candle; drawing tools (line/level/box/circle); 12 chart patterns + **patterns forming**
+  (before breakout); "Pattern arrows" with each pattern's 2015+ hit rate (most ≈ coin flip, e.g. falling wedge 49%).
+- **Trading:** "Your trade" panel (BUY/SELL any time, stop & target as prices, drag the lines); open trades drawn
+  on the chart with ✕ to close; SELL allowed in Paper for crypto (practice).
+- **🎯 Stop & targets:** the model's call drawn like a TradingView signal — Entry, Stop, TP1–3 boxes with how often
+  each was reached recently, green/red zones, and a "where price might land" cone.
+- **🏆 Best strategy finder** (Backtest tab): all 71 strategies ranked after fees. BTC 15m/1h: none profitable after
+  fees; ETH 3h "New York open momentum" ✅ (70% right, 5 of 8 years profitable).
+- **Futures data** (funding, open interest, long/short, taker flow; Binance archive since 2020): fair test →
+  helps BTC 1h (+1 pt, 2× confident calls) and BTC 15m a little, **hurts ETH** → used only for BTC, and only when
+  live futures data is reachable (Binance blocks it in the US → falls back to the normal model).
+- **Short-horizon models** (next 1/2/3/5 candles, BTC & ETH): 52–59% right when ≥65% sure; all lose after fees.
+- Mac: own `.venv` for TradyMe (Anaconda package clash); gold & forex history downloaded via OANDA (2015 → now);
+  `train_models.py` to train gold/forex models at home. Backtest showed Trend Rider on BTC 5m loses ~90%: fees > moves.
+- 📈 **Indicators menu** (EMAs, Bollinger, VWAP, Supertrend, Donchian, Volume, RSI, MACD, Stochastic, ATR) —
+  first version; **I'm not happy with it yet, we'll improve it later.**
 
 ## ⏭️ Next steps
 - [ ] History download finishes on my Mac
 - [x] Strategy library (46) → votes → combined model % → Strategy League
 - [x] Website: Reveal button, colour verdict, all votes
-- [ ] After news finishes: `python download_history.py --only forex` (gold/forex resume)
+- [x] Gold/forex history via OANDA
+- [ ] Finish news download (re-run until no skips), then `python train_models.py` on my Mac (gold & forex models)
+- [ ] Improve the Indicators menu (not good enough yet)
+- [ ] Futures data source that works in the US
 - [ ] Research: beat fees (bigger moves, higher confidence, low-fee venue), add news to the model, gold/forex models
 - [ ] Connect Alpaca paper keys
 - [ ] Telegram alerts + morning watchlist; daily news feed
