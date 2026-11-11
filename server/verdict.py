@@ -178,7 +178,9 @@ def model_markers(market: Market, timeframe: str, bars: int = 300, threshold: fl
     if not bundle:
         what = f"next-{horizon[1:]}-candle model" if short else "prediction model"
         return {"available": False, "markers": [],
-                "reason": f"No {what} for {market.name} on {timeframe} candles yet."}
+                "reason": f"No {what} for {market.name} on {timeframe} candles yet (looked in {MODELS}). "
+                          + ("10-minute candles use no model of their own — try 5 or 15 min. " if timeframe == "10m" else "")
+                          + (f"Train it with:  python train_models.py --markets {market.code}" if timeframe != "10m" else "")}
     df = get_candles(market, timeframe, bars=900)
     V = build_votes(df)
     A = agreement(V)
