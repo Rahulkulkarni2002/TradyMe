@@ -671,7 +671,7 @@ async function loadAnalog() {
       : "";
     box.innerHTML = `<div class="ab-row"><span class="vbear">Big fall ${b.VBEAR}%</span><span class="mbear">Fall ${b.MBEAR}%</span>
         <span class="bal">Flat ${b.BAL}%</span><span class="mbull">Rise ${b.MBULL}%</span><span class="vbull">Big rise ${b.VBULL}%</span></div>
-      <div class="small">🔮 ${a.analogs} look-alike moments since ${new Date(a.from).getFullYear()} · next ${a.horizon} candles ·
+      <div class="small">🔮 Forecast on the chart: ${a.analogs} look-alike moments since ${new Date(a.from).getFullYear()} · next ${a.horizon} candles ·
         middle path <b class="${a.median_move_pct >= 0 ? "pnl-pos" : "pnl-neg"}">${a.median_move_pct > 0 ? "+" : ""}${a.median_move_pct}%</b>
         · dark band = half the cases · light = 90% · dashed = pure chance</div>
       <div class="small muted">${skill}${sk.tests && sk.direction_right_pct < 53 ? " → <b>use it for HOW FAR price may move, not which way.</b>" : ""}</div>`;

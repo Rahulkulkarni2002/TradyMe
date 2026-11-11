@@ -348,8 +348,8 @@ footer { text-align: center; margin-top: 28px; }
 
 /* 🔮 look-alike forecast */
 #analog-toggle.on { background: #2f6bff; color: #fff; border-color: #2f6bff; }
-.analog-box { position: absolute; bottom: 34px; left: 8px; z-index: 5; max-width: 470px; background: color-mix(in srgb, var(--surface) 88%, transparent);
-  border: 1px solid var(--line); border-radius: 10px; padding: 6px 9px; font-size: .78rem; line-height: 1.45; pointer-events: none; }
+.analog-box { margin-top: 6px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px;
+  padding: 6px 10px; font-size: .78rem; line-height: 1.45; }
 .analog-box .ab-row { display: flex; gap: 10px; font-weight: 800; margin-bottom: 2px; flex-wrap: wrap; }
 .analog-box .vbear { color: #b4232f; } .analog-box .mbear { color: #e0525c; } .analog-box .bal { color: var(--muted); }
 .analog-box .mbull { color: #22a06b; } .analog-box .vbull { color: #0a7a4c; }
