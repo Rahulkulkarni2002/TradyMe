@@ -356,5 +356,28 @@ footer { text-align: center; margin-top: 28px; }
 
 /* ⛶ full-screen chart: the chart card covers the whole page */
 body.chart-max .chart-card { position: fixed; inset: 0; z-index: 40; margin: 0; border-radius: 0; overflow: auto; padding: 10px 14px; }
-body.chart-max .chart-card .chart-notes, body.chart-max .chart-card #plan-box { display: none; }
+
 #chart-max.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* ── side panel holds all chart controls; the chart starts at the top ── */
+.chart-panel { display: flex; flex-direction: column; gap: 10px; }
+.chart-panel .cp-fields { display: flex; flex-direction: column; gap: 10px; }
+.chart-panel .cp-fields .toolbar, .chart-panel .toolbar { all: unset; display: contents; }
+.chart-panel .field { width: 100%; }
+.chart-panel .field select { width: 100%; }
+.chart-panel .pills { flex-wrap: wrap; }
+.chart-panel .cp-group { border-top: 1px solid var(--line); padding-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+.chart-panel .cp-label { font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.chart-panel .cp-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.chart-panel .cp-row > * { flex: 1 1 140px; }
+.chart-panel .seg { width: 100%; }
+.chart-panel .seg button { flex: 1; }
+.chart-panel .draw-tools { flex-wrap: wrap; margin: 0; }
+.chart-panel .chart-notes { margin: 0; border-top: 1px solid var(--line); padding-top: 8px; }
+.chart-panel .plan-box, .chart-panel .analog-box { margin: 0; }
+.chart-card .card-head { margin-bottom: 6px; }
+/* full screen: chart on the left, the panel stays on the right */
+body.chart-max .chart-card { right: 380px; }
+body.chart-max .chart-panel { position: fixed; top: 0; right: 0; bottom: 0; width: 380px; z-index: 41; overflow: auto; border-radius: 0; margin: 0; }
+body.chart-max .chart-panel .chart-notes, body.chart-max .chart-panel #plan-box { display: revert; }
+@media (max-width: 900px) { .chart-panel { order: 0; } body.chart-max .chart-card { right: 0; } body.chart-max .chart-panel { display: none; } }

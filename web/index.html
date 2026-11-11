@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css?v=27">
+  <link rel="stylesheet" href="/static/style.css?v=28">
   <script src="/static/vendor/lightweight-charts.standalone.production.js"></script>
 </head>
 <body>
@@ -92,14 +92,58 @@
 
       <!-- ───────────── TRADE ───────────── -->
       <main id="tab-trade" class="tab">
-        <div class="toolbar">
-          <label class="field"><span>Market</span><select id="f-market"></select></label>
-          <div class="field"><span>Candle size <span class="q" data-tip="candle">?</span></span><div class="pills" id="f-tf"></div></div>
-          <label class="field"><span>Focus strategy <span class="q" data-tip="strategy">?</span></span><select id="f-strategy"></select></label>
-        </div>
 
         <div class="trade-grid">
           <div class="col-side">
+          <section class="card chart-panel" id="chart-panel">
+            <div class="cp-fields">
+          <label class="field"><span>Market</span><select id="f-market"></select></label>
+          <div class="field"><span>Candle size <span class="q" data-tip="candle">?</span></span><div class="pills" id="f-tf"></div></div>
+          <label class="field"><span>Focus strategy <span class="q" data-tip="strategy">?</span></span><select id="f-strategy"></select></label>
+            </div>
+            <div class="cp-group"><div class="cp-label">Arrows on the chart</div>
+                <div class="seg small-seg" id="arrow-src" title="Which arrows to show on the chart">
+                  <button data-v="model">Model arrows</button><button data-v="strategy">Strategy arrows</button><button data-v="pattern">Pattern arrows</button>
+                </div>
+              <div class="cp-row">
+                <select id="arrow-horizon" class="mini-select" title="What the model arrows predict">
+                  <option value="long">Model: next ~2–6 h</option><option value="n1">Model: next 1 candle</option><option value="n2">Model: next 2 candles</option><option value="n3">Model: next 3 candles</option><option value="n5">Model: next 5 candles</option>
+                </select>
+                <select id="arrow-sure" class="mini-select" title="Show model arrows when it is at least this sure">
+                  <option value="55">≥ 55% sure (more arrows)</option><option value="58">≥ 58% sure</option>
+                  <option value="62" selected>≥ 62% sure</option><option value="66">≥ 66% sure (fewer, surer)</option>
+                </select>
+              </div>
+            </div>
+            <div class="cp-group"><div class="cp-label">Forecast</div>
+              <div class="cp-row">
+                <button class="chart-theme" id="analog-toggle" title="Where price went after past moments that looked like now">🔮 Look-alike forecast</button>
+                <button class="chart-theme" id="plan-toggle" title="Show the model's stop-loss and targets on the chart">🎯 Stop &amp; targets</button>
+              </div>
+            </div>
+            <div class="cp-group"><div class="cp-label">Chart</div>
+              <div class="cp-row">
+                <select class="chart-theme" id="chart-theme" title="Chart background">
+                  <option value="lightgray">Light gray chart</option><option value="gray">Gray chart</option><option value="dark">Dark chart</option>
+                </select>
+              </div>
+            <div class="draw-tools" id="draw-tools" title="Draw on the chart: pick a tool, then click-and-drag. Pick it again (or press Esc) to go back to scrolling.">
+              <div class="ind-wrap"><button id="ind-btn" class="ind-btn" title="Add indicators to the chart (pick as many as you like)">📈 Indicators</button>
+                <div id="ind-menu" class="ind-menu hidden"></div></div>
+              <button id="draw-patterns" title="Show / hide chart patterns found automatically (double top, head & shoulders, wedges, flags, pennants, triangles)">📐 Patterns</button>
+              <span class="small muted" style="margin-left:6px">Draw:</span>
+              <button data-tool="line" title="Trend line: drag from one point to another">╱ Line</button>
+              <button data-tool="hline" title="Horizontal line: click a price">― Level</button>
+              <button data-tool="rect" title="Rectangle: drag a box">▭ Box</button>
+              <button data-tool="circle" title="Circle: drag around candles">◯ Circle</button>
+              <button id="draw-undo" title="Remove the last drawing">↶ Undo</button>
+              <button id="draw-clear" title="Remove all drawings">✕ Clear</button>
+            </div>
+            </div>
+            <p class="small muted chart-notes"><span id="chart-note"></span> <span id="chart-live" class="live-dot"></span> <span id="preview-note"></span> <span id="arrow-note"></span> <b id="arrow-score"></b></p>
+            <div id="plan-box" class="plan-box hidden"></div>
+            <div id="analog-box" class="analog-box hidden"></div>
+          </section>
           <section class="card verdict" id="verdict">
             <div class="card-head">
               <h3><svg class="ic"><use href="#i-spark"/></svg>All strategies + prediction model <span class="q" data-tip="verdict">?</span></h3>
@@ -137,23 +181,8 @@
           <div class="col-main">
           <section class="card chart-card">
             <div class="card-head">
-              <h3><svg class="ic"><use href="#i-chart"/></svg>Chart</h3>
+              <h3><svg class="ic"><use href="#i-chart"/></svg>Chart <span class="muted small" id="chart-title-sub"></span></h3>
               <div class="chart-tools">
-                <div class="seg small-seg" id="arrow-src" title="Which arrows to show on the chart">
-                  <button data-v="model">Model arrows</button><button data-v="strategy">Strategy arrows</button><button data-v="pattern">Pattern arrows</button>
-                </div>
-                <button class="chart-theme" id="analog-toggle" title="Where price went after past moments that looked like now">🔮 Look-alike forecast</button>
-                <button class="chart-theme" id="plan-toggle" title="Show the model's stop-loss and targets on the chart">🎯 Stop &amp; targets</button>
-                <select id="arrow-horizon" class="mini-select" title="What the model arrows predict">
-                  <option value="long">Model: next ~2–6 h</option><option value="n1">Model: next 1 candle</option><option value="n2">Model: next 2 candles</option><option value="n3">Model: next 3 candles</option><option value="n5">Model: next 5 candles</option>
-                </select>
-                <select id="arrow-sure" class="mini-select" title="Show model arrows when it is at least this sure">
-                  <option value="55">≥ 55% sure (more arrows)</option><option value="58">≥ 58% sure</option>
-                  <option value="62" selected>≥ 62% sure</option><option value="66">≥ 66% sure (fewer, surer)</option>
-                </select>
-                <select class="chart-theme" id="chart-theme" title="Chart background">
-                  <option value="lightgray">Light gray chart</option><option value="gray">Gray chart</option><option value="dark">Dark chart</option>
-                </select>
                 <button class="chart-theme" id="chart-max" title="Full-screen chart (Esc to leave)">⛶ Full screen</button>
                 <div class="zoom" role="group" aria-label="Zoom">
                   <button id="zoom-out" title="Zoom out (see more candles)">−</button>
@@ -162,22 +191,7 @@
                 </div>
               </div>
             </div>
-            <div class="draw-tools" id="draw-tools" title="Draw on the chart: pick a tool, then click-and-drag. Pick it again (or press Esc) to go back to scrolling.">
-              <div class="ind-wrap"><button id="ind-btn" class="ind-btn" title="Add indicators to the chart (pick as many as you like)">📈 Indicators</button>
-                <div id="ind-menu" class="ind-menu hidden"></div></div>
-              <button id="draw-patterns" title="Show / hide chart patterns found automatically (double top, head & shoulders, wedges, flags, pennants, triangles)">📐 Patterns</button>
-              <span class="small muted" style="margin-left:6px">Draw:</span>
-              <button data-tool="line" title="Trend line: drag from one point to another">╱ Line</button>
-              <button data-tool="hline" title="Horizontal line: click a price">― Level</button>
-              <button data-tool="rect" title="Rectangle: drag a box">▭ Box</button>
-              <button data-tool="circle" title="Circle: drag around candles">◯ Circle</button>
-              <button id="draw-undo" title="Remove the last drawing">↶ Undo</button>
-              <button id="draw-clear" title="Remove all drawings">✕ Clear</button>
-            </div>
-            <p class="small muted chart-notes"><span id="chart-note"></span> <span id="chart-live" class="live-dot"></span> <span id="preview-note"></span> <span id="arrow-note"></span> <b id="arrow-score"></b></p>
-            <div id="plan-box" class="plan-box hidden"></div>
             <div id="chart" class="chart"><div id="arrow-pop" class="arrow-pop hidden"></div></div>
-            <div id="analog-box" class="analog-box hidden"></div>
             <div id="ind-panes" class="ind-panes"></div>
           </section>
 
@@ -325,7 +339,7 @@
 
   <div id="tip" class="tip hidden"></div>
   <div id="toast" class="toast hidden"></div>
-  <script src="/static/app.js?v=32"></script>
+  <script src="/static/app.js?v=33"></script>
   <script src="/static/draw.js?v=11"></script>
   <script src="/static/indicators.js?v=2"></script>
 </body>

@@ -850,8 +850,9 @@ function sizeChart() {
   if (!el || !chart) return;
   const panes = $$("#ind-panes .ind-pane").length;
   const full = document.body.classList.contains("chart-max");
-  const reserve = full ? 150 : 120;                          // the chart's own buttons above it when scrolled to
-  const h = Math.max(380, window.innerHeight - reserve - panes * 128);
+  // fill the window below where the chart starts (page scrolled to the top), leaving room for indicator panels
+  const top = full ? 60 : el.getBoundingClientRect().top + window.scrollY;
+  const h = Math.max(380, window.innerHeight - top - panes * 128 - 24);
   el.style.height = h + "px";
   chart.applyOptions({ width: el.clientWidth, height: h });
   if (window.TradyInd?.resize) window.TradyInd.resize();
@@ -866,6 +867,8 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape" && document
 
 function renderChart(s) {
   if (!window.LightweightCharts) return;
+  const sub = $("#chart-title-sub");
+  if (sub) sub.textContent = `· ${market(s.market).emoji} ${market(s.market).name} · ${META.timeframes.find((t) => t.code === s.timeframe)?.label || s.timeframe}`;
   const c = chartColors();
   if (!chart) {
     chart = makeChart($("#chart"), 380);
