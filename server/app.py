@@ -226,10 +226,10 @@ def live_candle(market: str, timeframe: str):
 
 
 @app.get("/api/model-markers")
-def model_markers(market: str, timeframe: str):
-    """Prediction-model arrows for the chart (where the model became ≥ 62% sure)."""
+def model_markers(market: str, timeframe: str, sure: int = 62):
+    """Prediction-model arrows for the chart (where the model became ≥ `sure`% sure)."""
     try:
-        return verdict_mod.model_markers(get_market(market), timeframe)
+        return verdict_mod.model_markers(get_market(market), timeframe, threshold=min(max(sure, 52), 80) / 100)
     except requests.RequestException:
         return {"available": False, "markers": [], "reason": "Price source slow — try again shortly."}
 

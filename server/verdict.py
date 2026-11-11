@@ -18,7 +18,7 @@ from research.strategy_league import agreement, model_inputs
 
 MODELS = ROOT / "research" / "models"
 RESULTS = ROOT / "research" / "results"
-TAGS = ["_h6", ""]                     # preferred model variants per market/timeframe
+TAGS = ["_h6", "_h2", ""]                     # preferred model variants per market/timeframe
 HORIZON_HOURS = {("15m", ""): 2, ("1h", "_h6"): 6}
 _cache: dict = {}
 

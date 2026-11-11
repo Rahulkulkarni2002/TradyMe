@@ -139,3 +139,20 @@ def test_gdelt_quarter_parses_daily_values(monkeypatch):
     assert list(df.columns) == ["news_crypto_tone", "news_crypto_volume"]
     assert len(df) == 2 and df["news_crypto_tone"].iloc[0] == -1.5
     assert s.calls.count("timelinetone") == 2          # retried after the 429
+
+
+def test_oanda_history_month_pages_through_5000_candle_limit():
+    from research.sources import oanda_hist
+
+    class FakeFeed:
+        calls = 0
+        def _candles(self, inst, tf, **p):
+            self.calls += 1
+            start = pd.Timestamp(p["from"])
+            idx = pd.date_range(start, periods=p["count"], freq="5min")
+            return pd.DataFrame({"open": 1.0, "high": 1.1, "low": 0.9, "close": 1.0, "volume": 1.0}, index=idx)
+
+    f = FakeFeed()
+    df = oanda_hist.month("XAU_USD", pd.Timestamp("2020-01-01", tz="UTC"), f)
+    assert len(df) == 31 * 288 and df.index.max() < pd.Timestamp("2020-02-01", tz="UTC")
+    assert f.calls == 2 and (df["source"] == "oanda").all()      # 8,928 candles → 2 requests of ≤ 5000

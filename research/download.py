@@ -16,7 +16,7 @@ import pandas as pd
 import requests
 
 from . import store
-from .sources import binance_vision, bitstamp, dukascopy, sentiment
+from .sources import binance_vision, bitstamp, dukascopy, oanda_hist, sentiment
 
 START = "2015-01"
 
@@ -71,7 +71,13 @@ def download_crypto(codes, start: str, session) -> None:
         say(f"   ✅ {code}: {len(df):,} candles, {df.index[0]:%d %b %Y} → {df.index[-1]:%d %b %Y}" if len(df) else f"   ⚠️ {code}: nothing downloaded")
 
 
+OANDA_SYMBOLS = {"GOLD": "XAU_USD", "EURUSD": "EUR_USD", "GBPUSD": "GBP_USD", "USDJPY": "USD_JPY"}
+
+
 def download_forex(codes, start: str, session) -> None:
+    from engine.data import oanda_stream
+    if oanda_stream.available():                       # OANDA token in .env → fast, no blocking
+        return download_forex_oanda(codes, start)
     for code in codes:
         sym = FOREX[code]
         say(f"\n💱 {code} ({sym}, Dukascopy)")
@@ -93,6 +99,29 @@ def download_forex(codes, start: str, session) -> None:
                 say(f"   ❌ Dukascopy isn't answering ({last_err}). Skipping gold & forex for now — "
                     "everything else continues. Run again later: finished months are kept.")
                 return
+            if len(df):
+                store.save(df, path)
+                say(f"   {m:%Y-%m}  {len(df):>6} candles")
+        df = store.combine(code)
+        if len(df):
+            say(f"   ✅ {code}: {len(df):,} candles, {df.index[0]:%d %b %Y} → {df.index[-1]:%d %b %Y}")
+
+
+def download_forex_oanda(codes, start: str) -> None:
+    from engine.data.oanda import OandaFeed
+    feed = OandaFeed()
+    for code in codes:
+        inst = OANDA_SYMBOLS[code]
+        say(f"\n💱 {code} ({inst}, OANDA)")
+        for m in months(start, None):
+            path = store.raw_path(code, m.strftime("%Y-%m"))
+            if _done(path, m) and pd.read_parquet(path)["source"].iloc[0] == "oanda":
+                continue
+            try:
+                df = oanda_hist.month(inst, m, feed)
+            except Exception as e:                    # one bad month must not stop the rest
+                say(f"   ⚠️ {m:%Y-%m}: {type(e).__name__} — will retry next run")
+                continue
             if len(df):
                 store.save(df, path)
                 say(f"   {m:%Y-%m}  {len(df):>6} candles")

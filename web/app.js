@@ -430,10 +430,16 @@ function makeChart(el, height) {
 let previewSignal = null;
 let arrowSource = (() => { try { return localStorage.getItem("arrowSource") || "model"; } catch { return "model"; } })();
 let modelMarkers = null;                                   // {available, markers, reason}
+let arrowSure = (() => { try { return +localStorage.getItem("arrowSure") || 62; } catch { return 62; } })();
+$("#arrow-sure").value = String(arrowSure);
+$("#arrow-sure").addEventListener("change", (e) => {
+  arrowSure = +e.target.value; try { localStorage.setItem("arrowSure", arrowSure); } catch {}
+  loadModelMarkers();
+});
 async function loadModelMarkers() {
   const m = SETTINGS.market, tf = SETTINGS.timeframe;
   try {
-    const r = await api(`/api/model-markers?market=${m}&timeframe=${tf}`);
+    const r = await api(`/api/model-markers?market=${m}&timeframe=${tf}&sure=${arrowSure}`);
     if (m !== SETTINGS.market || tf !== SETTINGS.timeframe) return;
     modelMarkers = r; applyMarkers();
   } catch { modelMarkers = null; }
