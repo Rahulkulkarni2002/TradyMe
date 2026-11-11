@@ -139,3 +139,26 @@ def test_preview_signal_uses_the_forming_candle(client, monkeypatch):
     assert r["time"] == t and r["action"] in ("BUY", "SELL", "WAIT")
     monkeypatch.setattr(live, "forming_candle", lambda m, tf: None)          # no forming candle → nothing
     assert c.get("/api/preview", params={"market": "BTC", "timeframe": "5m", "strategy": "ema_rsi"}).json()["action"] is None
+
+
+def test_manual_trade_any_time(client):
+    c, appmod = client
+    d = c.get("/api/manual-defaults?market=GOLD&timeframe=15m").json()
+    assert d["stop_pct"] > 0 and d["target_pct"] == pytest.approx(2 * d["stop_pct"], rel=0.01)
+    r = c.post("/api/trade", json={"market": "GOLD", "timeframe": "15m", "strategy": "ema_rsi",
+                                    "side": "SELL", "stop_pct": 0.5, "target_pct": 1.0})
+    assert r.status_code == 200, r.text
+    pos = r.json()
+    assert pos["side"] == "SHORT" and pos["stop_loss"] > pos["entry"] > pos["take_profit"]
+    # spot crypto can't be shorted, even manually
+    r = c.post("/api/trade", json={"market": "BTC", "timeframe": "15m", "strategy": "ema_rsi", "side": "SELL"})
+    assert r.status_code == 400
+
+
+def test_forming_patterns_shape(client):
+    c, _ = client
+    s = c.get("/api/suggest?market=ETH&timeframe=15m&strategy=ema_rsi").json()
+    assert isinstance(s.get("forming"), list)
+    for p in s["forming"]:
+        assert p["lean"] in ("BUY", "SELL", "EITHER") and p["side"] in ("above", "below")
+        assert p["distance_atr"] <= 4

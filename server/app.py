@@ -204,6 +204,12 @@ def suggest(market: str, timeframe: str, strategy: str):
             if len(keep) == 4:
                 break
         sug["patterns"] = keep[::-1]
+        from engine.strategies.chart_patterns import forming
+        try:
+            sug["forming"] = forming(df)                   # patterns taking shape now (not broken out yet)
+        except Exception:
+            log.exception("forming patterns failed")
+            sug["forming"] = []
         return sug
     except KeyError as e:
         raise HTTPException(404, str(e))
@@ -323,11 +329,52 @@ class TradeIn(BaseModel):
     market: str
     timeframe: str
     strategy: str
+    side: str | None = None            # "BUY"/"SELL" = your own manual trade (any time)
+    stop_pct: float | None = None      # manual: stop-loss distance in % (default ≈ 1.5 × usual candle move)
+    target_pct: float | None = None    # manual: take-profit distance in % (default = 2 × stop)
+
+
+def manual_signal(market, timeframe: str, side: str, stop_pct: float | None, target_pct: float | None) -> dict:
+    """A trade YOU decide on: price now, with a stop and target in %."""
+    from engine.features import indicators as ta
+    side = side.upper()
+    if side not in ("BUY", "SELL"):
+        raise HTTPException(400, "side must be BUY or SELL")
+    df = get_candles(market, timeframe, bars=200)
+    price = float(df["close"].iloc[-1])
+    if not stop_pct:
+        stop_pct = round(1.5 * float(ta.atr(df, 14).iloc[-1]) / price * 100, 3)
+    if not target_pct:
+        target_pct = round(2 * stop_pct, 3)
+    if not (0 < stop_pct < 50 and 0 < target_pct < 100):
+        raise HTTPException(400, "Stop and target must be sensible percentages.")
+    sgn = 1 if side == "BUY" else -1
+    return {"action": side, "price": price, "confidence": None, "reason": "🙋 your own decision",
+            "stop_loss": price * (1 - sgn * stop_pct / 100), "take_profit": price * (1 + sgn * target_pct / 100),
+            "stop_pct": stop_pct, "target_pct": target_pct}
+
+
+@app.get("/api/manual-defaults")
+def manual_defaults(market: str, timeframe: str):
+    m = get_market(market)
+    sig = manual_signal(m, timeframe, "BUY", None, None)
+    return {"price": sig["price"], "stop_pct": sig["stop_pct"], "target_pct": sig["target_pct"],
+            "allow_short": m.allow_short}
 
 
 @app.post("/api/trade")
 def trade(req: TradeIn):
     s = db.settings()
+    if req.side:
+        m = get_market(req.market)
+        sug = manual_signal(m, req.timeframe, req.side, req.stop_pct, req.target_pct)
+        try:
+            pos = account.open(s["mode"], req.market, sug, timeframe=req.timeframe, strategy=req.strategy)
+        except TradeBlocked as e:
+            raise blocked(e)
+        note(f"🙋 You opened {'💰 LIVE ' if s['mode'] == 'live' else ''}{sug['action']} {req.market} "
+             f"(your call · stop {sug['stop_pct']:.2f}% · target {sug['target_pct']:.2f}%)", "trade")
+        return pos
     sug = analysis.suggest(get_market(req.market), req.timeframe, req.strategy)
     if sug.get("action") not in ("BUY", "SELL"):
         raise HTTPException(400, "There's no BUY or SELL suggestion right now — nothing to trade.")

@@ -8,6 +8,7 @@
   let draft = null;
   let svg = null;
   let patterns = [];
+  let forming = [];
   let showPatterns = (() => { try { return localStorage.getItem("showPatterns") !== "0"; } catch { return true; } })();
 
   const key = () => `drawings:${SETTINGS.market}`;
@@ -73,6 +74,27 @@
         }
       }
     }
+    if (showPatterns) {
+      const cs = getComputedStyle(document.getElementById("chart"));
+      for (const p of forming) {
+        const col = p.lean === "BUY" ? cs.getPropertyValue("--buy").trim() : p.lean === "SELL" ? cs.getPropertyValue("--sell").trim() : "#d89b00";
+        const pts = p.points.map(([t, pr]) => [x(t), y(pr)]).filter(([a, b]) => a != null && b != null);
+        if (pts.length >= 2) svg.appendChild(el("polyline", { points: pts.map((q) => q.join(",")).join(" "), stroke: col,
+          "stroke-width": 1.2, fill: "none", "stroke-dasharray": "2 4", opacity: 0.75 }));
+        p.lines.forEach(([[t1, p1], [t2, p2]], i) => {
+          const a1 = x(t1), b1 = y(p1), a2 = x(t2), b2 = y(p2);
+          if ([a1, b1, a2, b2].every((v) => v != null)) svg.appendChild(el("line", { x1: a1, y1: b1, x2: a2, y2: b2, stroke: col,
+            "stroke-width": i === 0 ? 2 : 1.2, "stroke-dasharray": "7 5", opacity: i === 0 ? 0.95 : 0.6 }));
+        });
+        const ty = y(p.trigger), lx = x(p.time);
+        if (ty != null && lx != null) {
+          const label = el("text", { x: Math.max(4, Math.min(lx - 230, svg.clientWidth - 240)), y: ty + (p.side === "below" ? 14 : -6), fill: col,
+            "font-size": 11, "font-weight": 700, stroke: cs.getPropertyValue("--surface").trim(), "stroke-width": 3, "paint-order": "stroke" });
+          label.textContent = `⏳ ${p.name}? → ${p.lean === "EITHER" ? "?" : p.lean} ${p.side} this line`;
+          svg.appendChild(label);
+        }
+      }
+    }
     for (const d of [...drawings, ...(draft ? [draft] : [])]) {
       const x1 = x(d.a.time), y1 = y(d.a.price);
       if (x1 == null || y1 == null) continue;
@@ -134,5 +156,5 @@
     setInterval(render, 150);                                     // follow zoom / scroll / new candles
   }
 
-  window.TradyDraw = { init, reload: () => { load(); render(); }, render, setPatterns: (p) => { patterns = p || []; render(); } };
+  window.TradyDraw = { init, reload: () => { load(); render(); }, render, setPatterns: (p, f) => { patterns = p || []; forming = f || []; render(); } };
 })();

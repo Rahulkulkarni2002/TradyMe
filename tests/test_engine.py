@@ -174,3 +174,17 @@ def test_chart_patterns_never_peek_and_cover_all_twelve():
     assert (cut.loc[tail] == full.loc[tail]).all().all()          # a breakout never depends on later candles
     for d in drawings:
         assert d["direction"] in ("BUY", "SELL") and len(d["points"]) >= 3
+
+
+def test_forming_double_top_before_breakout():
+    import numpy as np, pandas as pd
+    from engine.strategies.chart_patterns import forming
+    # up to a high, down to a dip, back up to the same high, and now drifting down — neckline not broken
+    path = list(np.linspace(100, 110, 40)) + list(np.linspace(110, 104, 15)) + list(np.linspace(104, 110, 15)) + list(np.linspace(110, 106, 8))
+    idx = pd.date_range("2024-01-01", periods=len(path), freq="15min", tz="UTC")
+    c = np.array(path)
+    df = pd.DataFrame({"open": c - 0.05, "high": c + 0.3, "low": c - 0.3, "close": c, "volume": 1.0}, index=idx)
+    keys = [p["key"] for p in forming(df)]
+    assert "double_top" in keys
+    p = next(p for p in forming(df) if p["key"] == "double_top")
+    assert p["lean"] == "SELL" and p["side"] == "below" and p["trigger"] < c[-1]

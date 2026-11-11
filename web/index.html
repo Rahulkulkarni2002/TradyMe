@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css?v=18">
+  <link rel="stylesheet" href="/static/style.css?v=19">
   <script src="/static/vendor/lightweight-charts.standalone.production.js"></script>
 </head>
 <body>
@@ -109,6 +109,24 @@
           </section>
 
           <section class="card suggestion" id="suggestion"><div class="skeleton"></div></section>
+
+          <section class="card trade-panel" id="trade-panel">
+            <div class="card-head"><h3><svg class="ic"><use href="#i-trade"/></svg>Your trade <span class="muted small" id="tp-mode"></span></h3></div>
+            <div class="tp-buttons">
+              <button class="btn buy" id="tp-buy">BUY</button>
+              <button class="btn sell" id="tp-sell">SELL</button>
+            </div>
+            <div class="tp-fields">
+              <label>Stop-loss %<input type="number" id="tp-stop" step="0.05" min="0.05"></label>
+              <label>Target %<input type="number" id="tp-target" step="0.05" min="0.05"></label>
+            </div>
+            <div class="small muted" id="tp-note">Your own decision, any time. Stop & target are pre-filled from the market's usual move — change them if you like.</div>
+          </section>
+
+          <section class="card forming-card">
+            <div class="card-head"><h3><svg class="ic"><use href="#i-eye"/></svg>Patterns forming now</h3></div>
+            <div id="forming"><div class="small muted">…</div></div>
+          </section>
 
           <section class="card prescan-card">
             <div class="card-head"><h3><svg class="ic"><use href="#i-scan"/></svg>Last 30 days <span class="q" data-tip="prescan">?</span></h3></div>
@@ -290,7 +308,7 @@
 
   <div id="tip" class="tip hidden"></div>
   <div id="toast" class="toast hidden"></div>
-  <script src="/static/app.js?v=19"></script>
-  <script src="/static/draw.js?v=5"></script>
+  <script src="/static/app.js?v=20"></script>
+  <script src="/static/draw.js?v=7"></script>
 </body>
 </html>

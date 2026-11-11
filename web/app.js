@@ -387,6 +387,53 @@ function renderSuggestion(s) {
   });
 }
 
+// ───────────────────────── your own trade (any time) ─────────────────────────
+async function loadManualDefaults() {
+  try {
+    const d = await api(`/api/manual-defaults?market=${SETTINGS.market}&timeframe=${SETTINGS.timeframe}`);
+    if (loadManualDefaults._for !== SETTINGS.market + SETTINGS.timeframe) {      // don't overwrite what you typed
+      $("#tp-stop").value = d.stop_pct.toFixed(2); $("#tp-target").value = d.target_pct.toFixed(2);
+      loadManualDefaults._for = SETTINGS.market + SETTINGS.timeframe;
+    }
+    const live = SETTINGS.mode === "live";
+    $("#tp-mode").textContent = live ? "· 💰 LIVE money" : "· 📝 paper (practice money)";
+    $("#tp-sell").textContent = d.allow_short ? "SELL" : "SELL (n/a)";
+    $("#tp-sell").disabled = !d.allow_short;
+    $("#tp-sell").title = d.allow_short ? "Bet that the price falls" : "Spot crypto can't bet on a fall — close your BUY instead";
+  } catch {}
+}
+async function manualTrade(side) {
+  const stop = parseFloat($("#tp-stop").value), target = parseFloat($("#tp-target").value);
+  const price = lastSuggestion?.price;
+  const sgn = side === "BUY" ? 1 : -1;
+  const msg = `${side} ${market(SETTINGS.market).name} with ${SETTINGS.mode === "live" ? "💰 LIVE" : "📝 PAPER"} money?\n\n` +
+    (price ? `Price now ≈ ${px(SETTINGS.market, price)}\nStop-loss: ${px(SETTINGS.market, price * (1 - sgn * stop / 100))} (${stop}% away)\nTarget: ${px(SETTINGS.market, price * (1 + sgn * target / 100))} (${target}% away)` : "");
+  if (!confirm(msg)) return;
+  try {
+    await api("/api/trade", { method: "POST", body: JSON.stringify({ market: SETTINGS.market, timeframe: SETTINGS.timeframe,
+      strategy: SETTINGS.strategy, side, stop_pct: stop, target_pct: target }) });
+    toast("✅ Trade opened — see Open trades below the chart"); refreshAccount();
+  } catch (e) { toast("⚠️ " + e.message, 5000); }
+}
+$("#tp-buy").addEventListener("click", () => manualTrade("BUY"));
+$("#tp-sell").addEventListener("click", () => manualTrade("SELL"));
+
+// ───────────────────────── patterns forming (before they complete) ─────────────────────────
+function renderForming(list) {
+  const el = $("#forming");
+  if (!list || !list.length) { el.innerHTML = `<div class="small muted">No pattern is taking shape right now on this candle size.</div>`; return; }
+  el.innerHTML = list.map((p) => {
+    const cls = p.lean === "BUY" ? "pnl-pos" : p.lean === "SELL" ? "pnl-neg" : "";
+    const near = p.distance_atr <= 1 ? "🔥 very close" : p.distance_atr <= 2 ? "close" : "still a way off";
+    return `<div class="forming-item">
+      <div><b>${esc(p.name)}</b> <span class="${cls}"><b>→ ${p.lean === "EITHER" ? "?" : p.lean}</b></span> <span class="muted small">· ${esc(p.stage)}</span></div>
+      <div class="small">Confirms if a candle <b>closes ${p.side} ${px(SETTINGS.market, p.trigger)}</b>
+        (${p.distance_pct > 0 ? "+" : ""}${p.distance_pct.toFixed(2)}% away · ${near})</div>
+      ${p.text.includes("cancel") || p.text.includes("other way") ? `<div class="small muted">${esc(p.text.split(". ").slice(1).join(". "))}</div>` : ""}
+    </div>`;
+  }).join("") + `<div class="small muted">⏳ A forming pattern is a heads-up, not a signal — many never complete. Wait for the close.</div>`;
+}
+
 async function doTrade() {
   const s = lastSuggestion;
   if (!confirm(`${s.action} ${market(s.market).name} with ${SETTINGS.mode.toUpperCase()} money?\n\nStop-loss: ${px(s.market, s.stop_loss)}\nTarget: ${px(s.market, s.take_profit)}\nConfidence: ${s.confidence}%`)) return;
@@ -611,7 +658,9 @@ function renderChart(s) {
   chart._strategyMarkers = s.markers.map((m) => ({ time: m.time, position: m.action === "BUY" ? "belowBar" : "aboveBar",
     color: m.action === "BUY" ? c.buy : c.sell, shape: m.action === "BUY" ? "arrowUp" : "arrowDown", text: RESULT_MARK[m.result] || "" }));
   chart._strategyScore = s.marker_score;
-  if (window.TradyDraw) window.TradyDraw.setPatterns(s.patterns);
+  if (window.TradyDraw) window.TradyDraw.setPatterns(s.patterns, s.forming);
+  renderForming(s.forming);
+  loadManualDefaults();
   applyMarkers();
   loadModelMarkers();
   (candleSeries._lines || []).forEach((l) => candleSeries.removePriceLine(l));

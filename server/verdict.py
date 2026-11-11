@@ -28,7 +28,11 @@ def _load_model(code: str, timeframe: str, tags: tuple = tuple(TAGS)):
     for tag in tags:
         p = MODELS / f"{code}_{timeframe}{tag}.joblib"
         if p.exists():
-            bundle = joblib.load(p)
+            try:
+                bundle = joblib.load(p)
+            except Exception as e:          # usually: numpy / scikit-learn on this computer is older than the model
+                raise RuntimeError("The prediction model can't load — your Python packages are too old. "
+                                   "Run:  pip install -U -r requirements.txt   then restart TradyMe.") from e
             bundle["tag"] = tag
             r = RESULTS / f"{code}_{timeframe}{tag}_strategies.json"
             bundle["hit_rates"] = {s["key"]: s["hit_rate"] for s in json.loads(r.read_text())["strategies"]} \

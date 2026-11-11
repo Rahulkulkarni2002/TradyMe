@@ -302,3 +302,12 @@ footer { text-align: center; margin-top: 28px; }
 .arrow-pop .pop-head { font-weight: 800; font-size: .95rem; margin-bottom: 2px; }
 .arrow-pop .pop-row { margin-top: 6px; line-height: 1.4; }
 .arrow-pop .muted { color: #5a6170; }
+
+/* your own trade panel + forming patterns */
+.trade-panel .tp-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 6px 0 10px; }
+.trade-panel .tp-buttons .btn { justify-content: center; padding: 12px 0; font-size: 1rem; font-weight: 800; }
+.trade-panel .tp-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px; }
+.trade-panel .tp-fields label { display: flex; flex-direction: column; gap: 4px; font-size: .78rem; color: var(--muted); }
+.trade-panel .tp-fields input { width: 100%; }
+.forming-item { padding: 8px 0; border-bottom: 1px solid var(--line); line-height: 1.45; }
+.forming-item:last-of-type { border-bottom: 0; }
