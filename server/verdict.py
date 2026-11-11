@@ -70,6 +70,20 @@ def _with_futures(market: Market, timeframe: str, tags: tuple, df, X):
     return _load_model(market.code, timeframe, ftags), pd.concat([X, F.astype("float32")], axis=1)
 
 
+def _with_mtf(bundle, market: Market, timeframe: str, df, X):
+    """Models trained with bigger-candle context need those inputs live too (from a longer stretch of candles)."""
+    if not bundle or not any(c.startswith("x4_") for c in bundle["columns"]):
+        return X
+    from engine.data.base import tf_seconds
+    from research import mtf_features
+    try:
+        long_df = get_candles(market, timeframe, bars=3000)
+    except Exception:
+        long_df = df
+    F = mtf_features.build(long_df, tf_seconds(timeframe)).reindex(df.index)
+    return pd.concat([X, F], axis=1)
+
+
 def available_models() -> list[str]:
     return sorted(p.stem for p in MODELS.glob("*.joblib"))
 
@@ -110,6 +124,7 @@ def verdict(market: Market, timeframe: str) -> dict:
         X = features.build(df, timeframe)
         fb, X = _with_futures(market, timeframe, tuple(TAGS), df, X)
         bundle = fb or bundle
+        X = _with_mtf(bundle, market, timeframe, df, X)
         M = model_inputs(V, A, X).reindex(columns=bundle["columns"])
         p_up = float(bundle["model"].predict_proba(M.iloc[[-1]])[:, 1][0])
         model = {"available": True, "p_up": p_up,
@@ -187,6 +202,7 @@ def model_markers(market: Market, timeframe: str, bars: int = 300, threshold: fl
     X = features.build(df, timeframe)
     fb, X = _with_futures(market, timeframe, (f"_{horizon}",) if short else tuple(TAGS), df, X)
     bundle = fb or bundle
+    X = _with_mtf(bundle, market, timeframe, df, X)
     M_all = model_inputs(V, A, X).reindex(columns=bundle["columns"])
     p_all = bundle["model"].predict_proba(M_all)[:, 1]          # all ~900 candles: for the target statistics
     M, p = M_all.iloc[-bars:], p_all[-bars:]

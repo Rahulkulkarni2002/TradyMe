@@ -44,10 +44,12 @@ def agreement(V: pd.DataFrame) -> pd.DataFrame:
 
 def model_inputs(V, A, X):
     from .futures_features import FUT_COLS
-    return pd.concat([V.astype("float32"), A, X[[c for c in MOOD_COLS + FUT_COLS if c in X]]], axis=1)
+    from .mtf_features import COLS as MTF_COLS
+    return pd.concat([V.astype("float32"), A, X[[c for c in MOOD_COLS + FUT_COLS + MTF_COLS if c in X]]], axis=1)
 
 
-def prepare(code: str, timeframe: str, horizon: int | None = None, barrier: float = 1.0, futures: bool = False):
+def prepare(code: str, timeframe: str, horizon: int | None = None, barrier: float = 1.0, futures: bool = False,
+            mtf: bool = False):
     df5 = store.load_prices(code)
     mood_p = store.NEWS / "fear_greed_daily.parquet"
     mood = pd.read_parquet(mood_p) if mood_p.exists() and code in ("BTC", "ETH", "XRP", "SOL") else None
@@ -58,10 +60,15 @@ def prepare(code: str, timeframe: str, horizon: int | None = None, barrier: floa
         from . import futures_features as ff
         X = pd.concat([X, ff.for_candles(df.index, tf_seconds(timeframe),
                                          ff.five_minute(code, close5=df5["close"])).astype("float32")], axis=1)
+    if mtf:                                                  # bigger-picture context (×4, ×16 candles)
+        from engine.data.base import tf_seconds
+        from . import mtf_features
+        X = pd.concat([X, mtf_features.build(df, tf_seconds(timeframe))], axis=1)
     V = build_votes(df)
     lab = labels.triple_barrier(df, horizon or HORIZON[timeframe], barrier)
     from .futures_features import FUT_COLS
-    keep = X.drop(columns=[c for c in FUT_COLS if c in X]).notna().mean(axis=1) > 0.8   # futures data may be missing (pre-2020)
+    from .mtf_features import COLS as MTF_COLS
+    keep = X.drop(columns=[c for c in FUT_COLS + MTF_COLS if c in X]).notna().mean(axis=1) > 0.8   # extra inputs may start later
     return df[keep], X[keep], V[keep], lab[keep]
 
 
@@ -71,9 +78,9 @@ def new_model():
 
 
 def run(code: str, timeframe: str, horizon: int | None = None, barrier: float = 1.0, tag: str = "",
-        futures: bool = False) -> dict:
+        futures: bool = False, mtf: bool = False) -> dict:
     t0 = time.time()
-    df, X, V, lab = prepare(code, timeframe, horizon, barrier, futures)
+    df, X, V, lab = prepare(code, timeframe, horizon, barrier, futures, mtf)
     A = agreement(V)
     H = horizon or HORIZON[timeframe]
     exam_mask = df.index < HOLDOUT_START                 # parts 1 & 2 only use pre-2025 history
@@ -184,6 +191,7 @@ if __name__ == "__main__":
     ap.add_argument("--barrier", type=float, default=1.0, help="move size in ATRs (default 1.0)")
     ap.add_argument("--tag", default="")
     ap.add_argument("--futures", action="store_true", help="add crypto futures data (tag gets an 'f')")
+    ap.add_argument("--mtf", action="store_true", help="add bigger-candle context (×4, ×16) — helps 5–15 min charts")
     a = ap.parse_args()
     run(a.market.upper(), a.timeframe, a.horizon, a.barrier, a.tag + ("f" if a.futures and not a.tag.endswith("f") else ""),
-        a.futures)
+        a.futures, a.mtf)
