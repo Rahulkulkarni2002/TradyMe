@@ -256,7 +256,7 @@ function paintLive() {
   if (!liveCandle || !candleSeries || liveCandle.time <= (chart._closedLast || 0)) return;
   candleSeries.update({ time: liveCandle.time, open: liveCandle.open, high: liveCandle.high, low: liveCandle.low, close: liveCandle.close });
   $("#tb-price").textContent = px(SETTINGS.market, liveCandle.close);
-  const src = liveSocket && liveSocket.readyState === 1 ? "live trades" : "updates every 2 s";
+  const src = liveSocket && liveSocket.readyState === 1 ? `live prices (${liveSocket.kind})` : "updates every 10 s (add an OANDA key for live gold/forex)";
   $("#chart-live").textContent = `● forming candle · ${src} · ${new Date().toLocaleTimeString()}`;
 }
 
@@ -277,7 +277,14 @@ function openStream(url) {
   liveStreamUrl = url;
   if (!url) return;
   try {
+    if (url.startsWith("sse:")) {                       // gold/forex: OANDA ticks relayed by TradyMe
+      const es = new EventSource(url.slice(4));
+      liveSocket = { close: () => es.close(), get readyState() { return es.readyState === 1 ? 1 : 0; }, kind: "OANDA" };
+      es.onmessage = (e) => { const t = JSON.parse(e.data); if (t.p) onTrade(+t.p, t.T || Date.now()); };
+      return;                                           // EventSource reconnects by itself
+    }
     liveSocket = new WebSocket(url);
+    liveSocket.kind = "Binance";
     liveSocket.onmessage = (e) => { const t = JSON.parse(e.data); if (t.p) onTrade(+t.p, t.T || Date.now()); };
     liveSocket.onclose = () => { liveSocket = null; setTimeout(() => { if (liveStreamUrl === url) openStream(url); }, 3000); };
   } catch { liveSocket = null; }

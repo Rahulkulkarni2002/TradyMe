@@ -25,8 +25,8 @@ BUILD_FROM = {"10m": "5m", "3h": "1h", "5m": "5m", "15m": "15m", "30m": "30m", "
 
 def _feed(market: Market) -> DataFeed:
     provider = "synthetic" if is_offline() else market.provider
-    if provider == "yahoo" and market.kind == "forex" and env("OANDA_API_TOKEN"):
-        provider = "oanda"                       # better forex data if user has a free token
+    if provider == "yahoo" and market.oanda_symbol and env("OANDA_API_TOKEN"):
+        provider = "oanda"                       # real-time gold/forex data with a free OANDA practice token
     if provider not in _feeds:
         if provider == "binance":
             from .binance import BinanceFeed
@@ -47,8 +47,7 @@ def _feed(market: Market) -> DataFeed:
 
 def _symbol(market: Market, feed: DataFeed) -> str:
     if type(feed).__name__ == "OandaFeed":
-        return {"EURUSD": "EUR_USD", "GBPUSD": "GBP_USD", "USDJPY": "USD_JPY", "USDINR": "USD_INR"}.get(
-            market.code, market.symbol)
+        return market.oanda_symbol or market.symbol
     return market.symbol
 
 

@@ -1,4 +1,4 @@
-"""OANDA v20 forex data. Free with a practice (demo) account token."""
+"""OANDA v20 forex + gold data. Free with a practice (demo) account token."""
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
@@ -25,7 +25,7 @@ class OandaFeed(DataFeed):
         self.s = requests.Session()
         self.s.headers.update({"Authorization": f"Bearer {self.token}", "Accept-Datetime-Format": "RFC3339"})
 
-    def _candles(self, instrument: str, timeframe: str, **params) -> pd.DataFrame:
+    def _candles(self, instrument: str, timeframe: str, include_forming: bool = False, **params) -> pd.DataFrame:
         params = {"granularity": GRANULARITY[timeframe], "price": "M", **params}
         r = self.s.get(f"{self.base_url}/v3/instruments/{instrument}/candles", params=params, timeout=15)
         r.raise_for_status()
@@ -36,7 +36,7 @@ class OandaFeed(DataFeed):
                 "volume": c["volume"],
             }
             for c in r.json().get("candles", [])
-            if c.get("complete")                              # closed candles only
+            if c.get("complete") or include_forming           # normally: closed candles only
         ]
         if not rows:
             return pd.DataFrame(columns=["open", "high", "low", "close", "volume"])
@@ -68,3 +68,9 @@ class OandaFeed(DataFeed):
         r.raise_for_status()
         p = r.json()["prices"][0]
         return (float(p["bids"][0]["price"]) + float(p["asks"][0]["price"])) / 2
+
+
+    def minutes_since(self, instrument: str, start) -> pd.DataFrame:
+        """1-minute candles from `start` until now, INCLUDING the one still forming (for the live chart)."""
+        return self._candles(instrument, "1m", include_forming=True,
+                             **{"from": pd.Timestamp(start).isoformat(), "count": 500})

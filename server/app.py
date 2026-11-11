@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import csv
 import io
+import json
 import logging
 import os
 from collections import deque
@@ -13,7 +14,7 @@ from pathlib import Path
 
 import pandas as pd
 import requests
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -221,6 +222,30 @@ def live_candle(market: str, timeframe: str):
         return {"candle": forming_candle(m, timeframe), "stream": stream_url(m)}
     except KeyError as e:
         raise HTTPException(404, str(e))
+
+
+@app.get("/api/stream")
+async def price_stream(market: str, request: Request):
+    """Real-time gold/forex prices (OANDA ticks) for the chart, as server-sent events."""
+    from engine.data import oanda_stream
+    m = get_market(market)
+    if not (m.oanda_symbol and oanda_stream.ensure(m.oanda_symbol)):
+        raise HTTPException(404, "Real-time prices need an OANDA practice token in .env")
+
+    async def events():
+        last, quiet = None, 0.0
+        while not await request.is_disconnected():
+            tick = oanda_stream.latest.get(m.oanda_symbol)
+            if tick and tick is not last:
+                last, quiet = tick, 0.0
+                yield f"data: {json.dumps({'p': tick['price'], 'T': tick['time']})}\n\n"
+            else:
+                quiet += 0.2
+                if quiet >= 15:                      # keep the connection open through quiet markets
+                    quiet = 0.0
+                    yield ": keep-alive\n\n"
+            await asyncio.sleep(0.2)
+    return StreamingResponse(events(), media_type="text/event-stream", headers={"Cache-Control": "no-cache"})
 
 
 @app.get("/api/watchlist")

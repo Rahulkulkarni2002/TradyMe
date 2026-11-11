@@ -23,6 +23,7 @@ class Market:
     leverage: float = 1.0      # max position size as a multiple of the account (spot crypto = 1)
     quote_is_usd: bool = True  # False for USD/JPY, USD/INR: profit is in yen/rupees → convert
     alpaca_symbol: str | None = None  # symbol at Alpaca, if Alpaca can trade it (live mode)
+    oanda_symbol: str | None = None   # symbol at OANDA: real-time gold/forex prices when an OANDA token is set
 
     def to_account(self, amount_in_quote: float, price: float) -> float:
         """Convert an amount in the quote currency (e.g. INR for USD/INR) to account dollars."""
@@ -41,14 +42,15 @@ MARKETS: dict[str, Market] = {m.code: m for m in [
            price_decimals=4, alpaca_symbol="XRP/USD"),
     # ── Gold ──
     Market("GOLD", "Gold", "gold", "yahoo", "GC=F", "🥇", fee_bps=0, slippage_bps=1.2,
-           hours="Sun–Fri, almost 24h", leverage=10),
+           hours="Sun–Fri, almost 24h", leverage=10, oanda_symbol="XAU_USD"),
     # ── Forex (Yahoo free data; OANDA if you add a token) ──
     Market("EURUSD", "Euro / US Dollar", "forex", "yahoo", "EURUSD=X", "💶", slippage_bps=0.6,
-           price_decimals=5, hours="Sun 5pm – Fri 5pm New York", leverage=20),
+           price_decimals=5, hours="Sun 5pm – Fri 5pm New York", leverage=20, oanda_symbol="EUR_USD"),
     Market("GBPUSD", "British Pound / US Dollar", "forex", "yahoo", "GBPUSD=X", "💷", slippage_bps=0.9,
-           price_decimals=5, hours="Sun 5pm – Fri 5pm New York", leverage=20),
+           price_decimals=5, hours="Sun 5pm – Fri 5pm New York", leverage=20, oanda_symbol="GBP_USD"),
     Market("USDJPY", "US Dollar / Japanese Yen", "forex", "yahoo", "JPY=X", "💴", slippage_bps=0.8,
-           price_decimals=3, hours="Sun 5pm – Fri 5pm New York", leverage=20, quote_is_usd=False),
+           price_decimals=3, hours="Sun 5pm – Fri 5pm New York", leverage=20, quote_is_usd=False,
+           oanda_symbol="USD_JPY"),
     Market("USDINR", "US Dollar / Indian Rupee", "forex", "yahoo", "INR=X", "🇮🇳", slippage_bps=2,
            price_decimals=4, hours="Mon–Fri", leverage=20, quote_is_usd=False),
 ]}

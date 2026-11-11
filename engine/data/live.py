@@ -51,7 +51,8 @@ def forming_candle(market: Market, timeframe: str) -> dict | None:
     key = (market.code, timeframe)
     hit = _cache.get(key)
     # Yahoo (gold/forex) gets throttled if asked too often → at most every 10 s; Binance is fine every 1.5 s
-    wait = CACHE_SECONDS if market.provider == "binance" else 10
+    from . import oanda_stream
+    wait = CACHE_SECONDS if (market.provider == "binance" or (market.oanda_symbol and oanda_stream.available())) else 10
     if hit and time.time() - hit[0] < wait:
         return hit[1]
     sec = tf_seconds(timeframe)
@@ -60,8 +61,12 @@ def forming_candle(market: Market, timeframe: str) -> dict | None:
     candle = None
     if not offline():
         try:
+            from . import oanda_stream
             if market.provider == "binance":
                 candle = _aggregate(_binance(market.symbol, start), start)
+            elif market.oanda_symbol and oanda_stream.available():
+                from .oanda import OandaFeed
+                candle = _aggregate(OandaFeed().minutes_since(market.oanda_symbol, start), start)
             elif market.provider == "yahoo":
                 candle = _aggregate(_yahoo(market.symbol), start)
         except Exception:
@@ -73,7 +78,12 @@ def forming_candle(market: Market, timeframe: str) -> dict | None:
 def stream_url(market: Market) -> str | None:
     """Binance's free real-time trade feed for this coin (the browser connects to it directly).
     In the US, Binance.com is blocked, so the Binance.US feed is used — the same choice the price feed made."""
-    if offline() or market.provider != "binance":
+    if offline():
+        return None
+    from . import oanda_stream
+    if market.oanda_symbol and oanda_stream.available():
+        return f"sse:/api/stream?market={market.code}"          # OANDA ticks, relayed by TradyMe
+    if market.provider != "binance":
         return None
     from .binance import US, BinanceFeed
     host = "stream.binance.us:9443" if BinanceFeed._base_url == US else "stream.binance.com:9443"
