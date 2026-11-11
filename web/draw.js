@@ -9,7 +9,8 @@
   let svg = null;
   let patterns = [];
   let forming = [];
-  let plan = null;                 // the model's current call: entry, stop, targets, forecast cone
+  let plan = null;
+  let analog = null;               // 🔮 analog forecast: where price went after look-alike moments                 // the model's current call: entry, stop, targets, forecast cone
   let showPatterns = (() => { try { return localStorage.getItem("showPatterns") !== "0"; } catch { return true; } })();
 
   const key = () => `drawings:${SETTINGS.market}`;
@@ -96,6 +97,7 @@
         }
       }
     }
+    if (analog) drawAnalog(analog);
     if (plan) drawPlan(plan);
     for (const d of [...drawings, ...(draft ? [draft] : [])]) {
       const x1 = x(d.a.time), y1 = y(d.a.price);
@@ -128,7 +130,7 @@
     if (yf != null) g.appendChild(el("rect", { x: x0, y: Math.min(ye, yf), width: Math.max(0, x1 - x0), height: Math.abs(yf - ye), fill: buyC, "fill-opacity": 0.12, stroke: "none" }));
     g.appendChild(el("rect", { x: x0, y: Math.min(ye, ys), width: Math.max(0, x1 - x0), height: Math.abs(ys - ye), fill: sellC, "fill-opacity": 0.14, stroke: "none" }));
     // forecast cone: 10–90% (light) and 25–75% (darker) of where price ended up after similar calls
-    if (p.cone && p.cone.length) {
+    if (p.cone && p.cone.length && !analog) {
       const pts = (k) => [[x0, ye], ...p.cone.map((c) => [x(c.time), y(c[k])])].filter(([a, b]) => a != null && b != null);
       const band = (lo, hi, o) => {
         const a = pts(hi), b = pts(lo).reverse();
@@ -155,6 +157,26 @@
       "font-size": 12, "font-weight": 800, "text-anchor": "end", stroke: surf, "stroke-width": 3, "paint-order": "stroke" });
     sig.textContent = `${p.action === "BUY" ? "▲ Buy" : "▼ Sell"} ${p.p}%${p.confident ? "" : " (weak)"}`;
     g.appendChild(sig);
+    svg.appendChild(g);
+  }
+
+  function drawAnalog(a) {
+    const x0 = x(a.start.time), y0 = y(a.start.price);
+    if (x0 == null || y0 == null) return;
+    const g = el("g", {});
+    const pts = (k) => [[x0, y0], ...a.steps.map((s) => [x(s.time), y(s[k])])].filter(([p, q]) => p != null && q != null);
+    const band = (lo, hi, fill, o) => {
+      const top = pts(hi), bot = pts(lo).reverse();
+      if (top.length > 1) g.appendChild(el("polygon", { points: [...top, ...bot].map((q) => q.join(",")).join(" "), fill, "fill-opacity": o, stroke: "none" }));
+    };
+    band("p5", "p95", "#3b6fd8", 0.10);
+    band("p25", "p75", "#3b6fd8", 0.22);
+    const line = (k, attrs) => { const p = pts(k); if (p.length > 1) g.appendChild(el("polyline", { points: p.map((q) => q.join(",")).join(" "), fill: "none", ...attrs })); };
+    line("rw05", { stroke: "#8a93a6", "stroke-width": 1.3, "stroke-dasharray": "5 4" });
+    line("rw95", { stroke: "#8a93a6", "stroke-width": 1.3, "stroke-dasharray": "5 4" });
+    line("p50", { stroke: "#2f6bff", "stroke-width": 2.4 });
+    g.appendChild(el("line", { x1: x0, x2: x0, y1: 0, y2: svg.clientHeight, stroke: "#d4a017", "stroke-width": 1.2, opacity: 0.8 }));
+    g.appendChild(el("circle", { cx: x0, cy: y0, r: 4, fill: "#f2c94c", stroke: "none" }));
     svg.appendChild(g);
   }
 
@@ -205,5 +227,6 @@
   }
 
   window.TradyDraw = { init, reload: () => { load(); render(); }, render, setPatterns: (p, f) => { patterns = p || []; forming = f || []; render(); },
-    setPlan: (p) => { plan = p || null; render(); } };
+    setPlan: (p) => { plan = p || null; render(); },
+    setAnalog: (a) => { analog = a || null; render(); } };
 })();

@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css?v=24">
+  <link rel="stylesheet" href="/static/style.css?v=25">
   <script src="/static/vendor/lightweight-charts.standalone.production.js"></script>
 </head>
 <body>
@@ -142,6 +142,7 @@
                 <div class="seg small-seg" id="arrow-src" title="Which arrows to show on the chart">
                   <button data-v="model">Model arrows</button><button data-v="strategy">Strategy arrows</button><button data-v="pattern">Pattern arrows</button>
                 </div>
+                <button class="chart-theme" id="analog-toggle" title="Where price went after past moments that looked like now">🔮 Look-alike forecast</button>
                 <button class="chart-theme" id="plan-toggle" title="Show the model's stop-loss and targets on the chart">🎯 Stop &amp; targets</button>
                 <select id="arrow-horizon" class="mini-select" title="What the model arrows predict">
                   <option value="long">Model: next ~2–6 h</option><option value="n1">Model: next 1 candle</option><option value="n2">Model: next 2 candles</option><option value="n3">Model: next 3 candles</option><option value="n5">Model: next 5 candles</option>
@@ -174,7 +175,7 @@
             </div>
             <p class="small muted chart-notes"><span id="chart-note"></span> <span id="chart-live" class="live-dot"></span> <span id="preview-note"></span> <span id="arrow-note"></span> <b id="arrow-score"></b></p>
             <div id="plan-box" class="plan-box hidden"></div>
-            <div id="chart" class="chart"><div id="arrow-pop" class="arrow-pop hidden"></div></div>
+            <div id="chart" class="chart"><div id="arrow-pop" class="arrow-pop hidden"></div><div id="analog-box" class="analog-box hidden"></div></div>
             <div id="ind-panes" class="ind-panes"></div>
           </section>
 
@@ -322,8 +323,8 @@
 
   <div id="tip" class="tip hidden"></div>
   <div id="toast" class="toast hidden"></div>
-  <script src="/static/app.js?v=28"></script>
-  <script src="/static/draw.js?v=9"></script>
+  <script src="/static/app.js?v=29"></script>
+  <script src="/static/draw.js?v=10"></script>
   <script src="/static/indicators.js?v=1"></script>
 </body>
 </html>

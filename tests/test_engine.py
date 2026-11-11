@@ -205,3 +205,18 @@ def test_futures_features_never_peek():
     m2 = m.copy(); m2.loc["2024-01-02 01:00":, "oi_usd"] = 9e12            # a future spike changes nothing before it
     F2 = for_candles(candles, 3600, five_minute("BTC", m2, None))
     assert F2["oi_ch_1h"].iloc[0] == F["oi_ch_1h"].iloc[0]
+
+
+def test_analog_skill_on_pure_chance_is_a_coin_flip():
+    """On a random walk there is nothing to find: the look-alike method must not claim a real edge."""
+    import numpy as np, pandas as pd
+    from types import SimpleNamespace
+    from engine.analogs import skill
+    rng = np.random.default_rng(1)
+    n = 30_000
+    c = 100 * np.exp(np.cumsum(rng.normal(0, 0.002, n)))
+    df = pd.DataFrame({"open": c, "high": c, "low": c, "close": c},
+                      index=pd.date_range("2020-01-01", periods=n, freq="1h", tz="UTC"))
+    r = skill(SimpleNamespace(code="RW"), "1h", df, L=48, H=24, K=40, tests=150)
+    assert r["tests"] == 150
+    assert 38 <= r["direction_right_pct"] <= 62

@@ -615,12 +615,14 @@ function drawPlan() {
   if (!p || !showPlan) {
     box.classList.add("hidden");
     if (window.TradyDraw) window.TradyDraw.setPlan(null);
-    chart?.timeScale().applyOptions({ rightOffset: 5 });
+    if (!showAnalog) chart?.timeScale().applyOptions({ rightOffset: 5 });     // keep room if the 🔮 forecast is on
     return;
   }
   const c = chartColors(), mk = SETTINGS.market, buy = p.action === "BUY";
   if (window.TradyDraw) window.TradyDraw.setPlan(p);           // zones, TP boxes and forecast cone (draw.js)
-  chart.timeScale().applyOptions({ rightOffset: Math.min(80, p.window_candles + 12) });   // room for the forecast
+  const room = Math.min(80, p.window_candles + 12);
+  chart.timeScale().applyOptions({ rightOffset: room });                // room for the forecast
+  if (!drawPlan._scrolled) { chart.timeScale().scrollToPosition(room, false); drawPlan._scrolled = true; }
   const tooSmall = p.targets[0] && Math.abs(p.targets[0].move_pct) < p.fees_pct;
   box.innerHTML = `<div class="plan-head ${buy ? "pnl-pos" : "pnl-neg"}">${buy ? "▲ BUY" : "▼ SELL"} plan · model ${p.p}% sure
       ${p.confident ? "" : `<span class="muted"> — not sure enough (needs ≥ ${Math.round(modelMarkers.threshold * 100)}%), lines are faded: just a guide</span>`}</div>
@@ -642,6 +644,46 @@ function drawPlan() {
   });
 }
 
+// ───────────────────────── 🔮 look-alike (analog) forecast ─────────────────────────
+let showAnalog = (() => { try { return localStorage.getItem("showAnalog") === "1"; } catch { return false; } })();
+let analogData = null;
+async function loadAnalog() {
+  const box = $("#analog-box");
+  if (!showAnalog) {
+    analogData = null; box.classList.add("hidden"); window.TradyDraw?.setAnalog(null);
+    if (!(showPlan && modelMarkers?.plan)) chart?.timeScale().applyOptions({ rightOffset: 5 });
+    return;
+  }
+  const m = SETTINGS.market, tf = SETTINGS.timeframe;
+  box.innerHTML = `<span class="muted">🔮 Finding look-alike moments in the history…</span>`; box.classList.remove("hidden");
+  try {
+    const a = await api(`/api/analogs?market=${m}&timeframe=${tf}&horizon=24`);
+    if (m !== SETTINGS.market || tf !== SETTINGS.timeframe || !showAnalog) return;
+    if (!a.available) { box.innerHTML = `<span class="muted">🔮 ${esc(a.reason)}</span>`; window.TradyDraw?.setAnalog(null); return; }
+    analogData = a;
+    window.TradyDraw?.setAnalog(a);
+    const room = Math.max(chart.timeScale().options().rightOffset || 0, a.horizon + 6);
+    chart.timeScale().applyOptions({ rightOffset: room });
+    if (!loadAnalog._scrolled) { chart.timeScale().scrollToPosition(room, false); loadAnalog._scrolled = true; }   // make room once
+    const b = a.buckets, sk = a.skill || {};
+    const skill = sk.pending ? `<span class="muted">checking how reliable this is… (refresh in a minute)</span>`
+      : sk.tests ? `Tested on ${sk.tests} past moments: direction right <b>${sk.direction_right_pct}%</b> (coin flip = 50%) · price stayed inside the dark band <b>${sk.inside_25_75_pct}%</b> (should be ~50%)`
+      : "";
+    box.innerHTML = `<div class="ab-row"><span class="vbear">Big fall ${b.VBEAR}%</span><span class="mbear">Fall ${b.MBEAR}%</span>
+        <span class="bal">Flat ${b.BAL}%</span><span class="mbull">Rise ${b.MBULL}%</span><span class="vbull">Big rise ${b.VBULL}%</span></div>
+      <div class="small">🔮 ${a.analogs} look-alike moments since ${new Date(a.from).getFullYear()} · next ${a.horizon} candles ·
+        middle path <b class="${a.median_move_pct >= 0 ? "pnl-pos" : "pnl-neg"}">${a.median_move_pct > 0 ? "+" : ""}${a.median_move_pct}%</b>
+        · dark band = half the cases · light = 90% · dashed = pure chance</div>
+      <div class="small muted">${skill}${sk.tests && sk.direction_right_pct < 53 ? " → <b>use it for HOW FAR price may move, not which way.</b>" : ""}</div>`;
+    if (sk.pending) setTimeout(() => { if (showAnalog) loadAnalog(); }, 30000);
+  } catch (e) { box.innerHTML = `<span class="muted">🔮 ${esc(e.message)}</span>`; }
+}
+$("#analog-toggle").classList.toggle("on", showAnalog);
+$("#analog-toggle").addEventListener("click", () => {
+  showAnalog = !showAnalog; loadAnalog._scrolled = false; try { localStorage.setItem("showAnalog", showAnalog ? "1" : "0"); } catch {}
+  $("#analog-toggle").classList.toggle("on", showAnalog); loadAnalog();
+});
+
 async function loadModelMarkers() {
   const m = SETTINGS.market, tf = SETTINGS.timeframe;
   try {
@@ -655,7 +697,7 @@ function paintArrowSwitch() {
 }
 $("#plan-toggle").classList.toggle("on", showPlan);
 $("#plan-toggle").addEventListener("click", () => {
-  showPlan = !showPlan; try { localStorage.setItem("showPlan", showPlan ? "1" : "0"); } catch {}
+  showPlan = !showPlan; drawPlan._scrolled = false; try { localStorage.setItem("showPlan", showPlan ? "1" : "0"); } catch {}
   $("#plan-toggle").classList.toggle("on", showPlan); drawPlan();
 });
 $$("#arrow-src button").forEach((b) => b.addEventListener("click", () => {
@@ -777,7 +819,8 @@ function showToday() {
   const MIN_BARS = 40, MAX_BARS = 90;                        // big, readable candles: today's most recent ~90
   if (last - first < MIN_BARS) first = Math.max(0, last - MIN_BARS);   // early in the day: a bit of yesterday too
   if (last - first > MAX_BARS) first = last - MAX_BARS;
-  chart.timeScale().setVisibleLogicalRange({ from: first - 1, to: last + 4 });
+  const room = Math.max(4, chart.timeScale().options().rightOffset || 0);   // keep space for a forecast on the right
+  chart.timeScale().setVisibleLogicalRange({ from: first - 1, to: last + room });
 }
 function zoom(factor) {
   if (!chart) return;
@@ -822,6 +865,7 @@ function renderChart(s) {
   if (window.TradyDraw) window.TradyDraw.setPatterns(s.patterns, s.forming);
   renderForming(s.forming);
   feedIndicators();
+  loadAnalog();
   loadManualDefaults();
   drawPositions();
   applyMarkers();

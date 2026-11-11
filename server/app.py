@@ -475,6 +475,16 @@ def journal_csv():
                              headers={"Content-Disposition": "attachment; filename=tradyme-memory-pad.csv"})
 
 
+@app.get("/api/analogs")
+def analogs(market: str, timeframe: str, horizon: int = 24):
+    """🔮 Where price went after past moments that looked like now (median, 25–75 %, 5–95 %) + random-walk cone."""
+    from engine.analogs import forecast
+    try:
+        return forecast(get_market(market), timeframe, H=max(4, min(96, horizon)))
+    except requests.RequestException as e:
+        raise HTTPException(502, f"Price source slow: {type(e).__name__}")
+
+
 @app.get("/api/ranking")
 def ranking(market: str, timeframe: str):
     """🏆 Best strategy finder: every strategy tested on this market & candle size since 2015,
