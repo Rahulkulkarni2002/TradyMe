@@ -272,7 +272,7 @@ def model_markers(market: str, timeframe: str, sure: int = 62, horizon: str = "l
     horizon=long: next ~2–6 hours; horizon=short: the next 2 candles."""
     try:
         h = horizon if horizon in ("n1", "n2", "n3", "n5") else ("n2" if horizon == "short" else "long")
-        return verdict_mod.model_markers(get_market(market), timeframe, threshold=min(max(sure, 52), 80) / 100, horizon=h)
+        return verdict_mod.model_markers(get_market(market), timeframe, threshold=min(max(sure, 50), 80) / 100, horizon=h)
     except requests.RequestException:
         return {"available": False, "markers": [], "reason": "Price source slow — try again shortly."}
 

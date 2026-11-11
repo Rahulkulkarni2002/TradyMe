@@ -15,7 +15,7 @@ import time
 from research import store
 
 # candle size → (look-ahead in candles, move size in ATRs, tag) — same set-up as the crypto models
-PLAN = {"5m": (24, 1.5, "_h2"), "15m": (24, 1.5, "_h6"), "30m": (12, 1.5, "_h6"), "1h": (6, 1.5, "_h6"),
+PLAN = {"5m": (24, 1.5, "_h2"), "10m": (24, 1.5, "_h6"), "15m": (24, 1.5, "_h6"), "30m": (12, 1.5, "_h6"), "1h": (6, 1.5, "_h6"),
         "3h": (2, 1.5, "_h6")}
 DEFAULT_MARKETS = ["GOLD", "EURUSD", "GBPUSD", "USDJPY"]
 # the "next 1 / 2 / 3 / 5 candles" models (Model arrows → "next N candles"): look-ahead, move size, tag
@@ -26,7 +26,7 @@ SHORT_TF = ["5m", "15m", "1h"]
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--markets", nargs="+", default=DEFAULT_MARKETS)
-    ap.add_argument("--timeframes", nargs="+", default=["15m", "1h", "3h", "30m", "5m"], choices=list(PLAN))
+    ap.add_argument("--timeframes", nargs="+", default=["15m", "1h", "3h", "30m", "5m", "10m"], choices=list(PLAN))
     ap.add_argument("--no-short", action="store_true", help="skip the next-1/2/3/5-candle models")
     a = ap.parse_args()
     from research.strategy_league import MODELS, run

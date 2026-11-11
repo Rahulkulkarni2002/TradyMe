@@ -192,11 +192,13 @@ def model_markers(market: Market, timeframe: str, bars: int = 300, threshold: fl
     M, p = M_all.iloc[-bars:], p_all[-bars:]
     side = np.where(p >= threshold, 1, np.where(p <= 1 - threshold, -1, 0))
     prev = np.concatenate([[0], side[:-1]])
+    every = threshold <= 0.5                               # "Every candle": an arrow on each candle (its lean)
     out = []
     for t, s_, pr, pv in zip(M.index, side, p, prev):
-        if s_ != 0 and (short or s_ != pv):               # long: only where it BECOMES confident (no clutter)
+        if s_ != 0 and (short or every or s_ != pv):      # long: only where it BECOMES confident (no clutter)
             out.append({"time": int(t.timestamp()), "action": "BUY" if s_ == 1 else "SELL",
-                        "pct": round(100 * (pr if s_ == 1 else 1 - pr)), "p_up": round(100 * float(pr))})
+                        "pct": round(100 * (pr if s_ == 1 else 1 - pr)), "p_up": round(100 * float(pr)),
+                        "strong": bool(pr >= 0.62 or pr <= 0.38)})
     from engine.analysis import grade_arrows
     from engine.data.base import tf_seconds
     H = max(1, round((bundle.get("horizon_hours") or 2) * 3600 / tf_seconds(timeframe)))
@@ -209,9 +211,10 @@ def model_markers(market: Market, timeframe: str, bars: int = 300, threshold: fl
            "confident": bool(side[-1] != 0)}
     conf_share = float((side != 0).mean())                    # how often it is this sure (on these candles)
     from engine.analysis import trade_plan
-    plan = trade_plan(df, p_all, threshold, H, bundle.get("barrier_atr") or 1.5,
+    plan = trade_plan(df, p_all, max(threshold, 0.62), H, bundle.get("barrier_atr") or 1.5,
                       fees_pct=round(2 * market.fee_bps / 100, 3))
     return {"available": True, "markers": out, "threshold": threshold, "score": score, "short": short, "now": now,
+            "every": every,
             "plan": plan,
             "confident_share": round(100 * conf_share, 1),
             "candles": int(horizon[1:]) if short else None,

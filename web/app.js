@@ -719,7 +719,9 @@ function applyMarkers() {
   const note = $("#arrow-note");
   if (note) note.textContent = arrowSource === "model" && modelMarkers && !modelMarkers.available
     ? `${modelMarkers.reason} Showing strategy arrows instead.`
-    : useModel ? (modelMarkers.short
+    : useModel ? (modelMarkers.every
+        ? `Model arrows on EVERY candle: small faded = the model's lean (often close to 50/50), big with % = at least 62% sure — trust those more. Click any arrow for details.`
+        : modelMarkers.short
         ? `Model arrows: every candle where the model is ≥ ${Math.round(modelMarkers.threshold * 100)}% sure about the NEXT ${modelMarkers.candles} CANDLE${modelMarkers.candles > 1 ? "S" : ""} (small moves — fees matter). Click an arrow for details.`
         : `Model arrows: where the prediction model became ≥ ${Math.round(modelMarkers.threshold * 100)}% sure about the next ~${modelMarkers.horizon_hours} h. Click an arrow for details.`)
         + ` The "NOW" arrow is always shown: the model's lean on the newest candle (faded = under ${Math.round(modelMarkers.threshold * 100)}% sure, so no real arrow). It is this sure on only ${modelMarkers.confident_share}% of candles.` : "";
@@ -728,9 +730,13 @@ function applyMarkers() {
   if (scoreEl) scoreEl.textContent = sc && sc.wins + sc.losses
     ? `Arrows on this chart: ${sc.wins} ✓ worked · ${sc.losses} ✗ failed (${Math.round(100 * sc.wins / (sc.wins + sc.losses))}% right)` : "";
   const past = useModel
-    ? modelMarkers.markers.map((m) => ({ time: m.time, position: m.action === "BUY" ? "belowBar" : "aboveBar",
-        text: modelMarkers.short ? (RESULT_MARK[m.result] || "") : `${m.pct}% ${RESULT_MARK[m.result] || ""}`.trim(), size: modelMarkers.short ? 0.6 : 1,
-        color: m.action === "BUY" ? c.buy : c.sell, shape: m.action === "BUY" ? "arrowUp" : "arrowDown" }))
+    ? modelMarkers.markers.map((m) => {
+        const weak = modelMarkers.every && !m.strong;             // "Every candle": small faded lean, big bold when sure
+        return { time: m.time, position: m.action === "BUY" ? "belowBar" : "aboveBar",
+          text: weak ? "" : modelMarkers.short || modelMarkers.every ? `${m.pct}%` : `${m.pct}% ${RESULT_MARK[m.result] || ""}`.trim(),
+          size: weak ? 0.45 : modelMarkers.short ? 0.6 : 1,
+          color: (m.action === "BUY" ? c.buy : c.sell) + (weak ? "66" : ""), shape: m.action === "BUY" ? "arrowUp" : "arrowDown" };
+      })
     : (chart._strategyMarkers || []);
   if (arrowSource === "pattern") {
     const pm = lastSuggestion?.pattern_markers || [];

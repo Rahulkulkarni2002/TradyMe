@@ -220,3 +220,16 @@ def test_analog_skill_on_pure_chance_is_a_coin_flip():
     r = skill(SimpleNamespace(code="RW"), "1h", df, L=48, H=24, K=40, tests=150)
     assert r["tests"] == 150
     assert 38 <= r["direction_right_pct"] <= 62
+
+
+def test_bigger_candle_context_never_peeks():
+    """A small candle only sees big candles that had CLOSED by the time it closed."""
+    import numpy as np, pandas as pd
+    from research.mtf_features import build
+    idx = pd.date_range("2024-01-01", periods=3000, freq="15min", tz="UTC")
+    c = 100 + np.cumsum(np.random.default_rng(0).normal(0, 0.1, len(idx)))
+    df = pd.DataFrame({"open": c, "high": c + 0.05, "low": c - 0.05, "close": c, "volume": 1.0}, index=idx)
+    a = build(df, 900)
+    df2 = df.copy(); df2.loc[idx[2000]:, ["open", "high", "low", "close"]] += 50      # change the future only
+    b = build(df2, 900)
+    pd.testing.assert_frame_equal(a.iloc[:2000], b.iloc[:2000])
