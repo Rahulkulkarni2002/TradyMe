@@ -152,5 +152,9 @@ def model_markers(market: Market, timeframe: str, bars: int = 300, threshold: fl
         if s_ != 0 and s_ != pv:                           # only where it BECOMES confident (no clutter)
             out.append({"time": int(t.timestamp()), "action": "BUY" if s_ == 1 else "SELL",
                         "pct": round(100 * (pr if s_ == 1 else 1 - pr))})
-    return {"available": True, "markers": out, "threshold": threshold,
+    from engine.analysis import grade_arrows
+    from engine.data.base import tf_seconds
+    H = max(1, round((bundle.get("horizon_hours") or 2) * 3600 / tf_seconds(timeframe)))
+    score = grade_arrows(df, out, H, bundle.get("barrier_atr") or 1.5)
+    return {"available": True, "markers": out, "threshold": threshold, "score": score,
             "horizon_hours": bundle.get("horizon_hours"), "exam_accuracy": bundle.get("exam_accuracy")}

@@ -186,6 +186,9 @@ def suggest(market: str, timeframe: str, strategy: str):
         tail = data.iloc[-300:]
         sug["candles"] = [{"time": int(t.timestamp()), "open": r.open, "high": r.high, "low": r.low, "close": r.close}
                           for t, r in tail.iterrows()]
+        from engine.data.base import tf_seconds
+        H = max(1, round(2 * 3600 / tf_seconds(timeframe)))          # did it move 1.5 ATR its way within ~2 h?
+        sug["marker_score"] = analysis.grade_arrows(df, markers, H, 1.5)
         sug["markers"] = markers
         sug["levels"] = analysis.support_resistance(df)
         return sug

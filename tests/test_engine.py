@@ -149,3 +149,15 @@ def test_slow_price_source_keeps_last_prices(monkeypatch):
     data._cache.clear()                                   # force a fresh fetch → it fails → last good data
     again = get_candles(m, "1h", bars=50)
     assert again.equals(first)
+
+
+def test_arrows_are_graded_by_what_happened_next():
+    from engine.analysis import grade_arrows
+    idx = pd.date_range("2026-01-05 00:00", periods=80, freq="15min", tz="UTC")
+    close = np.r_[np.full(40, 100.0), np.linspace(100, 110, 40)]           # flat, then a clear rise
+    df = pd.DataFrame({"open": close, "high": close + 0.2, "low": close - 0.2, "close": close, "volume": 1.0}, index=idx)
+    t = int(idx[45].timestamp())
+    arrows = [{"time": t, "action": "BUY"}, {"time": t, "action": "SELL"}, {"time": int(idx[-1].timestamp()), "action": "BUY"}]
+    score = grade_arrows(df, arrows, horizon_bars=8, barrier_atr=1.0)
+    assert [a["result"] for a in arrows] == ["win", "loss", "open"]
+    assert score == {"wins": 1, "losses": 1}

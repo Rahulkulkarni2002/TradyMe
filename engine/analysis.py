@@ -303,3 +303,31 @@ def support_resistance(df: pd.DataFrame, lookback: int = 300, k: int = 3, max_ea
     res = sorted([x for x in levels if x["kind"] == "resistance"], key=lambda x: x["price"])[:max_each]
     sup = sorted([x for x in levels if x["kind"] == "support"], key=lambda x: -x["price"])[:max_each]
     return res + sup
+
+
+# ─────────────────────── grade past arrows ───────────────────────
+def grade_arrows(df: pd.DataFrame, arrows: list[dict], horizon_bars: int, barrier_atr: float = 1.5) -> dict:
+    """For each past arrow, what actually happened next: did the price move barrier×ATR in the arrow's
+    direction FIRST (✓), against it first (✗), or neither within the window (–)? Arrows too recent → 'open'."""
+    from research.labels import triple_barrier
+    lab = triple_barrier(df, horizon_bars, barrier_atr)
+    pos = {int(t.timestamp()): i for i, t in enumerate(df.index)}
+    n = len(df)
+    wins = losses = 0
+    for a in arrows:
+        i = pos.get(a["time"])
+        if i is None:
+            a["result"] = "open"
+            continue
+        row = lab.iloc[i]
+        if i >= n - horizon_bars and np.isnan(row["label"]):
+            a["result"] = "open"                                  # not enough time has passed yet
+        elif row["ambiguous"]:
+            a["result"] = "loss"; losses += 1
+        elif np.isnan(row["label"]):
+            a["result"] = "flat"                                  # no clear move either way
+        else:
+            ok = (row["label"] == 1) == (a["action"] == "BUY")
+            a["result"] = "win" if ok else "loss"
+            wins += ok; losses += (not ok)
+    return {"wins": int(wins), "losses": int(losses)}

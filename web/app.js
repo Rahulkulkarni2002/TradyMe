@@ -428,6 +428,7 @@ function makeChart(el, height) {
 }
 // ───────────────────────── preview arrow on the forming candle (not final) ─────────────────────────
 let previewSignal = null;
+const RESULT_MARK = { win: "✓", loss: "✗", flat: "–", open: "" };
 let arrowSource = (() => { try { return localStorage.getItem("arrowSource") || "model"; } catch { return "model"; } })();
 let modelMarkers = null;                                   // {available, markers, reason}
 let arrowSure = (() => { try { return +localStorage.getItem("arrowSure") || 62; } catch { return 62; } })();
@@ -461,8 +462,12 @@ function applyMarkers() {
   if (note) note.textContent = arrowSource === "model" && modelMarkers && !modelMarkers.available
     ? `${modelMarkers.reason} Showing strategy arrows instead.`
     : useModel ? `Model arrows: where the prediction model became ≥ ${Math.round(modelMarkers.threshold * 100)}% sure about the next ~${modelMarkers.horizon_hours} h.` : "";
+  const sc = useModel ? modelMarkers.score : chart._strategyScore;
+  const scoreEl = $("#arrow-score");
+  if (scoreEl) scoreEl.textContent = sc && sc.wins + sc.losses
+    ? `Arrows on this chart: ${sc.wins} ✓ worked · ${sc.losses} ✗ failed (${Math.round(100 * sc.wins / (sc.wins + sc.losses))}% right)` : "";
   const past = useModel
-    ? modelMarkers.markers.map((m) => ({ time: m.time, position: m.action === "BUY" ? "belowBar" : "aboveBar", text: m.pct + "%",
+    ? modelMarkers.markers.map((m) => ({ time: m.time, position: m.action === "BUY" ? "belowBar" : "aboveBar", text: `${m.pct}% ${RESULT_MARK[m.result] || ""}`.trim(),
         color: m.action === "BUY" ? c.buy : c.sell, shape: m.action === "BUY" ? "arrowUp" : "arrowDown" }))
     : (chart._strategyMarkers || []);
   const marks = [...past];
@@ -536,7 +541,8 @@ function renderChart(s) {
     ? `😴 Market closed — the last candle is from ${tzFormat(last, { weekday: "long", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}. It will move again when the market reopens (${market(s.market).hours}). Times shown in ${tzName}.`
     : `🟢 Live — a new candle appears every ${META.timeframes.find((t) => t.code === s.timeframe).label}. Times shown in ${tzName}.`;
   chart._strategyMarkers = s.markers.map((m) => ({ time: m.time, position: m.action === "BUY" ? "belowBar" : "aboveBar",
-    color: m.action === "BUY" ? c.buy : c.sell, shape: m.action === "BUY" ? "arrowUp" : "arrowDown" }));
+    color: m.action === "BUY" ? c.buy : c.sell, shape: m.action === "BUY" ? "arrowUp" : "arrowDown", text: RESULT_MARK[m.result] || "" }));
+  chart._strategyScore = s.marker_score;
   applyMarkers();
   loadModelMarkers();
   (candleSeries._lines || []).forEach((l) => candleSeries.removePriceLine(l));
