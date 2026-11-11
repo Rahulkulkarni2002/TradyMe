@@ -177,6 +177,18 @@
     line("p50", { stroke: "#2f6bff", "stroke-width": 2.4 });
     g.appendChild(el("line", { x1: x0, x2: x0, y1: 0, y2: svg.clientHeight, stroke: "#d4a017", "stroke-width": 1.2, opacity: 0.8 }));
     g.appendChild(el("circle", { cx: x0, cy: y0, r: 4, fill: "#f2c94c", stroke: "none" }));
+    // the call: how many look-alikes ended higher vs lower → ▲ UP / ▼ DOWN / ↔ no clear side
+    const end = a.steps[a.steps.length - 1], ex = x(end.time), ey = y(end.p50);
+    if (ex != null && ey != null) {
+      const up = a.up_share, side = up >= 55 ? "UP" : up <= 45 ? "DOWN" : "FLAT";
+      const cs = getComputedStyle(document.getElementById("chart"));
+      const col = side === "UP" ? cs.getPropertyValue("--buy").trim() : side === "DOWN" ? cs.getPropertyValue("--sell").trim() : "#6b7280";
+      const txt = side === "UP" ? `▲ UP ${up}%` : side === "DOWN" ? `▼ DOWN ${100 - up}%` : `↔ no clear side`;
+      const w = txt.length * 8 + 16, bx = Math.min(ex - w / 2, svg.clientWidth - w - 4), by = side === "DOWN" ? ey + 14 : ey - 34;
+      g.appendChild(el("rect", { x: bx, y: by, width: w, height: 22, rx: 6, fill: col, stroke: "none" }));
+      const t = el("text", { x: bx + w / 2, y: by + 15.5, fill: "#fff", "font-size": 13, "font-weight": 800, "text-anchor": "middle", stroke: "none" });
+      t.textContent = txt; g.appendChild(t);
+    }
     svg.appendChild(g);
   }
 

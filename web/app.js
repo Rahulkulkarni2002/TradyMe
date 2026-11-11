@@ -669,7 +669,13 @@ async function loadAnalog() {
     const skill = sk.pending ? `<span class="muted">checking how reliable this is… (refresh in a minute)</span>`
       : sk.tests ? `Tested on ${sk.tests} past moments: direction right <b>${sk.direction_right_pct}%</b> (coin flip = 50%) · price stayed inside the dark band <b>${sk.inside_25_75_pct}%</b> (should be ~50%)`
       : "";
-    box.innerHTML = `<div class="ab-row"><span class="vbear">Big fall ${b.VBEAR}%</span><span class="mbear">Fall ${b.MBEAR}%</span>
+    const side = a.up_share >= 55 ? `<b class="pnl-pos">▲ UP</b> — ${a.up_share}% of look-alikes ended higher`
+      : a.up_share <= 45 ? `<b class="pnl-neg">▼ DOWN</b> — ${100 - a.up_share}% of look-alikes ended lower`
+      : `<b>↔ no clear side</b> — ${a.up_share}% ended higher, ${100 - a.up_share}% lower`;
+    const mm = modelMarkers?.available ? modelMarkers.now : null;
+    const agree = mm && a.up_share !== 50 && (a.up_share > 50) === (mm.action === "BUY")
+      ? ` · <b>prediction model agrees</b> (${mm.action} ${mm.pct}%)` : mm ? ` · prediction model says ${mm.action} ${mm.pct}%` : "";
+    box.innerHTML = `<div class="small" style="font-size:.9rem;margin-bottom:2px">🔮 ${side}${agree}</div><div class="ab-row"><span class="vbear">Big fall ${b.VBEAR}%</span><span class="mbear">Fall ${b.MBEAR}%</span>
         <span class="bal">Flat ${b.BAL}%</span><span class="mbull">Rise ${b.MBULL}%</span><span class="vbull">Big rise ${b.VBULL}%</span></div>
       <div class="small">🔮 Forecast on the chart: ${a.analogs} look-alike moments since ${new Date(a.from).getFullYear()} · next ${a.horizon} candles ·
         middle path <b class="${a.median_move_pct >= 0 ? "pnl-pos" : "pnl-neg"}">${a.median_move_pct > 0 ? "+" : ""}${a.median_move_pct}%</b>
