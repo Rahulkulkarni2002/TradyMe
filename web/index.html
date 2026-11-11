@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css?v=19">
+  <link rel="stylesheet" href="/static/style.css?v=21">
   <script src="/static/vendor/lightweight-charts.standalone.production.js"></script>
 </head>
 <body>
@@ -117,10 +117,10 @@
               <button class="btn sell" id="tp-sell">SELL</button>
             </div>
             <div class="tp-fields">
-              <label>Stop-loss %<input type="number" id="tp-stop" step="0.05" min="0.05"></label>
-              <label>Target %<input type="number" id="tp-target" step="0.05" min="0.05"></label>
+              <label>Stop-loss price<input type="number" id="tp-stop" step="any"><span class="tp-pct" id="tp-stop-pct"></span></label>
+              <label>Target price<input type="number" id="tp-target" step="any"><span class="tp-pct" id="tp-target-pct"></span></label>
             </div>
-            <div class="small muted" id="tp-note">Your own decision, any time. Stop & target are pre-filled from the market's usual move — change them if you like.</div>
+            <div class="small muted" id="tp-note">Your own decision, any time. Stop &amp; target are pre-filled for a BUY from the market's usual move. Type your own prices — the dashed lines on the chart move with them.</div>
           </section>
 
           <section class="card forming-card">
@@ -227,6 +227,14 @@
             <button class="btn primary" id="b-run"><svg class="ic"><use href="#i-play"/></svg>Run backtest</button>
           </div>
         </section>
+        <section class="card" id="ranking-card">
+          <div class="card-head"><h3>🏆 Best strategy finder</h3><span class="muted small" id="rank-sub"></span></div>
+          <p class="small muted">All 71 strategies, tested on this market &amp; candle size since 2015 — always on years they were NOT tuned on, after fees.
+            Uses the Market and Candle size above. <b>✅</b> = made money after fees in most years · <b>⚠️</b> = small edge, fees eat it ·
+            <b>🤷</b> = too few signals · <b>❌</b> = coin flip or loses.</p>
+          <div id="rank-summary" class="small"></div>
+          <div class="table-wrap"><table id="rank-table"></table></div>
+        </section>
         <section id="b-result" class="hidden">
           <div class="grid">
             <section class="card">
@@ -308,7 +316,7 @@
 
   <div id="tip" class="tip hidden"></div>
   <div id="toast" class="toast hidden"></div>
-  <script src="/static/app.js?v=22"></script>
+  <script src="/static/app.js?v=24"></script>
   <script src="/static/draw.js?v=7"></script>
 </body>
 </html>

@@ -473,6 +473,44 @@ def journal_csv():
                              headers={"Content-Disposition": "attachment; filename=tradyme-memory-pad.csv"})
 
 
+@app.get("/api/ranking")
+def ranking(market: str, timeframe: str):
+    """🏆 Best strategy finder: every strategy tested on this market & candle size since 2015,
+    on years it was NOT tuned on, after fees. Read from the research results (instant)."""
+    from server.verdict import RESULTS
+    for tag in ("_h6", "_h2", ""):
+        rp = RESULTS / f"{market}_{timeframe}{tag}_strategies.json"
+        if rp.exists():
+            break
+    else:
+        return {"available": False, "reason": f"No 10-year test for {market} on {timeframe} candles yet "
+                "(gold & forex: run the forex history download first)."}
+    r = json.loads(rp.read_text())
+    rows = []
+    for s in r["strategies"]:
+        s = {k: (0.0 if isinstance(v, float) and v != v else v) for k, v in s.items()}     # NaN → 0 (never fired)
+        n, hit, yrs = s["signals"], s["hit_rate"], s["years"] or 1
+        pos_share = s["years_positive_low_fees"] / yrs
+        if n < 100:
+            verdict, why = "🤷", f"Only {n} signals in {yrs} years — too few to judge."
+        elif s["profit_low_fees"] > 0 and pos_share >= 0.6 and hit >= 0.53:
+            verdict, why = "✅", f"Made money after fees in {s['years_positive_low_fees']} of {yrs} years."
+        elif s["profit_low_fees"] > 0 or (s["profit_no_fees"] > 0 and hit >= 0.53):
+            verdict, why = "⚠️", "Has a small edge, but fees eat most of it. Use only with a cheap broker."
+        else:
+            verdict, why = "❌", "Not better than a coin flip here, or loses after fees."
+        rows.append({"key": s["key"], "code": f"lib_{s['key']}", "name": s["name"], "family": s["family"],
+                     "signals": n, "per_day": s["signals_per_day"], "hit_pct": round(100 * hit, 1),
+                     "profit_no_fees": round(s["profit_no_fees"], 1), "profit_low_fees": round(s["profit_low_fees"], 1),
+                     "profit_alpaca": round(s["profit_alpaca"], 1),
+                     "years_positive": s["years_positive_low_fees"], "years": yrs, "verdict": verdict, "why": why})
+    order = {"✅": 0, "⚠️": 1, "🤷": 2, "❌": 3}
+    rows.sort(key=lambda x: (order[x["verdict"]], -x["profit_low_fees"]))
+    return {"available": True, "market": market, "timeframe": timeframe, "horizon_hours": r.get("horizon"),
+            "barrier_atr": r.get("barrier_atr"), "rows": rows,
+            "counts": {v: sum(1 for x in rows if x["verdict"] == v) for v in order}}
+
+
 class BacktestIn(BaseModel):
     market: str
     timeframe: str

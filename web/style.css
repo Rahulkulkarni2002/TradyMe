@@ -311,3 +311,8 @@ footer { text-align: center; margin-top: 28px; }
 .trade-panel .tp-fields input { width: 100%; }
 .forming-item { padding: 8px 0; border-bottom: 1px solid var(--line); line-height: 1.45; }
 .forming-item:last-of-type { border-bottom: 0; }
+
+#rank-table td, #rank-table th { white-space: nowrap; }
+.small-btn { padding: 3px 10px; font-size: .78rem; }
+
+.trade-panel .tp-pct { font-size: .74rem; color: var(--muted); min-height: 1em; }

@@ -89,6 +89,7 @@ function showTab(name) {
   if (name === "watch") loadWatch();
   if (name === "journal") loadJournal();
   if (name === "settings") loadBroker();
+  if (name === "backtest") loadRanking();
   if (name === "trade" && chart) setTimeout(() => chart.applyOptions({ width: $("#chart").clientWidth }), 0);
 }
 $$(".tabs button").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
@@ -388,11 +389,14 @@ function renderSuggestion(s) {
 }
 
 // ───────────────────────── your own trade (any time) ─────────────────────────
+const nowPrice = () => (liveCandle && liveCandle.time >= (chart?._closedLast || 0) ? liveCandle.close : lastSuggestion?.price);
 async function loadManualDefaults() {
   try {
     const d = await api(`/api/manual-defaults?market=${SETTINGS.market}&timeframe=${SETTINGS.timeframe}`);
     if (loadManualDefaults._for !== SETTINGS.market + SETTINGS.timeframe) {      // don't overwrite what you typed
-      $("#tp-stop").value = d.stop_pct.toFixed(2); $("#tp-target").value = d.target_pct.toFixed(2);
+      const dec = market(SETTINGS.market).decimals;
+      $("#tp-stop").value = (d.price * (1 - d.stop_pct / 100)).toFixed(dec);
+      $("#tp-target").value = (d.price * (1 + d.target_pct / 100)).toFixed(dec);
       loadManualDefaults._for = SETTINGS.market + SETTINGS.timeframe;
     }
     const live = SETTINGS.mode === "live";
@@ -400,18 +404,46 @@ async function loadManualDefaults() {
     $("#tp-sell").textContent = d.allow_short ? "SELL" : "SELL (n/a)";
     $("#tp-sell").disabled = !d.allow_short;
     $("#tp-sell").title = d.allow_short ? "Bet that the price falls" : "Spot crypto can't bet on a fall — close your BUY instead";
+    tpLines();
   } catch {}
 }
+// dashed "Your stop" / "Your target" lines on the chart + the % distance under each box
+function tpLines() {
+  if (!candleSeries) return;
+  (candleSeries._tp || []).forEach((l) => candleSeries.removePriceLine(l));
+  candleSeries._tp = [];
+  const now = nowPrice(), c = chartColors();
+  const stop = parseFloat($("#tp-stop").value), target = parseFloat($("#tp-target").value);
+  const pctTxt = (v) => (now && v ? `${v > now ? "+" : ""}${((v - now) / now * 100).toFixed(2)}% from now` : "");
+  $("#tp-stop-pct").textContent = pctTxt(stop);
+  $("#tp-target-pct").textContent = pctTxt(target);
+  if (stop > 0) candleSeries._tp.push(candleSeries.createPriceLine({ price: stop, color: c.sell, lineStyle: 2, lineWidth: 2,
+    axisLabelVisible: true, title: "Your stop" }));
+  if (target > 0) candleSeries._tp.push(candleSeries.createPriceLine({ price: target, color: c.buy, lineStyle: 2, lineWidth: 2,
+    axisLabelVisible: true, title: "Your target" }));
+}
+["#tp-stop", "#tp-target"].forEach((sel) => $(sel).addEventListener("input", tpLines));
+setInterval(() => { if (lastSuggestion) tpLines(); }, 5000);          // keep the "% from now" fresh as the price moves
+
 async function manualTrade(side) {
   const stop = parseFloat($("#tp-stop").value), target = parseFloat($("#tp-target").value);
-  const price = lastSuggestion?.price;
-  const sgn = side === "BUY" ? 1 : -1;
-  const msg = `${side} ${market(SETTINGS.market).name} with ${SETTINGS.mode === "live" ? "💰 LIVE" : "📝 PAPER"} money?\n\n` +
-    (price ? `Price now ≈ ${px(SETTINGS.market, price)}\nStop-loss: ${px(SETTINGS.market, price * (1 - sgn * stop / 100))} (${stop}% away)\nTarget: ${px(SETTINGS.market, price * (1 + sgn * target / 100))} (${target}% away)` : "");
+  const price = nowPrice(), name = market(SETTINGS.market).name, mk = SETTINGS.market;
+  if (!price || !(stop > 0) || !(target > 0)) { toast("⚠️ Type a stop-loss price and a target price first."); return; }
+  const buy = side === "BUY";
+  if (buy && !(stop < price && target > price)) {
+    toast(`⚠️ For a BUY: stop must be BELOW the price now (${px(mk, price)}) and target ABOVE it.`, 6000); return;
+  }
+  if (!buy && !(stop > price && target < price)) {
+    toast(`⚠️ For a SELL: stop must be ABOVE the price now (${px(mk, price)}) and target BELOW it.`, 6000); return;
+  }
+  const stopPct = Math.abs(price - stop) / price * 100, targetPct = Math.abs(target - price) / price * 100;
+  const msg = `${side} ${name} with ${SETTINGS.mode === "live" ? "💰 LIVE" : "📝 PAPER"} money?\n\n` +
+    `Price now ≈ ${px(mk, price)}\nStop-loss: ${px(mk, stop)} (${stopPct.toFixed(2)}% away)\nTarget: ${px(mk, target)} (${targetPct.toFixed(2)}% away)` +
+    `\n\nWin ${(targetPct / stopPct).toFixed(1)}× what you risk.`;
   if (!confirm(msg)) return;
   try {
-    await api("/api/trade", { method: "POST", body: JSON.stringify({ market: SETTINGS.market, timeframe: SETTINGS.timeframe,
-      strategy: SETTINGS.strategy, side, stop_pct: stop, target_pct: target }) });
+    await api("/api/trade", { method: "POST", body: JSON.stringify({ market: mk, timeframe: SETTINGS.timeframe,
+      strategy: SETTINGS.strategy, side, stop_pct: +stopPct.toFixed(4), target_pct: +targetPct.toFixed(4) }) });
     toast("✅ Trade opened — see Open trades below the chart"); refreshAccount();
   } catch (e) { toast("⚠️ " + e.message, 5000); }
 }
@@ -792,6 +824,38 @@ function updateDays() {
   const yrs = max >= 365 ? ` ≈ ${(max / 365).toFixed(1)} years` : "";
   $("#b-days-label").textContent = `${r.value} days (max ${max}${yrs})`;
 }
+// ───────────────────────── 🏆 best strategy finder ─────────────────────────
+async function loadRanking() {
+  const m = $("#b-market").value, tf = $("#b-tf").value;
+  if (!m || !tf) return;
+  const t = $("#rank-table");
+  try {
+    const r = await api(`/api/ranking?market=${m}&timeframe=${tf}`);
+    if (!r.available) { $("#rank-summary").textContent = r.reason; t.innerHTML = ""; $("#rank-sub").textContent = ""; return; }
+    $("#rank-sub").textContent = `${market(m).name} · ${tf} · "worked" = moved ${r.barrier_atr}× normal candle size its way first, within ${r.horizon_hours} h`;
+    const c = r.counts;
+    $("#rank-summary").innerHTML = `<b>${c["✅"]}</b> ✅ worth using · <b>${c["⚠️"]}</b> ⚠️ fees eat it · <b>${c["🤷"]}</b> 🤷 too few · <b>${c["❌"]}</b> ❌ no edge`
+      + (c["✅"] === 0 ? `<br><span class="muted">No strategy made money after fees here. Try a bigger candle size (1 hour / 3 hours).</span>` : "");
+    t.innerHTML = `<tr><th></th><th>Strategy</th><th>Right</th><th>Signals/day</th><th>Profit, no fees</th><th>Profit, cheap broker (0.1%)</th><th>Profit, Alpaca (0.25%)</th><th>Good years</th><th></th></tr>`
+      + r.rows.map((x) => `<tr title="${esc(x.why)}"><td>${x.verdict}</td><td>${esc(x.name)} <span class="muted small">${esc(x.family)}</span></td>
+        <td>${x.hit_pct}%</td><td>${x.per_day}</td>
+        <td class="${x.profit_no_fees >= 0 ? "pnl-pos" : "pnl-neg"}">${x.profit_no_fees > 0 ? "+" : ""}${x.profit_no_fees}%</td>
+        <td class="${x.profit_low_fees >= 0 ? "pnl-pos" : "pnl-neg"}"><b>${x.profit_low_fees > 0 ? "+" : ""}${x.profit_low_fees}%</b></td>
+        <td class="${x.profit_alpaca >= 0 ? "pnl-pos" : "pnl-neg"}">${x.profit_alpaca > 0 ? "+" : ""}${x.profit_alpaca}%</td>
+        <td>${x.years_positive}/${x.years}</td>
+        <td>${META.strategies.some((s) => s.code === x.code) ? `<button class="btn ghost small-btn" data-use="${x.code}">Use</button>` : ""}</td></tr>`).join("");
+    t.querySelectorAll("[data-use]").forEach((b) => b.addEventListener("click", async () => {
+      await saveSettings({ strategy: b.dataset.use, market: m, timeframe: tf });
+      $("#f-market").value = m; $("#f-strategy").value = b.dataset.use;
+      $$("#f-tf button").forEach((x) => x.classList.toggle("on", x.dataset.v === tf));
+      loadSuggestion();
+      toast("✅ Now your focus strategy — back to Trade"); showTab("trade");
+    }));
+  } catch (e) { $("#rank-summary").textContent = "⚠️ " + e.message; }
+}
+$("#b-market")?.addEventListener("change", loadRanking);
+$("#b-tf")?.addEventListener("change", loadRanking);
+
 async function runBacktest() {
   const btn = $("#b-run"); const label = btn.innerHTML; btn.disabled = true; btn.textContent = "Running…";
   try {
