@@ -541,20 +541,61 @@ $("#arrow-sure").addEventListener("change", (e) => {
   arrowSure = +e.target.value; try { localStorage.setItem("arrowSure", arrowSure); } catch {}
   loadModelMarkers();
 });
+// ───────────────────────── model plan: stop-loss + targets on the chart ─────────────────────────
+let showPlan = (() => { try { return localStorage.getItem("showPlan") !== "0"; } catch { return true; } })();
+function drawPlan() {
+  if (!candleSeries) return;
+  (candleSeries._plan || []).forEach((l) => candleSeries.removePriceLine(l));
+  candleSeries._plan = [];
+  const box = $("#plan-box");
+  const p = modelMarkers?.available && arrowSource === "model" ? modelMarkers.plan : null;
+  if (!p || !showPlan) { box.classList.add("hidden"); return; }
+  const c = chartColors(), mk = SETTINGS.market, buy = p.action === "BUY";
+  const fade = p.confident ? "" : "66";
+  const line = (price, color, title, style) => candleSeries._plan.push(candleSeries.createPriceLine({
+    price, color: color + fade, lineStyle: style, lineWidth: p.confident ? 2 : 1, axisLabelVisible: true, title }));
+  line(p.stop, c.sell, `Model stop`, 0);
+  p.targets.forEach((t) => line(t.price, c.buy, `${t.name} · reached ${t.reach_pct ?? "?"}%`, 0));
+  const tooSmall = p.targets[0] && Math.abs(p.targets[0].move_pct) < p.fees_pct;
+  box.innerHTML = `<div class="plan-head ${buy ? "pnl-pos" : "pnl-neg"}">${buy ? "▲ BUY" : "▼ SELL"} plan · model ${p.p}% sure
+      ${p.confident ? "" : `<span class="muted"> — not sure enough (needs ≥ ${Math.round(modelMarkers.threshold * 100)}%), lines are faded: just a guide</span>`}</div>
+    <div class="plan-rows">
+      <div><span class="muted">Entry now</span><b>${px(mk, p.entry)}</b></div>
+      ${p.targets.map((t) => `<div><span class="muted">${t.name}</span><b class="pnl-pos">${px(mk, t.price)}</b>
+        <span class="small">${t.move_pct > 0 ? "+" : ""}${t.move_pct.toFixed(2)}% · reached <b>${t.reach_pct ?? "?"}%</b> of the time</span></div>`).join("")}
+      <div><span class="muted">Stop-loss</span><b class="pnl-neg">${px(mk, p.stop)}</b>
+        <span class="small">${p.stop_pct > 0 ? "+" : ""}${p.stop_pct.toFixed(2)}% · hit ${p.stop_hit_pct ?? "?"}% of the time</span></div>
+    </div>
+    <div class="small muted">Within the next ${p.window_candles} candle${p.window_candles > 1 ? "s" : ""}. "Reached" = on the last ${p.samples} candles where
+      the model was this sure, price touched that level before the stop. ${tooSmall ? `<b class="pnl-neg">⚠️ Target 1 (${Math.abs(p.targets[0].move_pct).toFixed(2)}%) is smaller than fees (${p.fees_pct}% round trip) — a win there still loses money.</b>` : ""}
+      <button class="btn ghost small-btn" id="plan-copy">Use these in "Your trade"</button></div>`;
+  box.classList.remove("hidden");
+  $("#plan-copy").addEventListener("click", () => {
+    const dec = market(mk).decimals;
+    $("#tp-stop").value = p.stop.toFixed(dec); $("#tp-target").value = p.targets[0].price.toFixed(dec); tpLines();
+    toast(`Copied: stop ${px(mk, p.stop)} · target ${px(mk, p.targets[0].price)}`);
+  });
+}
+
 async function loadModelMarkers() {
   const m = SETTINGS.market, tf = SETTINGS.timeframe;
   try {
     const r = await api(`/api/model-markers?market=${m}&timeframe=${tf}&sure=${arrowSure}&horizon=${arrowHorizon}`);
     if (m !== SETTINGS.market || tf !== SETTINGS.timeframe) return;
-    modelMarkers = r; applyMarkers();
+    modelMarkers = r; applyMarkers(); drawPlan();
   } catch { modelMarkers = null; }
 }
 function paintArrowSwitch() {
   $$("#arrow-src button").forEach((b) => b.classList.toggle("on", b.dataset.v === arrowSource));
 }
+$("#plan-toggle").classList.toggle("on", showPlan);
+$("#plan-toggle").addEventListener("click", () => {
+  showPlan = !showPlan; try { localStorage.setItem("showPlan", showPlan ? "1" : "0"); } catch {}
+  $("#plan-toggle").classList.toggle("on", showPlan); drawPlan();
+});
 $$("#arrow-src button").forEach((b) => b.addEventListener("click", () => {
   arrowSource = b.dataset.v; try { localStorage.setItem("arrowSource", arrowSource); } catch {}
-  paintArrowSwitch(); applyMarkers();
+  paintArrowSwitch(); applyMarkers(); drawPlan();
 }));
 paintArrowSwitch();
 

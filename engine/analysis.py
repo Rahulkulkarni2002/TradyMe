@@ -352,3 +352,56 @@ def arrow_details(df: pd.DataFrame, arrows: list[dict], horizon_bars: int, barri
             a["max_down_pct"] = round(float((l[i + 1:j + 1].min() / c[i] - 1) * 100), 3)
             a["close_after_pct"] = round(float((c[j] / c[i] - 1) * 100), 3)
             a["complete"] = j == i + horizon_bars
+
+
+def trade_plan(df: pd.DataFrame, p_up: np.ndarray, threshold: float, horizon_bars: int,
+               barrier_atr: float = 1.5, fees_pct: float = 0.0) -> dict:
+    """Stop-loss and targets for the model's CURRENT call, with how often each was actually reached.
+
+    The model predicts exactly this: "will price move barrier×ATR my way before barrier×ATR against me,
+    within horizon_bars candles?" So:  stop = entry ∓ barrier×ATR,  target 2 = entry ± barrier×ATR,
+    target 1 = half-way (easier). 'reach_pct' = on the recent candles where the model was this sure, how often
+    that target was touched BEFORE the stop, inside the window (a candle touching both counts as a loss)."""
+    c, h, l = (df[x].to_numpy(float) for x in ("close", "high", "low"))
+    atr = ta.atr(df, 14).to_numpy()
+    n, k0 = len(df), len(df) - len(p_up)                    # p_up lines up with the LAST len(p_up) candles
+    side = np.where(p_up >= threshold, 1, np.where(p_up <= 1 - threshold, -1, 0))
+    levels = (0.5, 1.0)
+    hits = {lv: [0, 0] for lv in levels}                     # level → [reached, samples]
+    stop_hits = [0, 0]
+    for j, s in enumerate(side[:-1]):
+        i = k0 + j
+        if s == 0 or i + horizon_bars >= n or not np.isfinite(atr[i]):
+            continue
+        b = barrier_atr * atr[i]
+        stop = c[i] - s * b
+        for lv in levels:
+            tgt = c[i] + s * lv * b
+            ok = False
+            for t in range(i + 1, i + horizon_bars + 1):
+                hit_stop = l[t] <= stop if s > 0 else h[t] >= stop
+                hit_tgt = h[t] >= tgt if s > 0 else l[t] <= tgt
+                if hit_stop:
+                    break
+                if hit_tgt:
+                    ok = True
+                    break
+            hits[lv][0] += ok
+            hits[lv][1] += 1
+        stopped = any((l[t] <= stop if s > 0 else h[t] >= stop) for t in range(i + 1, i + horizon_bars + 1))
+        stop_hits[0] += stopped
+        stop_hits[1] += 1
+    s_now, p_now = int(side[-1]), float(p_up[-1])
+    lean = 1 if p_now >= 0.5 else -1
+    entry, a = float(c[-1]), float(atr[-1])
+    b = barrier_atr * a
+    pct = lambda x: round(100 * x / entry, 3)
+    plan = {"confident": s_now != 0, "action": "BUY" if lean > 0 else "SELL", "p": round(100 * max(p_now, 1 - p_now)),
+            "time": int(df.index[-1].timestamp()), "entry": entry, "window_candles": int(horizon_bars),
+            "stop": entry - lean * b, "stop_pct": pct(-lean * b),
+            "stop_hit_pct": round(100 * stop_hits[0] / stop_hits[1]) if stop_hits[1] else None,
+            "samples": hits[levels[0]][1], "fees_pct": fees_pct,
+            "targets": [{"name": f"Target {k + 1}", "price": entry + lean * lv * b, "move_pct": pct(lean * lv * b),
+                         "reach_pct": round(100 * hits[lv][0] / hits[lv][1]) if hits[lv][1] else None,
+                         "reward_risk": lv} for k, lv in enumerate(levels)]}
+    return plan

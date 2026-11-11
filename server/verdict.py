@@ -178,8 +178,9 @@ def model_markers(market: Market, timeframe: str, bars: int = 300, threshold: fl
     X = features.build(df, timeframe)
     fb, X = _with_futures(market, timeframe, (f"_{horizon}",) if short else tuple(TAGS), df, X)
     bundle = fb or bundle
-    M = model_inputs(V, A, X).reindex(columns=bundle["columns"]).iloc[-bars:]
-    p = bundle["model"].predict_proba(M)[:, 1]
+    M_all = model_inputs(V, A, X).reindex(columns=bundle["columns"])
+    p_all = bundle["model"].predict_proba(M_all)[:, 1]          # all ~900 candles: for the target statistics
+    M, p = M_all.iloc[-bars:], p_all[-bars:]
     side = np.where(p >= threshold, 1, np.where(p <= 1 - threshold, -1, 0))
     prev = np.concatenate([[0], side[:-1]])
     out = []
@@ -198,7 +199,11 @@ def model_markers(market: Market, timeframe: str, bars: int = 300, threshold: fl
            "action": "BUY" if last_up >= 0.5 else "SELL", "pct": round(100 * max(last_up, 1 - last_up)),
            "confident": bool(side[-1] != 0)}
     conf_share = float((side != 0).mean())                    # how often it is this sure (on these candles)
+    from engine.analysis import trade_plan
+    plan = trade_plan(df, p_all, threshold, H, bundle.get("barrier_atr") or 1.5,
+                      fees_pct=round(2 * market.fee_bps / 100, 3))
     return {"available": True, "markers": out, "threshold": threshold, "score": score, "short": short, "now": now,
+            "plan": plan,
             "confident_share": round(100 * conf_share, 1),
             "candles": int(horizon[1:]) if short else None,
             "horizon_hours": bundle.get("horizon_hours"), "exam_accuracy": bundle.get("exam_accuracy")}
