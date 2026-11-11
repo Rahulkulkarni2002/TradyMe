@@ -123,3 +123,19 @@ def test_backtest_limits_follow_the_data_source(monkeypatch):
     assert bs.max_days(get_market("GOLD"), "5m") == 59                 # Yahoo only keeps ~60 days
     monkeypatch.setenv("OANDA_API_TOKEN", "x"); monkeypatch.setenv("OANDA_ACCOUNT_ID", "y")
     assert bs.max_days(get_market("GOLD"), "5m") == 365                # OANDA keeps years
+
+
+def test_preview_signal_uses_the_forming_candle(client, monkeypatch):
+    c, _ = client
+    import engine.data.live as live
+    from engine.data import get_candles
+    from engine.markets import get_market
+    last = get_candles(get_market("BTC"), "5m", bars=5)
+    t = int(last.index[-1].timestamp()) + 300
+    close = float(last.close.iloc[-1])
+    monkeypatch.setattr(live, "forming_candle", lambda m, tf: {"time": t, "open": close, "high": close * 1.01,
+                                                                "low": close, "close": close * 1.01, "volume": 1.0})
+    r = c.get("/api/preview", params={"market": "BTC", "timeframe": "5m", "strategy": "lib_ema_9_21"}).json()
+    assert r["time"] == t and r["action"] in ("BUY", "SELL", "WAIT")
+    monkeypatch.setattr(live, "forming_candle", lambda m, tf: None)          # no forming candle → nothing
+    assert c.get("/api/preview", params={"market": "BTC", "timeframe": "5m", "strategy": "ema_rsi"}).json()["action"] is None

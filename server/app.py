@@ -224,6 +224,26 @@ def live_candle(market: str, timeframe: str):
         raise HTTPException(404, str(e))
 
 
+@app.get("/api/preview")
+def preview(market: str, timeframe: str, strategy: str):
+    """What the focus strategy WOULD say if the forming candle closed right now (not final)."""
+    from engine.data.live import forming_candle
+    m = get_market(market)
+    try:
+        df = get_candles(m, timeframe, bars=500)
+        fc = forming_candle(m, timeframe)
+    except requests.RequestException:
+        return {"action": None}
+    if not fc or len(df) < 250 or fc["time"] <= int(df.index[-1].timestamp()):
+        return {"action": None}
+    row = pd.DataFrame([{k: fc[k] for k in ("open", "high", "low", "close", "volume")}],
+                       index=[pd.Timestamp(fc["time"], unit="s", tz="UTC")])
+    strat = make_strategy(strategy)
+    data = strat.prepare(pd.concat([df, row]))
+    sig = strat.on_bar(data, len(data) - 1)
+    return {"time": fc["time"], "action": sig.action.value if sig.is_trade else "WAIT", "reason": sig.reason}
+
+
 @app.get("/api/stream")
 async def price_stream(market: str, request: Request):
     """Real-time gold/forex prices (OANDA ticks) for the chart, as server-sent events."""

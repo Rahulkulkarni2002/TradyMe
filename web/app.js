@@ -231,13 +231,15 @@ function renderVerdict(v) {
        <span>${esc(x.name)}</span>${x.hit_rate != null ? `<span class="hr">won ${Math.round(x.hit_rate * 100)}%</span>` : ""}</div>`).join("") + `</div>`;
   });
   html += `<p class="small muted" style="text-align:left">"won X%" = how often this strategy's signals went the right way on this market, 2015–2024 (before fees). 2025 onward is kept aside as the final exam.</p></details>`;
-  html += `<div class="small muted">Last candle ${ago(new Date(new Date(v.time).getTime()).toISOString())} · updates every 30 s</div>`;
+  const vClosed = new Date(new Date(v.time).getTime() + (TF_SEC[v.timeframe] || 0) * 1000).toISOString();
+  html += `<div class="small muted">Last candle closed ${ago(vClosed)} · updates when each candle closes</div>`;
   body.innerHTML = html;
 }
 
 async function loadSuggestion() {
   loadVerdict();
   if (lastSuggestion && (lastSuggestion.market !== SETTINGS.market || lastSuggestion.timeframe !== SETTINGS.timeframe)) { liveCandle = null; liveKey = ""; }
+  previewSignal = null;
   const m = SETTINGS.market, tf = SETTINGS.timeframe, st = SETTINGS.strategy;
   try {
     const s = await api(`/api/suggest?market=${m}&timeframe=${tf}&strategy=${st}`);
@@ -263,7 +265,9 @@ function paintLive() {
 let lastPriceAt = 0;
 function liveLabel() {                                   // ticks every second so you can see it's alive
   const el = $("#chart-live"); if (!el || !liveCandle) return;
-  const src = liveSocket && liveSocket.readyState === 1 ? `live prices (${liveSocket.kind})` : "updates every 10 s (add an OANDA key for live gold/forex)";
+  const crypto = market(SETTINGS.market)?.kind === "crypto";
+  const src = liveSocket && liveSocket.readyState === 1 ? `live prices (${liveSocket.kind})`
+    : crypto ? "updates every 2 s (live feed reconnecting…)" : "updates every 10 s (add an OANDA key for live gold/forex)";
   const ago = Math.max(0, Math.round((Date.now() - lastPriceAt) / 1000));
   const tf = TF_SEC[SETTINGS.timeframe], left = tf - (Math.floor(Date.now() / 1000) % tf);
   const mm = String(Math.floor(left / 60)), ss = String(left % 60).padStart(2, "0");
@@ -422,6 +426,34 @@ function makeChart(el, height) {
     rightPriceScale: { borderColor: c.line },
   });
 }
+// ───────────────────────── preview arrow on the forming candle (not final) ─────────────────────────
+let previewSignal = null;
+function applyMarkers() {
+  if (!candleSeries) return;
+  const c = chartColors();
+  const marks = [...(chart._pastMarkers || [])];
+  const p = previewSignal;
+  if (p && (p.action === "BUY" || p.action === "SELL") && p.time > (chart._closedLast || 0)) {
+    marks.push({ time: p.time, position: p.action === "BUY" ? "belowBar" : "aboveBar", text: "?",
+      color: (p.action === "BUY" ? c.buy : c.sell) + "88", shape: p.action === "BUY" ? "arrowUp" : "arrowDown" });
+  }
+  candleSeries.setMarkers(marks);
+}
+async function loadPreview() {
+  if (!lastSuggestion || !liveCandle) return;
+  const m = SETTINGS.market, tf = SETTINGS.timeframe, st = SETTINGS.strategy;
+  try {
+    const r = await api(`/api/preview?market=${m}&timeframe=${tf}&strategy=${st}`);
+    if (m !== SETTINGS.market || tf !== SETTINGS.timeframe || st !== SETTINGS.strategy) return;
+    const changed = (r.action || null) !== (previewSignal?.action || null) || r.time !== previewSignal?.time;
+    previewSignal = r.action ? r : null;
+    if (changed) applyMarkers();
+    const el = $("#preview-note");
+    if (el) el.textContent = r.action === "BUY" || r.action === "SELL"
+      ? `Preview: if this candle closed now → ${r.action} (faded “?” arrow, not final)` : "";
+  } catch { /* ignore */ }
+}
+
 // ───────────────────────── chart zoom: open on today, − / + / Today buttons ─────────────────────────
 function showToday() {
   const candles = lastSuggestion?.candles || [];
@@ -469,8 +501,9 @@ function renderChart(s) {
   $("#chart-note").textContent = !last ? "" : s.market_closed
     ? `😴 Market closed — the last candle is from ${tzFormat(last, { weekday: "long", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}. It will move again when the market reopens (${market(s.market).hours}). Times shown in ${tzName}.`
     : `🟢 Live — a new candle appears every ${META.timeframes.find((t) => t.code === s.timeframe).label}. Times shown in ${tzName}.`;
-  candleSeries.setMarkers(s.markers.map((m) => ({ time: m.time, position: m.action === "BUY" ? "belowBar" : "aboveBar",
-    color: m.action === "BUY" ? c.buy : c.sell, shape: m.action === "BUY" ? "arrowUp" : "arrowDown" })));
+  chart._pastMarkers = s.markers.map((m) => ({ time: m.time, position: m.action === "BUY" ? "belowBar" : "aboveBar",
+    color: m.action === "BUY" ? c.buy : c.sell, shape: m.action === "BUY" ? "arrowUp" : "arrowDown" }));
+  applyMarkers();
   (candleSeries._lines || []).forEach((l) => candleSeries.removePriceLine(l));
   candleSeries._lines = [];
   if (s.action !== "WAIT") {
@@ -646,6 +679,7 @@ function setupSettings() {
   setInterval(loadSuggestion, 30000);
   setInterval(loadLive, 2000);
   setInterval(liveLabel, 1000);
+  setInterval(loadPreview, 5000);
   (function atCandleClose() {                             // new signal ~3 s after each candle closes
     const tf = TF_SEC[SETTINGS.timeframe] || 300;
     const wait = (tf - (Date.now() / 1000) % tf + 3) * 1000;
