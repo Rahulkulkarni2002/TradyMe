@@ -41,6 +41,28 @@ def _load_model(code: str, timeframe: str, tags: tuple = tuple(TAGS)):
     return None
 
 
+def _with_futures(market: Market, timeframe: str, tags: tuple, df, X):
+    """If a futures-trained model exists AND live futures data is reachable, use it (with those inputs added).
+    Otherwise returns (None, X) and the normal model is used."""
+    ftags = tuple(t + "f" for t in tags if t)
+    if not any((MODELS / f"{market.code}_{timeframe}{t}.joblib").exists() for t in ftags):
+        return None, X
+    from engine.data import futures_live
+    from engine.data.base import tf_seconds
+    from research import futures_features as ff
+    metrics, funding = futures_live.merged(market.code)
+    if metrics is None:
+        return None, X
+    try:
+        c5 = get_candles(market, "5m", bars=600)["close"]
+    except Exception:
+        c5 = None
+    F = ff.for_candles(df.index, tf_seconds(timeframe), ff.five_minute(market.code, metrics, funding, close5=c5))
+    if F.iloc[-1].isna().all():
+        return None, X
+    return _load_model(market.code, timeframe, ftags), pd.concat([X, F.astype("float32")], axis=1)
+
+
 def available_models() -> list[str]:
     return sorted(p.stem for p in MODELS.glob("*.joblib"))
 
@@ -79,12 +101,14 @@ def verdict(market: Market, timeframe: str) -> dict:
     model = {"available": False}
     if bundle:
         X = features.build(df, timeframe)
+        fb, X = _with_futures(market, timeframe, tuple(TAGS), df, X)
+        bundle = fb or bundle
         M = model_inputs(V, A, X).reindex(columns=bundle["columns"])
         p_up = float(bundle["model"].predict_proba(M.iloc[[-1]])[:, 1][0])
         model = {"available": True, "p_up": p_up,
                  "horizon_hours": bundle.get("horizon_hours", HORIZON_HOURS.get((timeframe, bundle["tag"]), 2)),
                  "exam_accuracy": bundle["exam_accuracy"], "exam_auc": bundle["exam_auc"],
-                 "trained_until": bundle["trained_until"]}
+                 "trained_until": bundle["trained_until"], "uses_futures": bundle.get("tag", "").endswith("f")}
     else:
         model["reason"] = (f"No prediction model for {market.name} on {timeframe} candles yet — showing strategy votes only. "
                            f"Models so far: Bitcoin, Ethereum, XRP, Solana on 15 min, 30 min, 1 hour and 3 hour candles.")
@@ -152,6 +176,8 @@ def model_markers(market: Market, timeframe: str, bars: int = 300, threshold: fl
     V = build_votes(df)
     A = agreement(V)
     X = features.build(df, timeframe)
+    fb, X = _with_futures(market, timeframe, (f"_{horizon}",) if short else tuple(TAGS), df, X)
+    bundle = fb or bundle
     M = model_inputs(V, A, X).reindex(columns=bundle["columns"]).iloc[-bars:]
     p = bundle["model"].predict_proba(M)[:, 1]
     side = np.where(p >= threshold, 1, np.where(p <= 1 - threshold, -1, 0))

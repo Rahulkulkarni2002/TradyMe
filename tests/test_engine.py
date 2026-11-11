@@ -188,3 +188,20 @@ def test_forming_double_top_before_breakout():
     assert "double_top" in keys
     p = next(p for p in forming(df) if p["key"] == "double_top")
     assert p["lean"] == "SELL" and p["side"] == "below" and p["trigger"] < c[-1]
+
+
+def test_futures_features_never_peek():
+    """A candle only sees futures data stamped before it closes (minus a 5-min safety step)."""
+    import numpy as np, pandas as pd
+    from research.futures_features import five_minute, for_candles
+    idx = pd.date_range("2024-01-01", periods=2000, freq="5min", tz="UTC")
+    m = pd.DataFrame({"oi_usd": np.linspace(1e9, 2e9, len(idx)), "top_acct_ls": 1.2, "top_pos_ls": 1.1,
+                      "all_ls": 1.3, "taker_ls": 1.0}, index=idx)
+    f5 = five_minute("BTC", m, None)
+    candles = pd.date_range("2024-01-02", periods=10, freq="1h", tz="UTC")
+    F = for_candles(candles, 3600, f5)
+    # the 1h candle opening 2024-01-02 00:00 closes at 01:00 → may use data up to 00:55, not later
+    assert F["oi_ch_1h"].iloc[0] == f5["oi_ch_1h"].loc["2024-01-02 00:55"]
+    m2 = m.copy(); m2.loc["2024-01-02 01:00":, "oi_usd"] = 9e12            # a future spike changes nothing before it
+    F2 = for_candles(candles, 3600, five_minute("BTC", m2, None))
+    assert F2["oi_ch_1h"].iloc[0] == F["oi_ch_1h"].iloc[0]
