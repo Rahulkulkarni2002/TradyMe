@@ -129,6 +129,8 @@ def run(code: str, timeframe: str, horizon: int | None = None, barrier: float = 
     M = model_inputs(V, A, X)
     exams = []
     years = [y for y in range(max(df.index[0].year + 2, 2019), 2025)]
+    if futures:                       # futures data starts late 2020 → exam only years with ≥1 year of it to learn from
+        years = [y for y in years if y >= 2022]
     for year in years:
         ts = pd.Timestamp(f"{year}-01-01", tz="UTC")
         tr = (M.index < ts - pd.Timedelta(days=1)) & lab["label"].notna()
