@@ -204,6 +204,24 @@ def suggest(market: str, timeframe: str, strategy: str):
             if len(keep) == 4:
                 break
         sug["patterns"] = keep[::-1]
+        # every pattern breakout on this chart as an arrow, with how often that pattern worked since 2015
+        hist = {}
+        from server.verdict import RESULTS
+        for tag in ("_h6", "_h2", ""):
+            rp = RESULTS / f"{market}_{timeframe}{tag}_strategies.json"
+            if rp.exists():
+                hist = {x["key"][4:]: x for x in json.loads(rp.read_text())["strategies"] if x["key"].startswith("pat_")}
+                break
+        pm = []
+        for p in pats:
+            if p["time"] >= first:
+                h = hist.get(p["key"], {})
+                pm.append({"time": p["time"], "action": p["direction"], "name": p["name"],
+                           "hist_pct": round(100 * h["hit_rate"]) if h.get("hit_rate") is not None else None,
+                           "hist_n": h.get("signals")})
+        analysis.grade_arrows(df, pm, H, 1.5)
+        analysis.arrow_details(df, pm, H, 1.5)
+        sug["pattern_markers"] = pm
         from engine.strategies.chart_patterns import forming
         try:
             sug["forming"] = forming(df)                   # patterns taking shape now (not broken out yet)

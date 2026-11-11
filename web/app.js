@@ -546,6 +546,16 @@ function applyMarkers() {
         text: modelMarkers.short ? (RESULT_MARK[m.result] || "") : `${m.pct}% ${RESULT_MARK[m.result] || ""}`.trim(), size: modelMarkers.short ? 0.6 : 1,
         color: m.action === "BUY" ? c.buy : c.sell, shape: m.action === "BUY" ? "arrowUp" : "arrowDown" }))
     : (chart._strategyMarkers || []);
+  if (arrowSource === "pattern") {
+    const pm = lastSuggestion?.pattern_markers || [];
+    past.length = 0;
+    pm.forEach((m) => past.push({ time: m.time, position: m.action === "BUY" ? "belowBar" : "aboveBar",
+      shape: m.action === "BUY" ? "arrowUp" : "arrowDown", color: m.action === "BUY" ? c.buy : c.sell,
+      text: `${m.name}${m.hist_pct != null ? " " + m.hist_pct + "%" : ""} ${RESULT_MARK[m.result] || ""}`.trim() }));
+    const w = pm.filter((m) => m.result === "win").length, l = pm.filter((m) => m.result === "loss").length;
+    if (note) note.textContent = "Pattern arrows: an arrow where a chart pattern broke out. The % = how often that pattern was right on this market & candle size since 2015 (50% = coin flip).";
+    if (scoreEl) scoreEl.textContent = w + l ? `On this chart: ${w} ✓ · ${l} ✗` : "";
+  }
   const marks = [...past];
   if (useModel && modelMarkers.now) {                     // ALWAYS an arrow on the newest closed candle: the model's lean right now
     const n = modelMarkers.now, up = n.action === "BUY";
@@ -555,10 +565,11 @@ function applyMarkers() {
     marks.sort((a, b) => a.time - b.time);
   }
   chart._arrowInfo = {};
-  const src = useModel ? modelMarkers.markers : (lastSuggestion?.markers || []);
+  const src = arrowSource === "pattern" ? (lastSuggestion?.pattern_markers || []).map((m) => ({ ...m, p_up: null }))
+    : useModel ? modelMarkers.markers : (lastSuggestion?.markers || []);
   if (useModel && modelMarkers.now && !src.some((m) => m.time === modelMarkers.now.time))
     chart._arrowInfo[modelMarkers.now.time] = { ...modelMarkers.now, source: modelMarkers.now.confident ? "Model · NOW" : "Model · NOW (not sure enough for a real arrow)" };
-  for (const m of src) chart._arrowInfo[m.time] = { ...m, source: useModel ? (modelMarkers.short ? `Model · next ${modelMarkers.candles} candle${modelMarkers.candles > 1 ? "s" : ""}` : `Model · next ~${modelMarkers.horizon_hours} h`) : (META.strategies.find((x) => x.code === SETTINGS.strategy)?.label || "Strategy") };
+  for (const m of src) chart._arrowInfo[m.time] = { ...m, source: arrowSource === "pattern" ? `📐 ${m.name}` : useModel ? (modelMarkers.short ? `Model · next ${modelMarkers.candles} candle${modelMarkers.candles > 1 ? "s" : ""}` : `Model · next ~${modelMarkers.horizon_hours} h`) : (META.strategies.find((x) => x.code === SETTINGS.strategy)?.label || "Strategy") };
   const p = previewSignal;
   if (!useModel && p && (p.action === "BUY" || p.action === "SELL") && p.time > (chart._closedLast || 0)) {
     marks.push({ time: p.time, position: p.action === "BUY" ? "belowBar" : "aboveBar", text: "?",
@@ -594,6 +605,7 @@ function showArrowPopup(param) {
   const money = a.price && a.move_pct ? ` (≈ ${px(SETTINGS.market, a.price * a.move_pct / 100)} at ${px(SETTINGS.market, a.price)})` : "";
   let html = `<div class="pop-head ${up ? "pnl-pos" : "pnl-neg"}">${up ? "▲ BUY" : "▼ SELL"} <span class="muted small">· ${esc(a.source)}</span></div>
     <div class="small muted">${tzFormat(a.time, { weekday: "short", hour: "numeric", minute: "2-digit" })}</div>`;
+  if (a.hist_pct != null) html += `<div class="pop-row">Since 2015 this pattern was right <b>${a.hist_pct}%</b> of ${a.hist_n} times here ${a.hist_pct < 53 ? "(≈ coin flip)" : ""}</div>`;
   if (a.p_up != null) html += `<div class="pop-row">Chance <b class="pnl-pos">UP ${a.p_up}%</b> · <b class="pnl-neg">DOWN ${100 - a.p_up}%</b></div>`;
   if (a.move_pct) html += `<div class="pop-row">Aiming for a <b>±${a.move_pct.toFixed(2)}%</b> move${money} within <b>${a.window_candles} candle${a.window_candles > 1 ? "s" : ""}</b></div>`;
   if (a.max_up_pct != null) {
