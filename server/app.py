@@ -184,7 +184,8 @@ def suggest(market: str, timeframe: str, strategy: str):
             if sig.is_trade:
                 markers.append({"time": int(data.index[i].timestamp()), "action": sig.action.value})
         tail = data.iloc[-300:]
-        sug["candles"] = [{"time": int(t.timestamp()), "open": r.open, "high": r.high, "low": r.low, "close": r.close}
+        sug["candles"] = [{"time": int(t.timestamp()), "open": r.open, "high": r.high, "low": r.low, "close": r.close,
+                           "volume": float(r.volume) if "volume" in tail and r.volume == r.volume else 0.0}
                           for t, r in tail.iterrows()]
         from engine.data.base import tf_seconds
         H = max(1, round(2 * 3600 / tf_seconds(timeframe)))          # did it move 1.5 ATR its way within ~2 h?

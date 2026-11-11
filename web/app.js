@@ -255,12 +255,22 @@ async function loadSuggestion() {
 let liveCandle = null, liveSocket = null, liveStreamUrl = null, liveKey = "", lastPaint = 0, lastTick = 0, lastResync = 0;
 const TF_SEC = { "5m": 300, "10m": 600, "15m": 900, "30m": 1800, "1h": 3600, "3h": 10800 };
 
+// candles (closed + the live forming one) → the indicators you ticked
+let _indAt = 0;
+function feedIndicators() {
+  if (!window.TradyInd || !lastSuggestion) return;
+  const cs = lastSuggestion.candles.slice();
+  if (liveCandle && liveCandle.time > (chart?._closedLast || 0)) cs.push({ ...liveCandle, volume: 0 });
+  window.TradyInd.update(cs);
+  _indAt = Date.now();
+}
 function paintLive() {
   if (!liveCandle || !candleSeries || liveCandle.time <= (chart._closedLast || 0)) return;
   candleSeries.update({ time: liveCandle.time, open: liveCandle.open, high: liveCandle.high, low: liveCandle.low, close: liveCandle.close });
   $("#tb-price").textContent = px(SETTINGS.market, liveCandle.close);
   const now = $("#now-price"); if (now) now.textContent = px(SETTINGS.market, liveCandle.close);
   lastPriceAt = Date.now();
+  if (Date.now() - _indAt > 1000) feedIndicators();        // indicators follow the live candle (once a second)
   liveLabel();
 }
 let lastPriceAt = 0;
@@ -544,6 +554,7 @@ function chartColors(el) {
            bg: cs.getPropertyValue("--chart-bg").trim() || "transparent" };
 }
 function restyleCharts() {
+  if (window.TradyInd) setTimeout(() => window.TradyInd.restyle(), 0);
   paintChartTheme();
   const c = chartColors();
   if (chart) {
@@ -573,7 +584,7 @@ function makeChart(el, height) {
         : type === 2 ? tzFormat(t, { weekday: "short", day: "numeric", month: "short" })
         : tzFormat(t, { hour: "numeric", minute: "2-digit" }),
     },
-    rightPriceScale: { borderColor: c.line },
+    rightPriceScale: { borderColor: c.line, minimumWidth: 92 },   // same width everywhere → indicator panels line up
   });
 }
 // ───────────────────────── preview arrow on the forming candle (not final) ─────────────────────────
@@ -792,6 +803,7 @@ function renderChart(s) {
     candleSeries = chart.addCandlestickSeries({ upColor: c.buy, downColor: c.sell, borderVisible: false, wickUpColor: c.buy, wickDownColor: c.sell });
     window.addEventListener("resize", () => chart.applyOptions({ width: $("#chart").clientWidth, height: $("#chart").clientHeight }));
     if (window.TradyDraw) window.TradyDraw.init();
+    if (window.TradyInd) window.TradyInd.init();
     chart.subscribeClick(showArrowPopup);
   }
   const dec = market(s.market).decimals;
@@ -809,6 +821,7 @@ function renderChart(s) {
   chart._strategyScore = s.marker_score;
   if (window.TradyDraw) window.TradyDraw.setPatterns(s.patterns, s.forming);
   renderForming(s.forming);
+  feedIndicators();
   loadManualDefaults();
   drawPositions();
   applyMarkers();

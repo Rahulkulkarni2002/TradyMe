@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css?v=23">
+  <link rel="stylesheet" href="/static/style.css?v=24">
   <script src="/static/vendor/lightweight-charts.standalone.production.js"></script>
 </head>
 <body>
@@ -161,6 +161,8 @@
               </div>
             </div>
             <div class="draw-tools" id="draw-tools" title="Draw on the chart: pick a tool, then click-and-drag. Pick it again (or press Esc) to go back to scrolling.">
+              <div class="ind-wrap"><button id="ind-btn" class="ind-btn" title="Add indicators to the chart (pick as many as you like)">📈 Indicators</button>
+                <div id="ind-menu" class="ind-menu hidden"></div></div>
               <button id="draw-patterns" title="Show / hide chart patterns found automatically (double top, head & shoulders, wedges, flags, pennants, triangles)">📐 Patterns</button>
               <span class="small muted" style="margin-left:6px">Draw:</span>
               <button data-tool="line" title="Trend line: drag from one point to another">╱ Line</button>
@@ -173,6 +175,7 @@
             <p class="small muted chart-notes"><span id="chart-note"></span> <span id="chart-live" class="live-dot"></span> <span id="preview-note"></span> <span id="arrow-note"></span> <b id="arrow-score"></b></p>
             <div id="plan-box" class="plan-box hidden"></div>
             <div id="chart" class="chart"><div id="arrow-pop" class="arrow-pop hidden"></div></div>
+            <div id="ind-panes" class="ind-panes"></div>
           </section>
 
           <section class="card trades-card">
@@ -319,7 +322,8 @@
 
   <div id="tip" class="tip hidden"></div>
   <div id="toast" class="toast hidden"></div>
-  <script src="/static/app.js?v=27"></script>
+  <script src="/static/app.js?v=28"></script>
   <script src="/static/draw.js?v=9"></script>
+  <script src="/static/indicators.js?v=1"></script>
 </body>
 </html>

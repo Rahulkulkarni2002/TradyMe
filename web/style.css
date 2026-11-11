@@ -328,3 +328,20 @@ footer { text-align: center; margin-top: 28px; }
   background: #8a6d00; color: #fff; font: 700 12px/22px var(--font); padding: 0; box-shadow: 0 2px 6px rgba(0,0,0,.25); }
 .pos-x:hover { background: var(--sell); }
 #tp-hide { margin-bottom: 6px; }
+
+/* 📈 indicators menu + panels under the chart */
+.ind-wrap { position: relative; display: inline-block; }
+.ind-btn { font-weight: 700; }
+.ind-menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 20; width: 330px; max-height: 460px; overflow: auto;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 34px rgba(0,0,0,.22); padding: 8px; }
+.ind-group { font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 8px 6px 4px; }
+.ind-item { display: flex; gap: 10px; align-items: flex-start; padding: 6px; border-radius: 8px; cursor: pointer; font-size: .86rem; }
+.ind-item:hover { background: var(--surface-2); }
+.ind-item input { margin-top: 3px; }
+.ind-foot { display: flex; justify-content: space-between; padding: 8px 6px 2px; border-top: 1px solid var(--line); margin-top: 6px; }
+.ind-panes { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+.ind-pane { border-radius: 10px; overflow: hidden; background: var(--chart-bg, transparent); }
+.ind-pane-title { font-size: .76rem; font-weight: 700; color: var(--muted); padding: 2px 6px; display: flex; justify-content: space-between; }
+.ind-pane-title button { border: 0; background: none; cursor: pointer; color: var(--muted); font-weight: 800; }
+.ind-pane-title button:hover { color: var(--sell); }
+.ind-chart { height: 110px; }
