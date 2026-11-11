@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css?v=15">
+  <link rel="stylesheet" href="/static/style.css?v=16">
   <script src="/static/vendor/lightweight-charts.standalone.production.js"></script>
 </head>
 <body>
@@ -127,6 +127,7 @@
                   <option value="55">≥ 55% sure (more arrows)</option><option value="58">≥ 58% sure</option>
                   <option value="62" selected>≥ 62% sure</option><option value="66">≥ 66% sure (fewer, surer)</option>
                 </select>
+                <button class="chart-theme" id="chart-theme" title="Switch the chart background">☾ Dark chart</button>
                 <div class="zoom" role="group" aria-label="Zoom">
                   <button id="zoom-out" title="Zoom out (see more candles)">−</button>
                   <button id="zoom-today" title="Back to today">Today</button>
@@ -284,7 +285,7 @@
 
   <div id="tip" class="tip hidden"></div>
   <div id="toast" class="toast hidden"></div>
-  <script src="/static/app.js?v=14"></script>
-  <script src="/static/draw.js?v=4"></script>
+  <script src="/static/app.js?v=15"></script>
+  <script src="/static/draw.js?v=5"></script>
 </body>
 </html>

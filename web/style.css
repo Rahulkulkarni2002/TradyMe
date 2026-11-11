@@ -288,3 +288,10 @@ footer { text-align: center; margin-top: 28px; }
 .draw-tools button:hover { border-color: var(--accent); }
 .draw-tools button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
 .draw-layer { position: absolute; left: 0; top: 0; height: 100%; pointer-events: none; z-index: 3; overflow: hidden; }
+
+/* chart background: light by default so candles, arrows, patterns and lines stand out */
+.chart.chart-light { --surface: #ffffff; --surface-2: #f3f5f9; --line: #e7eaf0; --text: #111827; --muted: #4b5466;
+  --buy: #0a9a63; --sell: #d62f3b; --accent: #5b4cf0; background: #ffffff; border-radius: 12px; }
+.chart.chart-dark { background: transparent; }
+.chart-theme { border: 1px solid var(--line); background: var(--surface-2); color: var(--text-2); border-radius: 8px;
+  padding: 4px 9px; font: 600 .78rem var(--font); cursor: pointer; }

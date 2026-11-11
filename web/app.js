@@ -400,10 +400,27 @@ function renderPrescan(p) {
   $("#prescan").innerHTML = (p?.points || ["No data."]).map((x) => `<li>${esc(x)}</li>`).join("");
 }
 
-function chartColors() {
-  const cs = getComputedStyle(document.documentElement);
+let chartTheme = (() => { try { return localStorage.getItem("chartTheme") || "light"; } catch { return "light"; } })();
+function paintChartTheme() {
+  ["#chart", "#b-chart"].forEach((sel) => { const el = $(sel); if (el) { el.classList.toggle("chart-light", chartTheme === "light"); el.classList.toggle("chart-dark", chartTheme !== "light"); } });
+  const b = $("#chart-theme"); if (b) b.textContent = chartTheme === "light" ? "☾ Dark chart" : "☀ Light chart";
+}
+function chartColors(el) {
+  const cs = getComputedStyle(el || $("#chart"));
   return { text: cs.getPropertyValue("--muted").trim(), line: cs.getPropertyValue("--line").trim(),
-           buy: cs.getPropertyValue("--buy").trim(), sell: cs.getPropertyValue("--sell").trim() };
+           buy: cs.getPropertyValue("--buy").trim(), sell: cs.getPropertyValue("--sell").trim(),
+           bg: chartTheme === "light" ? "#ffffff" : "transparent" };
+}
+function restyleCharts() {
+  paintChartTheme();
+  const c = chartColors();
+  if (chart) {
+    chart.applyOptions({ layout: { background: { color: c.bg }, textColor: c.text },
+      grid: { horzLines: { color: c.line } }, rightPriceScale: { borderColor: c.line } });
+    candleSeries.applyOptions({ upColor: c.buy, downColor: c.sell, wickUpColor: c.buy, wickDownColor: c.sell });
+    if (lastSuggestion) renderChart(lastSuggestion);
+  }
+  if (btChart) btChart.applyOptions({ layout: { background: { color: chartColors($("#b-chart")).bg }, textColor: chartColors($("#b-chart")).text } });
 }
 // Show chart times in the user's own time zone (the chart library uses UTC by default).
 function tzFormat(t, opts) {
@@ -411,9 +428,10 @@ function tzFormat(t, opts) {
   catch { return new Date(t * 1000).toLocaleString(undefined, opts); }
 }
 function makeChart(el, height) {
-  const c = chartColors();
+  paintChartTheme();
+  const c = chartColors(el);
   return LightweightCharts.createChart(el, {
-    width: el.clientWidth, height: el.clientHeight || height, layout: { background: { color: "transparent" }, textColor: c.text, fontFamily: getComputedStyle(document.body).fontFamily },
+    width: el.clientWidth, height: el.clientHeight || height, layout: { background: { color: c.bg }, textColor: c.text, fontFamily: getComputedStyle(document.body).fontFamily },
     grid: { vertLines: { visible: false }, horzLines: { color: c.line } },
     crosshair: { mode: 1 },
     localization: { timeFormatter: (t) => tzFormat(t, { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) },
@@ -519,6 +537,11 @@ function zoom(factor) {
   chart.timeScale().setVisibleLogicalRange({ from: right - width, to: right });   // keep the newest candles in view
 }
 $("#zoom-in").addEventListener("click", () => zoom(0.6));
+$("#chart-theme").addEventListener("click", () => {
+  chartTheme = chartTheme === "light" ? "dark" : "light";
+  try { localStorage.setItem("chartTheme", chartTheme); } catch {}
+  restyleCharts();
+});
 $("#zoom-out").addEventListener("click", () => zoom(1.6));
 $("#zoom-today").addEventListener("click", showToday);
 

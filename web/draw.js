@@ -46,10 +46,10 @@
     const paneW = chart.timeScale().width(), paneH = svg.parentElement.clientHeight - (chart.timeScale().height ? chart.timeScale().height() : 26);
     svg.style.width = paneW + "px"; svg.style.height = Math.max(0, paneH) + "px";
     svg.setAttribute("viewBox", `0 0 ${paneW} ${Math.max(0, paneH)}`);
-    const color = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#7c6cff";
+    const color = getComputedStyle(document.getElementById("chart")).getPropertyValue("--accent").trim() || "#7c6cff";
     const W = svg.clientWidth;
     if (showPatterns) {
-      const cs = getComputedStyle(document.documentElement);
+      const cs = getComputedStyle(document.getElementById("chart"));
       const placed = [];                                 // keep labels from sitting on top of each other
       for (const p of patterns) {
         const col = p.direction === "BUY" ? cs.getPropertyValue("--buy").trim() : cs.getPropertyValue("--sell").trim();
