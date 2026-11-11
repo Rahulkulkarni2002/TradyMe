@@ -290,8 +290,9 @@ footer { text-align: center; margin-top: 28px; }
 .draw-layer { position: absolute; left: 0; top: 0; height: 100%; pointer-events: none; z-index: 3; overflow: hidden; }
 
 /* chart background: light by default so candles, arrows, patterns and lines stand out */
-.chart.chart-light { --surface: #ffffff; --surface-2: #f3f5f9; --line: #e7eaf0; --text: #111827; --muted: #4b5466;
-  --buy: #0a9a63; --sell: #d62f3b; --accent: #5b4cf0; background: #ffffff; border-radius: 12px; }
-.chart.chart-dark { background: transparent; }
-.chart-theme { border: 1px solid var(--line); background: var(--surface-2); color: var(--text-2); border-radius: 8px;
-  padding: 4px 9px; font: 600 .78rem var(--font); cursor: pointer; }
+.chart.chart-lightgray { --surface: #eceef1; --surface-2: #e2e5e9; --line: #dfe2e6; --text: #1f2430; --muted: #5a6170;
+  --buy: #0a9463; --sell: #d0333e; --accent: #5b4cf0; --chart-bg: #eceef1; background: var(--chart-bg); border-radius: 12px; }
+.chart.chart-gray { --surface: #cfd3d8; --surface-2: #c4c9cf; --line: #c3c8ce; --text: #1b1f27; --muted: #424955;
+  --buy: #08805a; --sell: #c22733; --accent: #4b3fd6; --chart-bg: #cfd3d8; background: var(--chart-bg); border-radius: 12px; }
+.chart.chart-dark { --chart-bg: transparent; background: transparent; }
+.chart-theme { min-width: 0; padding: 5px 8px; font-size: .78rem; border-radius: 9px; }

@@ -400,23 +400,24 @@ function renderPrescan(p) {
   $("#prescan").innerHTML = (p?.points || ["No data."]).map((x) => `<li>${esc(x)}</li>`).join("");
 }
 
-let chartTheme = (() => { try { return localStorage.getItem("chartTheme") || "light"; } catch { return "light"; } })();
+const CHART_THEMES = ["lightgray", "gray", "dark"];
+let chartTheme = (() => { try { const t = localStorage.getItem("chartTheme"); return CHART_THEMES.includes(t) ? t : "lightgray"; } catch { return "lightgray"; } })();
 function paintChartTheme() {
-  ["#chart", "#b-chart"].forEach((sel) => { const el = $(sel); if (el) { el.classList.toggle("chart-light", chartTheme === "light"); el.classList.toggle("chart-dark", chartTheme !== "light"); } });
-  const b = $("#chart-theme"); if (b) b.textContent = chartTheme === "light" ? "☾ Dark chart" : "☀ Light chart";
+  ["#chart", "#b-chart"].forEach((sel) => { const el = $(sel); if (el) CHART_THEMES.forEach((t) => el.classList.toggle("chart-" + t, t === chartTheme)); });
+  const s = $("#chart-theme"); if (s) s.value = chartTheme;
 }
 function chartColors(el) {
   const cs = getComputedStyle(el || $("#chart"));
   return { text: cs.getPropertyValue("--muted").trim(), line: cs.getPropertyValue("--line").trim(),
            buy: cs.getPropertyValue("--buy").trim(), sell: cs.getPropertyValue("--sell").trim(),
-           bg: chartTheme === "light" ? "#ffffff" : "transparent" };
+           bg: cs.getPropertyValue("--chart-bg").trim() || "transparent" };
 }
 function restyleCharts() {
   paintChartTheme();
   const c = chartColors();
   if (chart) {
     chart.applyOptions({ layout: { background: { color: c.bg }, textColor: c.text },
-      grid: { horzLines: { color: c.line } }, rightPriceScale: { borderColor: c.line } });
+      grid: { horzLines: { color: c.line + "80" } }, rightPriceScale: { borderColor: c.line } });
     candleSeries.applyOptions({ upColor: c.buy, downColor: c.sell, wickUpColor: c.buy, wickDownColor: c.sell });
     if (lastSuggestion) renderChart(lastSuggestion);
   }
@@ -432,7 +433,7 @@ function makeChart(el, height) {
   const c = chartColors(el);
   return LightweightCharts.createChart(el, {
     width: el.clientWidth, height: el.clientHeight || height, layout: { background: { color: c.bg }, textColor: c.text, fontFamily: getComputedStyle(document.body).fontFamily },
-    grid: { vertLines: { visible: false }, horzLines: { color: c.line } },
+    grid: { vertLines: { visible: false }, horzLines: { color: c.line + "80" } },     // very faint grid
     crosshair: { mode: 1 },
     localization: { timeFormatter: (t) => tzFormat(t, { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) },
     timeScale: {
@@ -537,8 +538,8 @@ function zoom(factor) {
   chart.timeScale().setVisibleLogicalRange({ from: right - width, to: right });   // keep the newest candles in view
 }
 $("#zoom-in").addEventListener("click", () => zoom(0.6));
-$("#chart-theme").addEventListener("click", () => {
-  chartTheme = chartTheme === "light" ? "dark" : "light";
+$("#chart-theme").addEventListener("change", (e) => {
+  chartTheme = e.target.value;
   try { localStorage.setItem("chartTheme", chartTheme); } catch {}
   restyleCharts();
 });
