@@ -366,7 +366,7 @@ def trade_plan(df: pd.DataFrame, p_up: np.ndarray, threshold: float, horizon_bar
     atr = ta.atr(df, 14).to_numpy()
     n, k0 = len(df), len(df) - len(p_up)                    # p_up lines up with the LAST len(p_up) candles
     side = np.where(p_up >= threshold, 1, np.where(p_up <= 1 - threshold, -1, 0))
-    levels = (0.5, 1.0)
+    levels = (0.5, 1.0, 1.5)
     hits = {lv: [0, 0] for lv in levels}                     # level → [reached, samples]
     stop_hits = [0, 0]
     for j, s in enumerate(side[:-1]):
@@ -394,6 +394,24 @@ def trade_plan(df: pd.DataFrame, p_up: np.ndarray, threshold: float, horizon_bar
     s_now, p_now = int(side[-1]), float(p_up[-1])
     lean = 1 if p_now >= 0.5 else -1
     entry, a = float(c[-1]), float(atr[-1])
+    # ── "where price might land": after past candles where the model said about the same thing, how far did
+    #    price go after 1, 2, … H candles (in ATRs)? → percentile bands, scaled to today's ATR ──
+    pc = np.asarray(p_up, float)
+    similar = [k0 + j for j in range(len(pc) - 1)
+               if (pc[j] >= 0.5) == (p_now >= 0.5) and abs(pc[j] - p_now) <= 0.07 and k0 + j + horizon_bars < n
+               and np.isfinite(atr[k0 + j]) and atr[k0 + j] > 0]
+    if len(similar) < 40:                                   # not enough look-alikes → same lean, any confidence
+        similar = [k0 + j for j in range(len(pc) - 1) if (pc[j] >= 0.5) == (p_now >= 0.5)
+                   and k0 + j + horizon_bars < n and np.isfinite(atr[k0 + j]) and atr[k0 + j] > 0]
+    cone = []
+    if len(similar) >= 20:
+        idx = np.array(similar)
+        tf = (df.index[-1] - df.index[-2]).total_seconds()
+        t_last = df.index[-1].timestamp()
+        for k in range(1, horizon_bars + 1):
+            moves = (c[idx + k] - c[idx]) / atr[idx]
+            q = np.percentile(moves, [10, 25, 50, 75, 90])
+            cone.append({"time": int(t_last + k * tf), **{f"p{p}": float(entry + v * a) for p, v in zip((10, 25, 50, 75, 90), q)}})
     b = barrier_atr * a
     pct = lambda x: round(100 * x / entry, 3)
     plan = {"confident": s_now != 0, "action": "BUY" if lean > 0 else "SELL", "p": round(100 * max(p_now, 1 - p_now)),
@@ -403,5 +421,6 @@ def trade_plan(df: pd.DataFrame, p_up: np.ndarray, threshold: float, horizon_bar
             "samples": hits[levels[0]][1], "fees_pct": fees_pct,
             "targets": [{"name": f"Target {k + 1}", "price": entry + lean * lv * b, "move_pct": pct(lean * lv * b),
                          "reach_pct": round(100 * hits[lv][0] / hits[lv][1]) if hits[lv][1] else None,
-                         "reward_risk": lv} for k, lv in enumerate(levels)]}
+                         "reward_risk": lv} for k, lv in enumerate(levels)],
+            "cone": cone, "cone_samples": len(similar)}
     return plan

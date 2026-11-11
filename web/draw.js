@@ -9,6 +9,7 @@
   let svg = null;
   let patterns = [];
   let forming = [];
+  let plan = null;                 // the model's current call: entry, stop, targets, forecast cone
   let showPatterns = (() => { try { return localStorage.getItem("showPatterns") !== "0"; } catch { return true; } })();
 
   const key = () => `drawings:${SETTINGS.market}`;
@@ -95,6 +96,7 @@
         }
       }
     }
+    if (plan) drawPlan(plan);
     for (const d of [...drawings, ...(draft ? [draft] : [])]) {
       const x1 = x(d.a.time), y1 = y(d.a.price);
       if (x1 == null || y1 == null) continue;
@@ -108,6 +110,52 @@
       if (d.type === "circle") svg.appendChild(el("ellipse", { cx: (x1 + x2) / 2, cy: (y1 + y2) / 2, rx: Math.abs(x2 - x1) / 2,
         ry: Math.abs(y2 - y1) / 2, ...style, fill: color, "fill-opacity": 0.08 }));
     }
+  }
+
+  // Entry / Stop loss / TP boxes with shaded zones, and the "where price might land" cone (like a forecast)
+  function drawPlan(p) {
+    const cs = getComputedStyle(document.getElementById("chart"));
+    const buyC = cs.getPropertyValue("--buy").trim(), sellC = cs.getPropertyValue("--sell").trim();
+    const surf = cs.getPropertyValue("--surface").trim() || "#fff";
+    const x0 = x(p.time), x1 = x(p.time + p.window_candles * tfSec());
+    const ye = y(p.entry), ys = y(p.stop);
+    if ([x0, x1, ye, ys].some((v) => v == null)) return;
+    const op = p.confident ? 1 : 0.55;
+    const far = p.targets[p.targets.length - 1];
+    const yf = y(far.price);
+    const g = el("g", { opacity: op });
+    // shaded zones: profit side green, loss side red
+    if (yf != null) g.appendChild(el("rect", { x: x0, y: Math.min(ye, yf), width: Math.max(0, x1 - x0), height: Math.abs(yf - ye), fill: buyC, "fill-opacity": 0.12, stroke: "none" }));
+    g.appendChild(el("rect", { x: x0, y: Math.min(ye, ys), width: Math.max(0, x1 - x0), height: Math.abs(ys - ye), fill: sellC, "fill-opacity": 0.14, stroke: "none" }));
+    // forecast cone: 10–90% (light) and 25–75% (darker) of where price ended up after similar calls
+    if (p.cone && p.cone.length) {
+      const pts = (k) => [[x0, ye], ...p.cone.map((c) => [x(c.time), y(c[k])])].filter(([a, b]) => a != null && b != null);
+      const band = (lo, hi, o) => {
+        const a = pts(hi), b = pts(lo).reverse();
+        if (a.length > 1) g.appendChild(el("polygon", { points: [...a, ...b].map((q) => q.join(",")).join(" "), fill: "#6b7cff", "fill-opacity": o, stroke: "none" }));
+      };
+      band("p10", "p90", 0.07); band("p25", "p75", 0.15);
+      const mid = pts("p50");
+      if (mid.length > 1) g.appendChild(el("polyline", { points: mid.map((q) => q.join(",")).join(" "), stroke: "#4b55d6", "stroke-width": 2, fill: "none", "stroke-dasharray": "5 4" }));
+    }
+    // dashed level lines + label boxes on the right end of the zone
+    const W = svg.clientWidth;
+    const label = (yy, text, bg, fg) => {
+      const w = text.length * 6.6 + 14, lx = Math.min(x1 + 6, W - w - 4);
+      g.appendChild(el("line", { x1: x0, x2: lx, y1: yy, y2: yy, stroke: bg, "stroke-width": 1.4, "stroke-dasharray": "4 3" }));
+      g.appendChild(el("rect", { x: lx, y: yy - 10, width: w, height: 20, rx: 5, fill: bg, stroke: "none" }));
+      const t = el("text", { x: lx + 7, y: yy + 4, fill: fg, "font-size": 11.5, "font-weight": 700, stroke: "none" });
+      t.textContent = text; g.appendChild(t);
+    };
+    const fmt = (v) => px(SETTINGS.market, v);
+    p.targets.forEach((t, i) => { const yy = y(t.price); if (yy != null) label(yy, `TP ${i + 1}: ${fmt(t.price)} · ${t.reach_pct ?? "?"}%`, buyC, "#fff"); });
+    label(ye, `Entry: ${fmt(p.entry)}`, "#f2c94c", "#1b1f27");
+    label(ys, `Stop loss: ${fmt(p.stop)}`, sellC, "#fff");
+    const sig = el("text", { x: x0 - 4, y: p.action === "BUY" ? ys + 16 : ys - 8, fill: p.action === "BUY" ? buyC : sellC,
+      "font-size": 12, "font-weight": 800, "text-anchor": "end", stroke: surf, "stroke-width": 3, "paint-order": "stroke" });
+    sig.textContent = `${p.action === "BUY" ? "▲ Buy" : "▼ Sell"} ${p.p}%${p.confident ? "" : " (weak)"}`;
+    g.appendChild(sig);
+    svg.appendChild(g);
   }
 
   function setTool(t) {
@@ -156,5 +204,6 @@
     setInterval(render, 150);                                     // follow zoom / scroll / new candles
   }
 
-  window.TradyDraw = { init, reload: () => { load(); render(); }, render, setPatterns: (p, f) => { patterns = p || []; forming = f || []; render(); } };
+  window.TradyDraw = { init, reload: () => { load(); render(); }, render, setPatterns: (p, f) => { patterns = p || []; forming = f || []; render(); },
+    setPlan: (p) => { plan = p || null; render(); } };
 })();

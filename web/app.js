@@ -398,36 +398,88 @@ async function loadManualDefaults() {
       $("#tp-stop").value = (d.price * (1 - d.stop_pct / 100)).toFixed(dec);
       $("#tp-target").value = (d.price * (1 + d.target_pct / 100)).toFixed(dec);
       loadManualDefaults._for = SETTINGS.market + SETTINGS.timeframe;
+      tpShow = false;                                       // new market: no setup lines until you start one
     }
     const live = SETTINGS.mode === "live";
     $("#tp-mode").textContent = live ? "· 💰 LIVE money" : "· 📝 paper (practice money)";
     $("#tp-sell").textContent = d.allow_short ? "SELL" : "SELL (n/a)";
     $("#tp-sell").disabled = !d.allow_short;
-    $("#tp-sell").title = d.allow_short ? "Bet that the price falls" : "Spot crypto can't bet on a fall — close your BUY instead";
+    $("#tp-sell").title = !d.allow_short ? "Live crypto on Alpaca can't bet on a fall — practise SELLs in Paper mode"
+      : d.real_short ? "Bet that the price falls" : "Practice only: betting on a fall in real crypto needs a futures/CFD broker";
     tpLines();
   } catch {}
 }
 // dashed "Your stop" / "Your target" lines on the chart + the % distance under each box
+let tpShow = false;                 // only while you're setting up a trade (typing / dragging / "Use these")
 function tpLines() {
   if (!candleSeries) return;
   (candleSeries._tp || []).forEach((l) => candleSeries.removePriceLine(l));
   candleSeries._tp = [];
+  $("#tp-hide").classList.toggle("hidden", !tpShow);
   const now = nowPrice(), c = chartColors();
   const stop = parseFloat($("#tp-stop").value), target = parseFloat($("#tp-target").value);
   const pctTxt = (v) => (now && v ? `${v > now ? "+" : ""}${((v - now) / now * 100).toFixed(2)}% from now` : "");
   $("#tp-stop-pct").textContent = pctTxt(stop);
   $("#tp-target-pct").textContent = pctTxt(target);
+  if (!tpShow) return;
   if (stop > 0) candleSeries._tp.push(candleSeries.createPriceLine({ price: stop, color: c.sell, lineStyle: 2, lineWidth: 2,
-    axisLabelVisible: true, title: "Your stop" }));
+    axisLabelVisible: true, title: "Your stop ✋" }));
   if (target > 0) candleSeries._tp.push(candleSeries.createPriceLine({ price: target, color: c.buy, lineStyle: 2, lineWidth: 2,
-    axisLabelVisible: true, title: "Your target" }));
+    axisLabelVisible: true, title: "Your target ✋" }));
 }
-["#tp-stop", "#tp-target"].forEach((sel) => $(sel).addEventListener("input", tpLines));
+["#tp-stop", "#tp-target"].forEach((sel) => {
+  $(sel).addEventListener("input", () => { tpShow = true; tpLines(); });
+  $(sel).addEventListener("focus", () => { tpShow = true; tpLines(); });
+});
+$("#tp-hide").addEventListener("click", () => { tpShow = false; tpLines(); });
+
+// ✋ drag "Your stop" / "Your target" lines up and down on the chart
+(function dragLines() {
+  const host = $("#chart");
+  let drag = null;
+  const near = (yy) => {
+    if (!candleSeries) return null;
+    for (const [sel, name] of [["#tp-stop", "stop"], ["#tp-target", "target"]]) {
+      const v = parseFloat($(sel).value), ly = v > 0 ? candleSeries.priceToCoordinate(v) : null;
+      if (ly != null && Math.abs(ly - yy) <= 7) return { sel, name };
+    }
+    return null;
+  };
+  const yOf = (e) => e.clientY - host.getBoundingClientRect().top;
+  host.addEventListener("pointerdown", (e) => {
+    const hit = near(yOf(e));
+    if (!hit) return;
+    drag = hit;
+    chart.applyOptions({ handleScroll: false, handleScale: false });
+    host.setPointerCapture(e.pointerId);
+    e.preventDefault(); e.stopPropagation();
+  }, true);
+  host.addEventListener("pointermove", (e) => {
+    if (!drag) { host.style.cursor = near(yOf(e)) ? "ns-resize" : ""; return; }
+    const price = candleSeries.coordinateToPrice(yOf(e));
+    if (price != null && price > 0) { $(drag.sel).value = price.toFixed(market(SETTINGS.market).decimals); tpLines(); }
+  }, true);
+  const end = () => {
+    if (!drag) return;
+    drag = null;
+    chart.applyOptions({ handleScroll: true, handleScale: true });
+    host.style.cursor = "";
+  };
+  host.addEventListener("pointerup", end, true);
+  host.addEventListener("pointercancel", end, true);
+})();
 setInterval(() => { if (lastSuggestion) tpLines(); }, 5000);          // keep the "% from now" fresh as the price moves
 
 async function manualTrade(side) {
-  const stop = parseFloat($("#tp-stop").value), target = parseFloat($("#tp-target").value);
+  let stop = parseFloat($("#tp-stop").value), target = parseFloat($("#tp-target").value);
   const price = nowPrice(), name = market(SETTINGS.market).name, mk = SETTINGS.market;
+  // boxes set up the other way round (e.g. BUY layout but you pressed SELL)? → mirror them around the price
+  if (price && stop > 0 && target > 0 && ((side === "SELL" && stop < price && target > price) ||
+      (side === "BUY" && stop > price && target < price))) {
+    [stop, target] = [2 * price - stop, 2 * price - target];
+    const dec = market(mk).decimals;
+    $("#tp-stop").value = stop.toFixed(dec); $("#tp-target").value = target.toFixed(dec); tpLines();
+  }
   if (!price || !(stop > 0) || !(target > 0)) { toast("⚠️ Type a stop-loss price and a target price first."); return; }
   const buy = side === "BUY";
   if (buy && !(stop < price && target > price)) {
@@ -444,7 +496,7 @@ async function manualTrade(side) {
   try {
     await api("/api/trade", { method: "POST", body: JSON.stringify({ market: mk, timeframe: SETTINGS.timeframe,
       strategy: SETTINGS.strategy, side, stop_pct: +stopPct.toFixed(4), target_pct: +targetPct.toFixed(4) }) });
-    toast("✅ Trade opened — see Open trades below the chart"); refreshAccount();
+    toast("✅ Trade opened — its lines are on the chart (✕ closes it)"); tpShow = false; tpLines(); refreshAccount();
   } catch (e) { toast("⚠️ " + e.message, 5000); }
 }
 $("#tp-buy").addEventListener("click", () => manualTrade("BUY"));
@@ -549,13 +601,15 @@ function drawPlan() {
   candleSeries._plan = [];
   const box = $("#plan-box");
   const p = modelMarkers?.available && arrowSource === "model" ? modelMarkers.plan : null;
-  if (!p || !showPlan) { box.classList.add("hidden"); return; }
+  if (!p || !showPlan) {
+    box.classList.add("hidden");
+    if (window.TradyDraw) window.TradyDraw.setPlan(null);
+    chart?.timeScale().applyOptions({ rightOffset: 5 });
+    return;
+  }
   const c = chartColors(), mk = SETTINGS.market, buy = p.action === "BUY";
-  const fade = p.confident ? "" : "66";
-  const line = (price, color, title, style) => candleSeries._plan.push(candleSeries.createPriceLine({
-    price, color: color + fade, lineStyle: style, lineWidth: p.confident ? 2 : 1, axisLabelVisible: true, title }));
-  line(p.stop, c.sell, `Model stop`, 0);
-  p.targets.forEach((t) => line(t.price, c.buy, `${t.name} · reached ${t.reach_pct ?? "?"}%`, 0));
+  if (window.TradyDraw) window.TradyDraw.setPlan(p);           // zones, TP boxes and forecast cone (draw.js)
+  chart.timeScale().applyOptions({ rightOffset: Math.min(80, p.window_candles + 12) });   // room for the forecast
   const tooSmall = p.targets[0] && Math.abs(p.targets[0].move_pct) < p.fees_pct;
   box.innerHTML = `<div class="plan-head ${buy ? "pnl-pos" : "pnl-neg"}">${buy ? "▲ BUY" : "▼ SELL"} plan · model ${p.p}% sure
       ${p.confident ? "" : `<span class="muted"> — not sure enough (needs ≥ ${Math.round(modelMarkers.threshold * 100)}%), lines are faded: just a guide</span>`}</div>
@@ -572,7 +626,7 @@ function drawPlan() {
   box.classList.remove("hidden");
   $("#plan-copy").addEventListener("click", () => {
     const dec = market(mk).decimals;
-    $("#tp-stop").value = p.stop.toFixed(dec); $("#tp-target").value = p.targets[0].price.toFixed(dec); tpLines();
+    $("#tp-stop").value = p.stop.toFixed(dec); $("#tp-target").value = p.targets[0].price.toFixed(dec); tpShow = true; tpLines();
     toast(`Copied: stop ${px(mk, p.stop)} · target ${px(mk, p.targets[0].price)}`);
   });
 }
@@ -756,6 +810,7 @@ function renderChart(s) {
   if (window.TradyDraw) window.TradyDraw.setPatterns(s.patterns, s.forming);
   renderForming(s.forming);
   loadManualDefaults();
+  drawPositions();
   applyMarkers();
   loadModelMarkers();
   (candleSeries._lines || []).forEach((l) => candleSeries.removePriceLine(l));
@@ -771,6 +826,45 @@ function renderChart(s) {
 }
 
 // ───────────────────────── account ─────────────────────────
+// ───────────────────────── your open trades on the chart, with ✕ to close ─────────────────────────
+let OPEN_POS = [];
+function drawPositions() {
+  if (!candleSeries) return;
+  (candleSeries._pos || []).forEach((l) => candleSeries.removePriceLine(l));
+  candleSeries._pos = [];
+  const host = $("#chart"); host.querySelectorAll(".pos-x").forEach((b) => b.remove());
+  const c = chartColors();
+  for (const p of OPEN_POS.filter((x) => x.market === SETTINGS.market)) {
+    const buy = p.side === "LONG";
+    const add = (price, color, title, style) => price && candleSeries._pos.push(candleSeries.createPriceLine({
+      price, color, lineStyle: style, lineWidth: 2, axisLabelVisible: true, title }));
+    add(p.entry, "#8a6d00", `${buy ? "BUY" : "SELL"} · ${signed(p.upnl)}`, 0);
+    add(p.stop_loss, c.sell, "Trade stop", 2);
+    add(p.take_profit, c.buy, "Trade target", 2);
+    const x = document.createElement("button");
+    x.className = "pos-x"; x.textContent = "✕"; x.title = "Close this trade now";
+    x.dataset.price = p.entry;
+    x.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      if (!confirm(`Close your ${buy ? "BUY" : "SELL"} ${market(p.market).name} trade now (${signed(p.upnl)})?`)) return;
+      try { const r = await api(`/api/close/${p.id}`, { method: "POST" }); toast(`Closed: ${signed(r.pnl)}`); refreshAccount(); }
+      catch (err) { toast("⚠️ " + err.message, 5000); }
+    });
+    host.appendChild(x);
+  }
+  placePosX();
+}
+function placePosX() {                      // keep each ✕ on its entry line while you scroll / zoom
+  if (!candleSeries || !chart) return;
+  const w = chart.timeScale().width();
+  $("#chart").querySelectorAll(".pos-x").forEach((b) => {
+    const y = candleSeries.priceToCoordinate(parseFloat(b.dataset.price));
+    b.style.display = y == null ? "none" : "";
+    b.style.top = (y - 11) + "px"; b.style.left = (w - 200) + "px";
+  });
+}
+setInterval(placePosX, 150);
+
 async function refreshAccount() {
   let a;
   try { a = await api("/api/account"); } catch { return; }
@@ -787,6 +881,8 @@ async function refreshAccount() {
     t.status === "max_loss" ? "🛑 Daily max loss reached. No more trades today — tomorrow is a new day." :
     t.total >= 0 ? `${Math.round(pct)}% of today's goal` : `Down today — ${Math.round(pct)}% of your max loss used`;
 
+  OPEN_POS = a.positions;
+  drawPositions();
   $("#positions").innerHTML = a.positions.length ? a.positions.map((p) => `
     <div class="pos">
       <div class="pos-head"><span>${market(p.market).emoji} ${esc(market(p.market).name)} · <span class="${p.side === "LONG" ? "pnl-pos" : "pnl-neg"}">${p.side === "LONG" ? "BUY" : "SELL"}</span></span>

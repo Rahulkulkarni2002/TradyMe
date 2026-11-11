@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css?v=22">
+  <link rel="stylesheet" href="/static/style.css?v=23">
   <script src="/static/vendor/lightweight-charts.standalone.production.js"></script>
 </head>
 <body>
@@ -120,7 +120,8 @@
               <label>Stop-loss price<input type="number" id="tp-stop" step="any"><span class="tp-pct" id="tp-stop-pct"></span></label>
               <label>Target price<input type="number" id="tp-target" step="any"><span class="tp-pct" id="tp-target-pct"></span></label>
             </div>
-            <div class="small muted" id="tp-note">Your own decision, any time. Stop &amp; target are pre-filled for a BUY from the market's usual move. Type your own prices — the dashed lines on the chart move with them.</div>
+            <button class="btn ghost small-btn hidden" id="tp-hide">✕ Hide these lines</button>
+            <div class="small muted" id="tp-note">Your own decision, any time. Stop &amp; target are pre-filled for a BUY from the market's usual move. Type your own prices, or ✋ drag the dashed "Your stop" / "Your target" lines on the chart.</div>
           </section>
 
           <section class="card forming-card">
@@ -318,7 +319,7 @@
 
   <div id="tip" class="tip hidden"></div>
   <div id="toast" class="toast hidden"></div>
-  <script src="/static/app.js?v=25"></script>
-  <script src="/static/draw.js?v=7"></script>
+  <script src="/static/app.js?v=27"></script>
+  <script src="/static/draw.js?v=9"></script>
 </body>
 </html>

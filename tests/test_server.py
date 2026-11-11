@@ -44,8 +44,8 @@ def test_paper_trade_cycle(client):
         acct.open("paper", "ETH", sig, timeframe="15m", strategy="ema_rsi")
     with pytest.raises(TradeBlocked):
         acct.open("live", "BTC", sig, timeframe="15m", strategy="ema_rsi")
-    with pytest.raises(TradeBlocked):
-        acct.open("paper", "BTC", {**sig, "action": "SELL"}, timeframe="15m", strategy="ema_rsi")
+    with pytest.raises(TradeBlocked):                    # live spot crypto can't short
+        acct.open("live", "BTC", {**sig, "action": "SELL"}, timeframe="15m", strategy="ema_rsi")
     a = c.get("/api/account").json()
     assert len(a["positions"]) == 1 and "advice" in a["positions"][0]
     r = c.post(f"/api/close/{pos['id']}").json()
@@ -150,9 +150,9 @@ def test_manual_trade_any_time(client):
     assert r.status_code == 200, r.text
     pos = r.json()
     assert pos["side"] == "SHORT" and pos["stop_loss"] > pos["entry"] > pos["take_profit"]
-    # spot crypto can't be shorted, even manually
+    # paper mode: you may practise a SELL on crypto too
     r = c.post("/api/trade", json={"market": "BTC", "timeframe": "15m", "strategy": "ema_rsi", "side": "SELL"})
-    assert r.status_code == 400
+    assert r.status_code == 200, r.text
 
 
 def test_forming_patterns_shape(client):

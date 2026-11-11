@@ -323,3 +323,8 @@ footer { text-align: center; margin-top: 28px; }
 .plan-box .plan-rows > div { display: flex; flex-direction: column; }
 .plan-box .plan-rows span.muted { font-size: .75rem; }
 #plan-toggle.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+.pos-x { position: absolute; z-index: 6; width: 22px; height: 22px; border-radius: 6px; border: 0; cursor: pointer;
+  background: #8a6d00; color: #fff; font: 700 12px/22px var(--font); padding: 0; box-shadow: 0 2px 6px rgba(0,0,0,.25); }
+.pos-x:hover { background: var(--sell); }
+#tp-hide { margin-bottom: 6px; }

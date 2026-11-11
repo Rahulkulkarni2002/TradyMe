@@ -121,8 +121,9 @@ class Account:
         if day["status"] == "max_loss":
             raise TradeBlocked("🛑 Daily max loss reached — no more trades today. Tomorrow is a new day.")
         action = Action(sig["action"])
-        if action == Action.SELL and not market.allow_short:
-            raise TradeBlocked(f"You can't bet on a fall in {market.name} here (spot crypto has no shorting).")
+        if action == Action.SELL and not market.allow_short and mode == "live":
+            raise TradeBlocked(f"Alpaca can't bet on a fall in {market.name} (spot crypto has no shorting). "
+                               "Practise SELLs in 📝 Paper mode; for real you'd need a futures/CFD broker.")
         if self.past_day_end(s):
             raise TradeBlocked(f"It's after your day-end time ({s['day_end']}). Intraday only — come back tomorrow.")
 

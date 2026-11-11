@@ -377,7 +377,8 @@ def manual_defaults(market: str, timeframe: str):
     m = get_market(market)
     sig = manual_signal(m, timeframe, "BUY", None, None)
     return {"price": sig["price"], "stop_pct": sig["stop_pct"], "target_pct": sig["target_pct"],
-            "allow_short": m.allow_short}
+            "allow_short": m.allow_short or db.settings()["mode"] == "paper",   # paper: practise SELLs on crypto too
+            "real_short": m.allow_short}
 
 
 @app.post("/api/trade")
