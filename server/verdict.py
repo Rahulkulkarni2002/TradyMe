@@ -167,6 +167,12 @@ def model_markers(market: Market, timeframe: str, bars: int = 300, threshold: fl
     score = grade_arrows(df, out, H, bundle.get("barrier_atr") or 1.5)
     from engine.analysis import arrow_details
     arrow_details(df, out, H, bundle.get("barrier_atr") or 1.5)
-    return {"available": True, "markers": out, "threshold": threshold, "score": score, "short": short,
+    last_up = float(p[-1])                                  # the model's view on the newest closed candle, ALWAYS shown
+    now = {"time": int(M.index[-1].timestamp()), "p_up": round(100 * last_up),
+           "action": "BUY" if last_up >= 0.5 else "SELL", "pct": round(100 * max(last_up, 1 - last_up)),
+           "confident": bool(side[-1] != 0)}
+    conf_share = float((side != 0).mean())                    # how often it is this sure (on these candles)
+    return {"available": True, "markers": out, "threshold": threshold, "score": score, "short": short, "now": now,
+            "confident_share": round(100 * conf_share, 1),
             "candles": int(horizon[1:]) if short else None,
             "horizon_hours": bundle.get("horizon_hours"), "exam_accuracy": bundle.get("exam_accuracy")}

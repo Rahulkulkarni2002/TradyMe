@@ -535,7 +535,8 @@ function applyMarkers() {
     ? `${modelMarkers.reason} Showing strategy arrows instead.`
     : useModel ? (modelMarkers.short
         ? `Model arrows: every candle where the model is ≥ ${Math.round(modelMarkers.threshold * 100)}% sure about the NEXT ${modelMarkers.candles} CANDLE${modelMarkers.candles > 1 ? "S" : ""} (small moves — fees matter). Click an arrow for details.`
-        : `Model arrows: where the prediction model became ≥ ${Math.round(modelMarkers.threshold * 100)}% sure about the next ~${modelMarkers.horizon_hours} h. Click an arrow for details.`) : "";
+        : `Model arrows: where the prediction model became ≥ ${Math.round(modelMarkers.threshold * 100)}% sure about the next ~${modelMarkers.horizon_hours} h. Click an arrow for details.`)
+        + ` The "NOW" arrow is always shown: the model's lean on the newest candle (faded = under ${Math.round(modelMarkers.threshold * 100)}% sure, so no real arrow). It is this sure on only ${modelMarkers.confident_share}% of candles.` : "";
   const sc = useModel ? modelMarkers.score : chart._strategyScore;
   const scoreEl = $("#arrow-score");
   if (scoreEl) scoreEl.textContent = sc && sc.wins + sc.losses
@@ -546,8 +547,17 @@ function applyMarkers() {
         color: m.action === "BUY" ? c.buy : c.sell, shape: m.action === "BUY" ? "arrowUp" : "arrowDown" }))
     : (chart._strategyMarkers || []);
   const marks = [...past];
+  if (useModel && modelMarkers.now) {                     // ALWAYS an arrow on the newest closed candle: the model's lean right now
+    const n = modelMarkers.now, up = n.action === "BUY";
+    if (!marks.some((m) => m.time === n.time)) marks.push({ time: n.time, position: up ? "belowBar" : "aboveBar",
+      shape: up ? "arrowUp" : "arrowDown", size: n.confident ? 1.4 : 1,
+      color: (up ? c.buy : c.sell) + (n.confident ? "" : "77"), text: `NOW ${n.pct}%${n.confident ? "" : " (weak)"}` });
+    marks.sort((a, b) => a.time - b.time);
+  }
   chart._arrowInfo = {};
   const src = useModel ? modelMarkers.markers : (lastSuggestion?.markers || []);
+  if (useModel && modelMarkers.now && !src.some((m) => m.time === modelMarkers.now.time))
+    chart._arrowInfo[modelMarkers.now.time] = { ...modelMarkers.now, source: modelMarkers.now.confident ? "Model · NOW" : "Model · NOW (not sure enough for a real arrow)" };
   for (const m of src) chart._arrowInfo[m.time] = { ...m, source: useModel ? (modelMarkers.short ? `Model · next ${modelMarkers.candles} candle${modelMarkers.candles > 1 ? "s" : ""}` : `Model · next ~${modelMarkers.horizon_hours} h`) : (META.strategies.find((x) => x.code === SETTINGS.strategy)?.label || "Strategy") };
   const p = previewSignal;
   if (!useModel && p && (p.action === "BUY" || p.action === "SELL") && p.time > (chart._closedLast || 0)) {
