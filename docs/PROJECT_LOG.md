@@ -69,6 +69,14 @@ Download history (2015 → today), Mac plugged in: `caffeinate -i python downloa
   82% of moments have no clear move and it loses after fees every year. Leak check: 0 differences.
 - News download on my Mac running (~8.6 h); gold/forex to resume afterwards.
 
+### 2026-11-11
+- **Live chart:** forming candle moves in real time — crypto from Binance's live trade feed, gold & forex from
+  **OANDA** (free practice account, token in `.env`). Signals/model still use closed candles only.
+- Website says **"prediction model"** instead of "AI". Fixed browser-cache mix-up, squashed gauge, Yahoo timeouts.
+- Decided **Option B**: TradyMe predicts, I trade on **TradingView** later via a broker (OANDA for gold/forex).
+  Alpaca not needed for now. Practice only.
+- Downloads: news now **daily** mood (3-month requests; GDELT rate-limits hourly); gold/forex continues slowly.
+
 ## ⏭️ Next steps
 - [ ] History download finishes on my Mac
 - [x] Strategy library (46) → votes → combined model % → Strategy League
