@@ -7,6 +7,8 @@
   let drawings = [];
   let draft = null;
   let svg = null;
+  let patterns = [];
+  let showPatterns = (() => { try { return localStorage.getItem("showPatterns") !== "0"; } catch { return true; } })();
 
   const key = () => `drawings:${SETTINGS.market}`;
   const load = () => { try { drawings = JSON.parse(localStorage.getItem(key()) || "[]"); } catch { drawings = []; } };
@@ -42,6 +44,31 @@
     svg.innerHTML = "";
     const color = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#7c6cff";
     const W = svg.clientWidth;
+    if (showPatterns) {
+      const cs = getComputedStyle(document.documentElement);
+      const placed = [];                                 // keep labels from sitting on top of each other
+      for (const p of patterns) {
+        const col = p.direction === "BUY" ? cs.getPropertyValue("--buy").trim() : cs.getPropertyValue("--sell").trim();
+        const pts = p.points.map(([t, pr]) => [x(t), y(pr)]).filter(([a, b]) => a != null && b != null);
+        if (pts.length >= 2) svg.appendChild(el("polyline", { points: pts.map((q) => q.join(",")).join(" "), stroke: col,
+          "stroke-width": 1.5, fill: "none", "stroke-dasharray": "4 3", opacity: 0.9 }));
+        for (const [[t1, p1], [t2, p2]] of p.lines) {
+          const a1 = x(t1), b1 = y(p1), a2 = x(t2), b2 = y(p2);
+          if ([a1, b1, a2, b2].every((v) => v != null)) svg.appendChild(el("line", { x1: a1, y1: b1, x2: a2, y2: b2, stroke: col, "stroke-width": 1.5, opacity: 0.8 }));
+        }
+        const bx = x(p.time), last = p.points[p.points.length - 1];
+        const by = last ? y(last[1]) : null;
+        if (bx != null && by != null) {
+          let ly = by - 8;
+          while (placed.some(([px, py]) => Math.abs(px - bx) < 170 && Math.abs(py - ly) < 14)) ly -= 14;
+          placed.push([bx, ly]);
+          const label = el("text", { x: bx + 4, y: ly, fill: col, "font-size": 11, "font-weight": 700,
+            stroke: cs.getPropertyValue("--surface").trim(), "stroke-width": 3, "paint-order": "stroke" });
+          label.textContent = `${p.name} → ${p.direction}`;
+          svg.appendChild(label);
+        }
+      }
+    }
     for (const d of [...drawings, ...(draft ? [draft] : [])]) {
       const x1 = x(d.a.time), y1 = y(d.a.price);
       if (x1 == null || y1 == null) continue;
@@ -91,6 +118,10 @@
       drawings.push(draft); draft = null; save(); render();
     });
     document.querySelectorAll("#draw-tools [data-tool]").forEach((b) => b.addEventListener("click", () => setTool(b.dataset.tool)));
+    const pb = document.getElementById("draw-patterns");
+    const paintPb = () => pb.classList.toggle("on", showPatterns);
+    pb.addEventListener("click", () => { showPatterns = !showPatterns; try { localStorage.setItem("showPatterns", showPatterns ? "1" : "0"); } catch {} paintPb(); render(); });
+    paintPb();
     document.getElementById("draw-undo").addEventListener("click", () => { drawings.pop(); save(); render(); });
     document.getElementById("draw-clear").addEventListener("click", () => {
       if (drawings.length && confirm("Remove all drawings on this market?")) { drawings = []; save(); render(); }
@@ -99,5 +130,5 @@
     setInterval(render, 150);                                     // follow zoom / scroll / new candles
   }
 
-  window.TradyDraw = { init, reload: () => { load(); render(); }, render };
+  window.TradyDraw = { init, reload: () => { load(); render(); }, render, setPatterns: (p) => { patterns = p || []; render(); } };
 })();

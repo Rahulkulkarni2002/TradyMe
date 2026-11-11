@@ -12,6 +12,7 @@ import pandas as pd
 
 from ..features import indicators as ta
 from .candles import NAMES as CANDLE_NAMES, NEUTRAL as CANDLE_NEUTRAL, detect as detect_candles
+from .chart_patterns import NAMES as CHART_NAMES, detect as detect_chart_patterns
 
 FAMILIES = {
     "trend": "🏄 Trend",
@@ -20,6 +21,7 @@ FAMILIES = {
     "momentum": "⚡ Momentum",
     "pattern": "🕯️ Candle pattern",
     "session": "🕐 Time of day",
+    "chart": "📐 Chart pattern",
 }
 
 
@@ -229,6 +231,12 @@ def build_votes(df: pd.DataFrame) -> pd.DataFrame:
     body = (c - o).abs()
     V["pin_at_band"] = _hold(_where((lower_w > 2 * body) & (l < bb["bb_lower"]), (upper_w > 2 * body) & (h > bb["bb_upper"])), 3)
 
+    # 📐 chart patterns (double top/bottom, head & shoulders, wedges, flags, pennants, triangles):
+    # the vote stays on for 6 candles after the breakout
+    CP = detect_chart_patterns(df)
+    for k in CP.columns:
+        V[f"pat_{k}"] = _hold(CP[k].astype(int), 6)
+
     # 🕐 sessions (UTC)
     hour = df.index.hour + df.index.minute / 60
 
@@ -307,6 +315,7 @@ INFO = {
 
 
 INFO.update({f"cdl_{k}": (n, "pattern", kid) for k, (n, _size, kid) in CANDLE_NAMES.items() if k not in CANDLE_NEUTRAL})
+INFO.update({f"pat_{k}": (n, "chart", kid) for k, (n, _kind, kid) in CHART_NAMES.items()})
 
 
 def catalogue() -> list[dict]:

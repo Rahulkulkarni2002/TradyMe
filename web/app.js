@@ -544,6 +544,7 @@ function renderChart(s) {
   chart._strategyMarkers = s.markers.map((m) => ({ time: m.time, position: m.action === "BUY" ? "belowBar" : "aboveBar",
     color: m.action === "BUY" ? c.buy : c.sell, shape: m.action === "BUY" ? "arrowUp" : "arrowDown", text: RESULT_MARK[m.result] || "" }));
   chart._strategyScore = s.marker_score;
+  if (window.TradyDraw) window.TradyDraw.setPatterns(s.patterns);
   applyMarkers();
   loadModelMarkers();
   (candleSeries._lines || []).forEach((l) => candleSeries.removePriceLine(l));

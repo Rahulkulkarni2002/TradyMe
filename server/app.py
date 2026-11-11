@@ -191,6 +191,10 @@ def suggest(market: str, timeframe: str, strategy: str):
         sug["marker_score"] = analysis.grade_arrows(df, markers, H, 1.5)
         sug["markers"] = markers
         sug["levels"] = analysis.support_resistance(df)
+        from engine.strategies.chart_patterns import detect as detect_chart_patterns
+        _, pats = detect_chart_patterns(df, with_drawings=True)
+        first = int(df.index[-300].timestamp()) if len(df) >= 300 else 0
+        sug["patterns"] = [p for p in pats if p["time"] >= first][-6:]          # the most recent ones on screen
         return sug
     except KeyError as e:
         raise HTTPException(404, str(e))

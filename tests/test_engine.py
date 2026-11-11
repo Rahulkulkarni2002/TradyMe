@@ -161,3 +161,16 @@ def test_arrows_are_graded_by_what_happened_next():
     score = grade_arrows(df, arrows, horizon_bars=8, barrier_atr=1.0)
     assert [a["result"] for a in arrows] == ["win", "loss", "open"]
     assert score == {"wins": 1, "losses": 1}
+
+
+def test_chart_patterns_never_peek_and_cover_all_twelve():
+    from engine.strategies.chart_patterns import NAMES, detect
+    df = get_candles(get_market("BTC"), "15m", days=60)
+    full, drawings = detect(df, with_drawings=True)
+    assert set(full.columns) == set(NAMES) and len(NAMES) == 12
+    assert full.isin([-1, 0, 1]).all().all()
+    cut = detect(df.iloc[:-200])
+    tail = cut.index[-150:]
+    assert (cut.loc[tail] == full.loc[tail]).all().all()          # a breakout never depends on later candles
+    for d in drawings:
+        assert d["direction"] in ("BUY", "SELL") and len(d["points"]) >= 3
