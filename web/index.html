@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css?v=12">
+  <link rel="stylesheet" href="/static/style.css?v=13">
   <script src="/static/vendor/lightweight-charts.standalone.production.js"></script>
 </head>
 <body>
@@ -133,6 +133,15 @@
                   <button id="zoom-in" title="Zoom in (see fewer, bigger candles)">+</button>
                 </div>
               </div>
+            </div>
+            <div class="draw-tools" id="draw-tools" title="Draw on the chart: pick a tool, then click-and-drag. Pick it again (or press Esc) to go back to scrolling.">
+              <span class="small muted">Draw:</span>
+              <button data-tool="line" title="Trend line: drag from one point to another">╱ Line</button>
+              <button data-tool="hline" title="Horizontal line: click a price">― Level</button>
+              <button data-tool="rect" title="Rectangle: drag a box">▭ Box</button>
+              <button data-tool="circle" title="Circle: drag around candles">◯ Circle</button>
+              <button id="draw-undo" title="Remove the last drawing">↶ Undo</button>
+              <button id="draw-clear" title="Remove all drawings">✕ Clear</button>
             </div>
             <p class="small muted chart-notes"><span id="chart-note"></span> <span id="chart-live" class="live-dot"></span> <span id="preview-note"></span> <span id="arrow-note"></span> <b id="arrow-score"></b></p>
             <div id="chart" class="chart"></div>
@@ -274,6 +283,7 @@
 
   <div id="tip" class="tip hidden"></div>
   <div id="toast" class="toast hidden"></div>
-  <script src="/static/app.js?v=12"></script>
+  <script src="/static/app.js?v=13"></script>
+  <script src="/static/draw.js?v=1"></script>
 </body>
 </html>

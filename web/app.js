@@ -529,6 +529,7 @@ function renderChart(s) {
     chart = makeChart($("#chart"), 380);
     candleSeries = chart.addCandlestickSeries({ upColor: c.buy, downColor: c.sell, borderVisible: false, wickUpColor: c.buy, wickDownColor: c.sell });
     window.addEventListener("resize", () => chart.applyOptions({ width: $("#chart").clientWidth, height: $("#chart").clientHeight }));
+    if (window.TradyDraw) window.TradyDraw.init();
   }
   const dec = market(s.market).decimals;
   candleSeries.applyOptions({ priceFormat: { type: "price", precision: dec, minMove: 1 / 10 ** dec } });
@@ -554,7 +555,7 @@ function renderChart(s) {
     candleSeries._lines.push(candleSeries.createPriceLine({ price: s.stop_loss, color: c.sell, lineStyle: 2, title: "Stop" }));
     candleSeries._lines.push(candleSeries.createPriceLine({ price: s.take_profit, color: c.buy, lineStyle: 2, title: "Target" }));
   }
-  if (chart._market !== s.market + s.timeframe) { chart._market = s.market + s.timeframe; showToday(); }
+  if (chart._market !== s.market + s.timeframe) { chart._market = s.market + s.timeframe; showToday(); if (window.TradyDraw) window.TradyDraw.reload(); }
 }
 
 // ───────────────────────── account ─────────────────────────
