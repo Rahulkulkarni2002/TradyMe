@@ -28,8 +28,15 @@ class YahooFeed(DataFeed):
         days = min(days, MAX_DAYS[timeframe])
         now = int(time.time())
         params = {"interval": INTERVAL[timeframe], "period1": now - int(days * 86400), "period2": now}
-        r = self.s.get(URL.format(symbol=symbol), params=params, timeout=15)
-        r.raise_for_status()
+        for attempt in range(2):                         # Yahoo is sometimes slow: one patient retry
+            try:
+                r = self.s.get(URL.format(symbol=symbol), params=params, timeout=20)
+                r.raise_for_status()
+                break
+            except requests.RequestException:
+                if attempt == 1:
+                    raise
+                time.sleep(2)
         res = r.json()["chart"]["result"][0]
         ts = res.get("timestamp") or []
         if not ts:

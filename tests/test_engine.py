@@ -134,3 +134,18 @@ def test_library_votes_never_peek(btc15):
     cut = build_votes(btc15.iloc[:-300])
     tail = cut.index[-200:]
     assert (cut.loc[tail] == full.loc[tail]).all().all()
+
+
+def test_slow_price_source_keeps_last_prices(monkeypatch):
+    """If the free price source times out, the app keeps showing the last prices instead of an error."""
+    import requests
+    import engine.data as data
+    m = get_market("GOLD")
+    first = get_candles(m, "1h", bars=50)
+    feed = data._feed(m)
+    def boom(*a, **k):
+        raise requests.ReadTimeout("Yahoo read timed out")
+    monkeypatch.setattr(feed, "history", boom)
+    data._cache.clear()                                   # force a fresh fetch → it fails → last good data
+    again = get_candles(m, "1h", bars=50)
+    assert again.equals(first)

@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import pandas as pd
+import requests
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -188,6 +189,9 @@ def suggest(market: str, timeframe: str, strategy: str):
         return sug
     except KeyError as e:
         raise HTTPException(404, str(e))
+    except requests.RequestException as e:
+        log.warning("price source slow/unavailable for %s %s: %s", market, timeframe, type(e).__name__)
+        raise HTTPException(502, f"The free price source for {market} is slow right now — trying again in a moment.")
     except Exception as e:
         log.exception("suggest failed")
         raise HTTPException(502, f"Couldn't get prices for {market}: {e}")
@@ -200,6 +204,9 @@ def verdict(market: str, timeframe: str):
         return verdict_mod.verdict(get_market(market), timeframe)
     except KeyError as e:
         raise HTTPException(404, str(e))
+    except requests.RequestException as e:
+        log.warning("price source slow/unavailable for %s %s: %s", market, timeframe, type(e).__name__)
+        raise HTTPException(502, f"The free price source for {market} is slow right now — trying again in a moment.")
     except Exception as e:
         log.exception("verdict failed")
         raise HTTPException(502, f"Couldn't build the verdict for {market}: {e}")

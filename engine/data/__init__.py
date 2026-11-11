@@ -16,6 +16,7 @@ from .base import DataFeed, resample, tf_seconds
 
 _feeds: dict[str, DataFeed] = {}
 _cache: dict[tuple, tuple[float, pd.DataFrame]] = {}
+_last_good: dict[tuple, pd.DataFrame] = {}      # if a source is slow/down, keep showing the last prices
 CACHE_SECONDS = 20
 
 # Which smaller candle to build each timeframe from, if not native
@@ -64,10 +65,18 @@ def get_candles(market: Market, timeframe: str, *, bars: int | None = None,
     src_tf = timeframe if timeframe in feed.native else BUILD_FROM[timeframe]
     if days is None:
         days = (bars or 300) * tf_seconds(timeframe) / 86400 * (1.6 if market.kind != "crypto" else 1.05) + 0.5
-    df = feed.history(sym, src_tf, days)
+    try:
+        df = feed.history(sym, src_tf, days)
+    except Exception:
+        stale = _last_good.get(key)
+        if stale is not None:
+            _cache[key] = (time.time() - CACHE_SECONDS / 2, stale)      # retry again soon
+            return stale
+        raise
     if src_tf != timeframe:
         df = resample(df, timeframe)
     if bars:
         df = df.tail(bars)
     _cache[key] = (time.time(), df)
+    _last_good[key] = df
     return df

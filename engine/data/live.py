@@ -50,7 +50,9 @@ def _yahoo(symbol: str) -> pd.DataFrame:
 def forming_candle(market: Market, timeframe: str) -> dict | None:
     key = (market.code, timeframe)
     hit = _cache.get(key)
-    if hit and time.time() - hit[0] < CACHE_SECONDS:
+    # Yahoo (gold/forex) gets throttled if asked too often → at most every 10 s; Binance is fine every 1.5 s
+    wait = CACHE_SECONDS if market.provider == "binance" else 10
+    if hit and time.time() - hit[0] < wait:
         return hit[1]
     sec = tf_seconds(timeframe)
     now = pd.Timestamp.now(tz="UTC")
