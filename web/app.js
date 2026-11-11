@@ -422,6 +422,35 @@ function makeChart(el, height) {
     rightPriceScale: { borderColor: c.line },
   });
 }
+// ───────────────────────── chart zoom: open on today, − / + / Today buttons ─────────────────────────
+function showToday() {
+  const candles = lastSuggestion?.candles || [];
+  if (!chart || !candles.length) return;
+  // midnight today in the user's time zone
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: SETTINGS.timezone, year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date());
+  const get = (t) => +parts.find((p) => p.type === t).value;
+  const sinceMidnight = (get("hour") * 60 + get("minute")) * 60;
+  const todayStart = Math.floor(Date.now() / 1000) - sinceMidnight;
+  const last = candles.length - 1;
+  let first = candles.findIndex((c) => c.time >= todayStart);
+  if (first < 0) first = last;
+  const MIN_BARS = 40, MAX_BARS = 90;                        // big, readable candles: today's most recent ~90
+  if (last - first < MIN_BARS) first = Math.max(0, last - MIN_BARS);   // early in the day: a bit of yesterday too
+  if (last - first > MAX_BARS) first = last - MAX_BARS;
+  chart.timeScale().setVisibleLogicalRange({ from: first - 1, to: last + 4 });
+}
+function zoom(factor) {
+  if (!chart) return;
+  const r = chart.timeScale().getVisibleLogicalRange();
+  if (!r) return;
+  const right = r.to, width = Math.max(10, Math.min(2000, (r.to - r.from) * factor));
+  chart.timeScale().setVisibleLogicalRange({ from: right - width, to: right });   // keep the newest candles in view
+}
+$("#zoom-in").addEventListener("click", () => zoom(0.6));
+$("#zoom-out").addEventListener("click", () => zoom(1.6));
+$("#zoom-today").addEventListener("click", showToday);
+
 function renderChart(s) {
   if (!window.LightweightCharts) return;
   const c = chartColors();
@@ -448,7 +477,7 @@ function renderChart(s) {
     candleSeries._lines.push(candleSeries.createPriceLine({ price: s.stop_loss, color: c.sell, lineStyle: 2, title: "Stop" }));
     candleSeries._lines.push(candleSeries.createPriceLine({ price: s.take_profit, color: c.buy, lineStyle: 2, title: "Target" }));
   }
-  if (chart._market !== s.market + s.timeframe) { chart.timeScale().fitContent(); chart._market = s.market + s.timeframe; }
+  if (chart._market !== s.market + s.timeframe) { chart._market = s.market + s.timeframe; showToday(); }
 }
 
 // ───────────────────────── account ─────────────────────────
@@ -543,7 +572,8 @@ function setupBacktest() {
 function updateDays() {
   const max = market($("#b-market").value).max_days[$("#b-tf").value];
   const r = $("#b-days"); r.max = max; if (+r.value > max) r.value = max;
-  $("#b-days-label").textContent = `${r.value} days (max ${max})`;
+  const yrs = max >= 365 ? ` ≈ ${(max / 365).toFixed(1)} years` : "";
+  $("#b-days-label").textContent = `${r.value} days (max ${max}${yrs})`;
 }
 async function runBacktest() {
   const btn = $("#b-run"); const label = btn.innerHTML; btn.disabled = true; btn.textContent = "Running…";

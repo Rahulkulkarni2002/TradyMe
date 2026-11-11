@@ -270,3 +270,10 @@ footer { text-align: center; margin-top: 28px; }
   .exams { grid-template-columns: repeat(2, 1fr); }
   .toolbar { gap: 10px; } select { min-width: 0; width: 100%; } .toolbar .field { width: 100%; }
 }
+
+.chart-tools { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.zoom { display: inline-flex; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 2px; }
+.zoom button { border: 0; background: transparent; color: var(--text-2); font: 700 .95rem var(--font); min-width: 34px; height: 30px;
+  padding: 0 10px; border-radius: 8px; cursor: pointer; }
+.zoom button:hover { background: var(--surface); color: var(--text); }
+#zoom-today { font-size: .8rem; font-weight: 650; }

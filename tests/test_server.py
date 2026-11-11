@@ -113,3 +113,13 @@ def test_live_candle_endpoint_is_safe_offline(client):
     c, _ = client
     r = c.get("/api/live", params={"market": "BTC", "timeframe": "5m"})
     assert r.status_code == 200 and "candle" in r.json()
+
+
+def test_backtest_limits_follow_the_data_source(monkeypatch):
+    from engine.markets import get_market
+    from server import backtest_service as bs
+    monkeypatch.setattr(bs, "_local_history", lambda m: None)
+    monkeypatch.delenv("OANDA_API_TOKEN", raising=False)
+    assert bs.max_days(get_market("GOLD"), "5m") == 59                 # Yahoo only keeps ~60 days
+    monkeypatch.setenv("OANDA_API_TOKEN", "x"); monkeypatch.setenv("OANDA_ACCOUNT_ID", "y")
+    assert bs.max_days(get_market("GOLD"), "5m") == 365                # OANDA keeps years

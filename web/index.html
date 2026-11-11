@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css?v=6">
+  <link rel="stylesheet" href="/static/style.css?v=8">
   <script src="/static/vendor/lightweight-charts.standalone.production.js"></script>
 </head>
 <body>
@@ -119,7 +119,14 @@
           <section class="card chart-card">
             <div class="card-head">
               <h3><svg class="ic"><use href="#i-chart"/></svg>Chart</h3>
-              <span class="legend"><i class="dot up"></i>past BUY <i class="dot down"></i>past SELL</span>
+              <div class="chart-tools">
+                <span class="legend"><i class="dot up"></i>past BUY <i class="dot down"></i>past SELL</span>
+                <div class="zoom" role="group" aria-label="Zoom">
+                  <button id="zoom-out" title="Zoom out (see more candles)">−</button>
+                  <button id="zoom-today" title="Back to today">Today</button>
+                  <button id="zoom-in" title="Zoom in (see fewer, bigger candles)">+</button>
+                </div>
+              </div>
             </div>
             <p class="small muted chart-notes"><span id="chart-note"></span> <span id="chart-live" class="live-dot"></span></p>
             <div id="chart" class="chart"></div>
@@ -261,6 +268,6 @@
 
   <div id="tip" class="tip hidden"></div>
   <div id="toast" class="toast hidden"></div>
-  <script src="/static/app.js?v=6"></script>
+  <script src="/static/app.js?v=8"></script>
 </body>
 </html>

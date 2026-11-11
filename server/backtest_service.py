@@ -9,20 +9,60 @@ from engine.markets import Market
 from engine.risk.manager import RiskManager
 from engine.strategies import make_strategy
 
-# How far back we can go per timeframe (free data limits / speed)
+# How far back we can go per timeframe. Limits come from the data source (and keep backtests quick).
 MAX_DAYS_CRYPTO = {"5m": 90, "10m": 120, "15m": 180, "30m": 365, "1h": 730, "3h": 1500}
-MAX_DAYS_YAHOO = {"5m": 59, "10m": 59, "15m": 59, "30m": 59, "1h": 729, "3h": 729}
+MAX_DAYS_YAHOO = {"5m": 59, "10m": 59, "15m": 59, "30m": 59, "1h": 729, "3h": 729}         # Yahoo keeps ~60 days of 5m
+MAX_DAYS_OANDA = {"5m": 365, "10m": 365, "15m": 730, "30m": 1095, "1h": 1825, "3h": 3650}   # OANDA keeps years
+MAX_DAYS_LOCAL = {"5m": 730, "10m": 1095, "15m": 1825, "30m": 2555, "1h": 4200, "3h": 4200}  # your downloaded history
 EXAMS = 5
 
 
+def _local_history(market: Market) -> pd.DataFrame | None:
+    """5-minute history downloaded with download_history.py — used if it reaches (almost) today."""
+    try:
+        from research import store
+        p = store.PRICES / f"{market.code}_5m.parquet"
+        if not p.exists():
+            return None
+        df = pd.read_parquet(p)
+        if df.empty or pd.Timestamp.now(tz="UTC") - df.index[-1] > pd.Timedelta(days=4):
+            return None                                  # too old to backtest "up to now"
+        return df
+    except Exception:
+        return None
+
+
 def max_days(market: Market, timeframe: str) -> int:
+    from engine.data import oanda_stream
+    local = _local_history(market)
+    if local is not None:
+        span = (local.index[-1] - local.index[0]).days
+        return max(5, min(MAX_DAYS_LOCAL[timeframe], span))
+    if market.oanda_symbol and oanda_stream.available():
+        return MAX_DAYS_OANDA[timeframe]
     return (MAX_DAYS_YAHOO if market.provider == "yahoo" else MAX_DAYS_CRYPTO)[timeframe]
+
+
+def history(market: Market, timeframe: str, days: int) -> pd.DataFrame:
+    """Downloaded history (+ the latest candles from the live source) if available, else the live source."""
+    local = _local_history(market)
+    if local is None:
+        return get_candles(market, timeframe, days=days)
+    from engine.data.base import resample
+    start = pd.Timestamp.now(tz="UTC") - pd.Timedelta(days=days)
+    df5 = local[local.index >= start][["open", "high", "low", "close", "volume"]]
+    try:                                                  # top up the last few days from the live source
+        recent = get_candles(market, "5m", days=5)
+        df5 = pd.concat([df5, recent[recent.index > df5.index[-1]]])
+    except Exception:
+        pass
+    return df5 if timeframe == "5m" else resample(df5, timeframe)
 
 
 def run(market: Market, timeframe: str, strategy: str, days: int, *, capital: float, risk_pct: float,
         tz: str, params: dict | None = None) -> dict:
     days = max(5, min(days, max_days(market, timeframe)))
-    df = get_candles(market, timeframe, days=days)
+    df = history(market, timeframe, days)
     if len(df) < 300:
         return {"error": f"Only {len(df)} candles available — not enough for a backtest. Try a bigger timeframe."}
     risk_cfg = {"risk_per_trade_pct": risk_pct, "min_confidence": 0.55}
