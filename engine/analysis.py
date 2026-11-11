@@ -331,3 +331,24 @@ def grade_arrows(df: pd.DataFrame, arrows: list[dict], horizon_bars: int, barrie
             a["result"] = "win" if ok else "loss"
             wins += ok; losses += (not ok)
     return {"wins": int(wins), "losses": int(losses)}
+
+
+def arrow_details(df: pd.DataFrame, arrows: list[dict], horizon_bars: int, barrier_atr: float = 1.5) -> None:
+    """Adds to each arrow: the move size it aims for (±%), and — once enough candles have passed —
+    how far the price actually went up / down and where it closed after the window."""
+    pos = {int(t.timestamp()): i for i, t in enumerate(df.index)}
+    c, h, l = df["close"].to_numpy(), df["high"].to_numpy(), df["low"].to_numpy()
+    atr = ta.atr(df, 14).to_numpy()
+    for a in arrows:
+        i = pos.get(a["time"])
+        if i is None:
+            continue
+        a["price"] = float(c[i])
+        a["move_pct"] = round(float(barrier_atr * atr[i] / c[i] * 100), 3)
+        a["window_candles"] = int(horizon_bars)
+        j = min(len(df) - 1, i + horizon_bars)
+        if j > i:
+            a["max_up_pct"] = round(float((h[i + 1:j + 1].max() / c[i] - 1) * 100), 3)
+            a["max_down_pct"] = round(float((l[i + 1:j + 1].min() / c[i] - 1) * 100), 3)
+            a["close_after_pct"] = round(float((c[j] / c[i] - 1) * 100), 3)
+            a["complete"] = j == i + horizon_bars

@@ -450,6 +450,12 @@ let previewSignal = null;
 const RESULT_MARK = { win: "✓", loss: "✗", flat: "–", open: "" };
 let arrowSource = (() => { try { return localStorage.getItem("arrowSource") || "model"; } catch { return "model"; } })();
 let modelMarkers = null;                                   // {available, markers, reason}
+let arrowHorizon = (() => { try { return localStorage.getItem("arrowHorizon") || "long"; } catch { return "long"; } })();
+$("#arrow-horizon").value = arrowHorizon;
+$("#arrow-horizon").addEventListener("change", (e) => {
+  arrowHorizon = e.target.value; try { localStorage.setItem("arrowHorizon", arrowHorizon); } catch {}
+  loadModelMarkers();
+});
 let arrowSure = (() => { try { return +localStorage.getItem("arrowSure") || 62; } catch { return 62; } })();
 $("#arrow-sure").value = String(arrowSure);
 $("#arrow-sure").addEventListener("change", (e) => {
@@ -459,7 +465,7 @@ $("#arrow-sure").addEventListener("change", (e) => {
 async function loadModelMarkers() {
   const m = SETTINGS.market, tf = SETTINGS.timeframe;
   try {
-    const r = await api(`/api/model-markers?market=${m}&timeframe=${tf}&sure=${arrowSure}`);
+    const r = await api(`/api/model-markers?market=${m}&timeframe=${tf}&sure=${arrowSure}&horizon=${arrowHorizon}`);
     if (m !== SETTINGS.market || tf !== SETTINGS.timeframe) return;
     modelMarkers = r; applyMarkers();
   } catch { modelMarkers = null; }
@@ -480,16 +486,22 @@ function applyMarkers() {
   const note = $("#arrow-note");
   if (note) note.textContent = arrowSource === "model" && modelMarkers && !modelMarkers.available
     ? `${modelMarkers.reason} Showing strategy arrows instead.`
-    : useModel ? `Model arrows: where the prediction model became ≥ ${Math.round(modelMarkers.threshold * 100)}% sure about the next ~${modelMarkers.horizon_hours} h.` : "";
+    : useModel ? (modelMarkers.short
+        ? `Model arrows: every candle where the model is ≥ ${Math.round(modelMarkers.threshold * 100)}% sure about the NEXT ${modelMarkers.candles} CANDLE${modelMarkers.candles > 1 ? "S" : ""} (small moves — fees matter). Click an arrow for details.`
+        : `Model arrows: where the prediction model became ≥ ${Math.round(modelMarkers.threshold * 100)}% sure about the next ~${modelMarkers.horizon_hours} h. Click an arrow for details.`) : "";
   const sc = useModel ? modelMarkers.score : chart._strategyScore;
   const scoreEl = $("#arrow-score");
   if (scoreEl) scoreEl.textContent = sc && sc.wins + sc.losses
     ? `Arrows on this chart: ${sc.wins} ✓ worked · ${sc.losses} ✗ failed (${Math.round(100 * sc.wins / (sc.wins + sc.losses))}% right)` : "";
   const past = useModel
-    ? modelMarkers.markers.map((m) => ({ time: m.time, position: m.action === "BUY" ? "belowBar" : "aboveBar", text: `${m.pct}% ${RESULT_MARK[m.result] || ""}`.trim(),
+    ? modelMarkers.markers.map((m) => ({ time: m.time, position: m.action === "BUY" ? "belowBar" : "aboveBar",
+        text: modelMarkers.short ? (RESULT_MARK[m.result] || "") : `${m.pct}% ${RESULT_MARK[m.result] || ""}`.trim(), size: modelMarkers.short ? 0.6 : 1,
         color: m.action === "BUY" ? c.buy : c.sell, shape: m.action === "BUY" ? "arrowUp" : "arrowDown" }))
     : (chart._strategyMarkers || []);
   const marks = [...past];
+  chart._arrowInfo = {};
+  const src = useModel ? modelMarkers.markers : (lastSuggestion?.markers || []);
+  for (const m of src) chart._arrowInfo[m.time] = { ...m, source: useModel ? (modelMarkers.short ? `Model · next ${modelMarkers.candles} candle${modelMarkers.candles > 1 ? "s" : ""}` : `Model · next ~${modelMarkers.horizon_hours} h`) : (META.strategies.find((x) => x.code === SETTINGS.strategy)?.label || "Strategy") };
   const p = previewSignal;
   if (!useModel && p && (p.action === "BUY" || p.action === "SELL") && p.time > (chart._closedLast || 0)) {
     marks.push({ time: p.time, position: p.action === "BUY" ? "belowBar" : "aboveBar", text: "?",
@@ -510,6 +522,36 @@ async function loadPreview() {
     if (el) el.textContent = r.action === "BUY" || r.action === "SELL"
       ? `Preview: if this candle closed now → ${r.action} (faded “?” arrow, not final)` : "";
   } catch { /* ignore */ }
+}
+
+// ───────────────────────── click an arrow → details popup ─────────────────────────
+function pct(v) { return v == null ? "—" : `${v > 0 ? "+" : ""}${v.toFixed(2)}%`; }
+function showArrowPopup(param) {
+  const pop = $("#arrow-pop");
+  if (!param || !param.time || !param.point || !chart._arrowInfo) { pop.classList.add("hidden"); return; }
+  // allow a click on a neighbouring candle (arrows are small)
+  const tf = TF_SEC[SETTINGS.timeframe] || 300;
+  const a = chart._arrowInfo[param.time] || chart._arrowInfo[param.time - tf] || chart._arrowInfo[param.time + tf];
+  if (!a) { pop.classList.add("hidden"); return; }
+  const up = a.action === "BUY";
+  const money = a.price && a.move_pct ? ` (≈ ${px(SETTINGS.market, a.price * a.move_pct / 100)} at ${px(SETTINGS.market, a.price)})` : "";
+  let html = `<div class="pop-head ${up ? "pnl-pos" : "pnl-neg"}">${up ? "▲ BUY" : "▼ SELL"} <span class="muted small">· ${esc(a.source)}</span></div>
+    <div class="small muted">${tzFormat(a.time, { weekday: "short", hour: "numeric", minute: "2-digit" })}</div>`;
+  if (a.p_up != null) html += `<div class="pop-row">Chance <b class="pnl-pos">UP ${a.p_up}%</b> · <b class="pnl-neg">DOWN ${100 - a.p_up}%</b></div>`;
+  if (a.move_pct) html += `<div class="pop-row">Aiming for a <b>±${a.move_pct.toFixed(2)}%</b> move${money} within <b>${a.window_candles} candle${a.window_candles > 1 ? "s" : ""}</b></div>`;
+  if (a.max_up_pct != null) {
+    const res = { win: "✓ worked", loss: "✗ failed", flat: "– no clear move", open: "still running" }[a.result] || "";
+    html += `<div class="pop-row"><b>What happened${a.complete ? "" : " so far"}:</b> highest <span class="pnl-pos">${pct(a.max_up_pct)}</span>,
+      lowest <span class="pnl-neg">${pct(a.max_down_pct)}</span>, closed <b>${pct(a.close_after_pct)}</b> after ${a.window_candles} candles
+      ${res ? `→ <b>${res}</b>` : ""}</div>`;
+  } else {
+    html += `<div class="pop-row muted">Too recent — the result shows after ${a.window_candles || "a few"} candles.</div>`;
+  }
+  pop.innerHTML = html;
+  const host = $("#chart");
+  pop.style.left = Math.min(param.point.x + 12, host.clientWidth - 290) + "px";
+  pop.style.top = Math.max(8, param.point.y - 40) + "px";
+  pop.classList.remove("hidden");
 }
 
 // ───────────────────────── chart zoom: open on today, − / + / Today buttons ─────────────────────────
@@ -554,6 +596,7 @@ function renderChart(s) {
     candleSeries = chart.addCandlestickSeries({ upColor: c.buy, downColor: c.sell, borderVisible: false, wickUpColor: c.buy, wickDownColor: c.sell });
     window.addEventListener("resize", () => chart.applyOptions({ width: $("#chart").clientWidth, height: $("#chart").clientHeight }));
     if (window.TradyDraw) window.TradyDraw.init();
+    chart.subscribeClick(showArrowPopup);
   }
   const dec = market(s.market).decimals;
   candleSeries.applyOptions({ priceFormat: { type: "price", precision: dec, minMove: 1 / 10 ** dec } });

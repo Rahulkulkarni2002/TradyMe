@@ -189,6 +189,7 @@ def suggest(market: str, timeframe: str, strategy: str):
         from engine.data.base import tf_seconds
         H = max(1, round(2 * 3600 / tf_seconds(timeframe)))          # did it move 1.5 ATR its way within ~2 h?
         sug["marker_score"] = analysis.grade_arrows(df, markers, H, 1.5)
+        analysis.arrow_details(df, markers, H, 1.5)
         sug["markers"] = markers
         sug["levels"] = analysis.support_resistance(df)
         from engine.strategies.chart_patterns import detect as detect_chart_patterns
@@ -241,10 +242,12 @@ def live_candle(market: str, timeframe: str):
 
 
 @app.get("/api/model-markers")
-def model_markers(market: str, timeframe: str, sure: int = 62):
-    """Prediction-model arrows for the chart (where the model became ≥ `sure`% sure)."""
+def model_markers(market: str, timeframe: str, sure: int = 62, horizon: str = "long"):
+    """Prediction-model arrows for the chart (where the model is ≥ `sure`% sure).
+    horizon=long: next ~2–6 hours; horizon=short: the next 2 candles."""
     try:
-        return verdict_mod.model_markers(get_market(market), timeframe, threshold=min(max(sure, 52), 80) / 100)
+        h = horizon if horizon in ("n1", "n2", "n3", "n5") else ("n2" if horizon == "short" else "long")
+        return verdict_mod.model_markers(get_market(market), timeframe, threshold=min(max(sure, 52), 80) / 100, horizon=h)
     except requests.RequestException:
         return {"available": False, "markers": [], "reason": "Price source slow — try again shortly."}
 

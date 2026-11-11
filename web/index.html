@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css?v=17">
+  <link rel="stylesheet" href="/static/style.css?v=18">
   <script src="/static/vendor/lightweight-charts.standalone.production.js"></script>
 </head>
 <body>
@@ -123,6 +123,9 @@
                 <div class="seg small-seg" id="arrow-src" title="Which arrows to show on the chart">
                   <button data-v="model">Model arrows</button><button data-v="strategy">Strategy arrows</button>
                 </div>
+                <select id="arrow-horizon" class="mini-select" title="What the model arrows predict">
+                  <option value="long">Model: next ~2–6 h</option><option value="n1">Model: next 1 candle</option><option value="n2">Model: next 2 candles</option><option value="n3">Model: next 3 candles</option><option value="n5">Model: next 5 candles</option>
+                </select>
                 <select id="arrow-sure" class="mini-select" title="Show model arrows when it is at least this sure">
                   <option value="55">≥ 55% sure (more arrows)</option><option value="58">≥ 58% sure</option>
                   <option value="62" selected>≥ 62% sure</option><option value="66">≥ 66% sure (fewer, surer)</option>
@@ -148,7 +151,7 @@
               <button id="draw-clear" title="Remove all drawings">✕ Clear</button>
             </div>
             <p class="small muted chart-notes"><span id="chart-note"></span> <span id="chart-live" class="live-dot"></span> <span id="preview-note"></span> <span id="arrow-note"></span> <b id="arrow-score"></b></p>
-            <div id="chart" class="chart"></div>
+            <div id="chart" class="chart"><div id="arrow-pop" class="arrow-pop hidden"></div></div>
           </section>
 
           <section class="card trades-card">
@@ -287,7 +290,7 @@
 
   <div id="tip" class="tip hidden"></div>
   <div id="toast" class="toast hidden"></div>
-  <script src="/static/app.js?v=16"></script>
+  <script src="/static/app.js?v=19"></script>
   <script src="/static/draw.js?v=5"></script>
 </body>
 </html>

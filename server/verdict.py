@@ -23,9 +23,9 @@ HORIZON_HOURS = {("15m", ""): 2, ("1h", "_h6"): 6}
 _cache: dict = {}
 
 
-@lru_cache(maxsize=32)
-def _load_model(code: str, timeframe: str):
-    for tag in TAGS:
+@lru_cache(maxsize=64)
+def _load_model(code: str, timeframe: str, tags: tuple = tuple(TAGS)):
+    for tag in tags:
         p = MODELS / f"{code}_{timeframe}{tag}.joblib"
         if p.exists():
             bundle = joblib.load(p)
@@ -132,13 +132,18 @@ def verdict(market: Market, timeframe: str) -> dict:
     return out
 
 
-def model_markers(market: Market, timeframe: str, bars: int = 300, threshold: float = 0.62) -> dict:
-    """The prediction model's view on every recent CLOSED candle. An arrow appears where it became
-    confident: ≥ threshold chance of UP first (▲) or of DOWN first (▼)."""
-    bundle = _load_model(market.code, timeframe)
+def model_markers(market: Market, timeframe: str, bars: int = 300, threshold: float = 0.62,
+                  horizon: str = "long") -> dict:
+    """The prediction model's view on every recent CLOSED candle.
+    horizon="long":  arrow where it BECOMES ≥ threshold sure about the next ~2–6 hours.
+    horizon="short": the 'next 2 candles' model — an arrow on EVERY candle where it is ≥ threshold sure."""
+    # horizon: "long" (next ~2–6 h) or "n1" / "n2" / "n3" / "n5" (the next 1, 2, 3 or 5 candles)
+    short = horizon.startswith("n") and horizon[1:].isdigit()
+    bundle = _load_model(market.code, timeframe, (f"_{horizon}",) if short else tuple(TAGS))
     if not bundle:
+        what = f"next-{horizon[1:]}-candle model" if short else "prediction model"
         return {"available": False, "markers": [],
-                "reason": f"No prediction model for {market.name} on {timeframe} candles yet."}
+                "reason": f"No {what} for {market.name} on {timeframe} candles yet."}
     df = get_candles(market, timeframe, bars=900)
     V = build_votes(df)
     A = agreement(V)
@@ -149,12 +154,15 @@ def model_markers(market: Market, timeframe: str, bars: int = 300, threshold: fl
     prev = np.concatenate([[0], side[:-1]])
     out = []
     for t, s_, pr, pv in zip(M.index, side, p, prev):
-        if s_ != 0 and s_ != pv:                           # only where it BECOMES confident (no clutter)
+        if s_ != 0 and (short or s_ != pv):               # long: only where it BECOMES confident (no clutter)
             out.append({"time": int(t.timestamp()), "action": "BUY" if s_ == 1 else "SELL",
-                        "pct": round(100 * (pr if s_ == 1 else 1 - pr))})
+                        "pct": round(100 * (pr if s_ == 1 else 1 - pr)), "p_up": round(100 * float(pr))})
     from engine.analysis import grade_arrows
     from engine.data.base import tf_seconds
     H = max(1, round((bundle.get("horizon_hours") or 2) * 3600 / tf_seconds(timeframe)))
     score = grade_arrows(df, out, H, bundle.get("barrier_atr") or 1.5)
-    return {"available": True, "markers": out, "threshold": threshold, "score": score,
+    from engine.analysis import arrow_details
+    arrow_details(df, out, H, bundle.get("barrier_atr") or 1.5)
+    return {"available": True, "markers": out, "threshold": threshold, "score": score, "short": short,
+            "candles": int(horizon[1:]) if short else None,
             "horizon_hours": bundle.get("horizon_hours"), "exam_accuracy": bundle.get("exam_accuracy")}

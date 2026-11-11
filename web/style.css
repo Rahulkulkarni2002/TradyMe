@@ -296,3 +296,9 @@ footer { text-align: center; margin-top: 28px; }
   --buy: #08805a; --sell: #c22733; --accent: #4b3fd6; --chart-bg: #cfd3d8; background: var(--chart-bg); border-radius: 12px; }
 .chart.chart-dark { --chart-bg: transparent; background: transparent; }
 .chart-theme { min-width: 0; padding: 5px 8px; font-size: .78rem; border-radius: 9px; }
+
+.arrow-pop { position: absolute; z-index: 5; width: 280px; background: var(--card-pop, #ffffff); color: #111827; border: 1px solid #d9dde4;
+  border-radius: 12px; padding: 10px 12px; box-shadow: 0 10px 30px rgba(0,0,0,.25); font-size: .84rem; pointer-events: none; }
+.arrow-pop .pop-head { font-weight: 800; font-size: .95rem; margin-bottom: 2px; }
+.arrow-pop .pop-row { margin-top: 6px; line-height: 1.4; }
+.arrow-pop .muted { color: #5a6170; }
