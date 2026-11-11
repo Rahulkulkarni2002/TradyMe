@@ -838,13 +838,34 @@ $("#chart-theme").addEventListener("change", (e) => {
 $("#zoom-out").addEventListener("click", () => zoom(1.6));
 $("#zoom-today").addEventListener("click", showToday);
 
+// ───────────────────────── big chart: fills the screen (minus indicator panels) ─────────────────────────
+function sizeChart() {
+  const el = $("#chart");
+  if (!el || !chart) return;
+  const panes = $$("#ind-panes .ind-pane").length;
+  const full = document.body.classList.contains("chart-max");
+  const reserve = full ? 150 : 120;                          // the chart's own buttons above it when scrolled to
+  const h = Math.max(380, window.innerHeight - reserve - panes * 128);
+  el.style.height = h + "px";
+  chart.applyOptions({ width: el.clientWidth, height: h });
+  if (window.TradyInd?.resize) window.TradyInd.resize();
+}
+$("#chart-max").addEventListener("click", () => {
+  const on = document.body.classList.toggle("chart-max");
+  $("#chart-max").textContent = on ? "✕ Exit full screen" : "⛶ Full screen";
+  $("#chart-max").classList.toggle("on", on);
+  setTimeout(() => { sizeChart(); if (!on) $(".chart-card").scrollIntoView({ block: "start" }); }, 30);
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && document.body.classList.contains("chart-max")) $("#chart-max").click(); });
+
 function renderChart(s) {
   if (!window.LightweightCharts) return;
   const c = chartColors();
   if (!chart) {
     chart = makeChart($("#chart"), 380);
     candleSeries = chart.addCandlestickSeries({ upColor: c.buy, downColor: c.sell, borderVisible: false, wickUpColor: c.buy, wickDownColor: c.sell });
-    window.addEventListener("resize", () => chart.applyOptions({ width: $("#chart").clientWidth, height: $("#chart").clientHeight }));
+    window.addEventListener("resize", sizeChart);
+    setTimeout(sizeChart, 0);
     if (window.TradyDraw) window.TradyDraw.init();
     if (window.TradyInd) window.TradyInd.init();
     chart.subscribeClick(showArrowPopup);

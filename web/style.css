@@ -353,3 +353,8 @@ footer { text-align: center; margin-top: 28px; }
 .analog-box .ab-row { display: flex; gap: 10px; font-weight: 800; margin-bottom: 2px; flex-wrap: wrap; }
 .analog-box .vbear { color: #b4232f; } .analog-box .mbear { color: #e0525c; } .analog-box .bal { color: var(--muted); }
 .analog-box .mbull { color: #22a06b; } .analog-box .vbull { color: #0a7a4c; }
+
+/* ⛶ full-screen chart: the chart card covers the whole page */
+body.chart-max .chart-card { position: fixed; inset: 0; z-index: 40; margin: 0; border-radius: 0; overflow: auto; padding: 10px 14px; }
+body.chart-max .chart-card .chart-notes, body.chart-max .chart-card #plan-box { display: none; }
+#chart-max.on { background: var(--accent); color: #fff; border-color: var(--accent); }

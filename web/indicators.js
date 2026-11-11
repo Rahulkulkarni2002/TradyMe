@@ -129,6 +129,7 @@
     for (const k of LIST.map((x) => x.key).filter((k) => on.has(k))) (below.has(k) ? ensurePane(k) : ensureOverlay(k));
     update(last);
     document.getElementById("ind-btn").textContent = on.size ? `📈 Indicators (${on.size})` : "📈 Indicators";
+    if (typeof sizeChart === "function") setTimeout(sizeChart, 0);
   }
   function update(candles) {
     last = candles || [];
@@ -162,5 +163,6 @@
   }
   function restyle() { Object.keys(panes).forEach((k) => { dropPane(k); }); sync(); }
 
-  window.TradyInd = { init, update, restyle };
+  function resize() { Object.values(panes).forEach((p) => p.chart.applyOptions({ width: p.box.clientWidth })); }
+  window.TradyInd = { init, update, restyle, resize };
 })();
