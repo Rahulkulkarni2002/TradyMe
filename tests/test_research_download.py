@@ -156,3 +156,24 @@ def test_oanda_history_month_pages_through_5000_candle_limit():
     df = oanda_hist.month("XAU_USD", pd.Timestamp("2020-01-01", tz="UTC"), f)
     assert len(df) == 31 * 288 and df.index.max() < pd.Timestamp("2020-02-01", tz="UTC")
     assert f.calls == 2 and (df["source"] == "oanda").all()      # 8,928 candles → 2 requests of ≤ 5000
+
+
+def test_oanda_month_handles_empty_answer():
+    """The current month can end with an empty answer from OANDA — that must not crash (was a TypeError)."""
+    import pandas as pd
+    from research.sources import oanda_hist
+
+    class Feed:
+        def __init__(self):
+            self.calls = 0
+
+        def _candles(self, instrument, tf, **params):
+            self.calls += 1
+            if self.calls == 1:
+                idx = pd.date_range(params["from"], periods=3, freq="5min")
+                return pd.DataFrame({"open": 1.0, "high": 1.0, "low": 1.0, "close": 1.0, "volume": 1.0}, index=idx)
+            return pd.DataFrame(columns=["open", "high", "low", "close", "volume"])
+
+    start = pd.Timestamp.now(tz="UTC").normalize().replace(day=1)
+    out = oanda_hist.month("XAU_USD", start, Feed())
+    assert len(out) == 3 and (out["source"] == "oanda").all()

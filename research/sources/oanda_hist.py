@@ -17,6 +17,8 @@ def month(instrument: str, start: pd.Timestamp, feed: OandaFeed | None = None) -
     parts, t = [], start
     while t < end:
         df = feed._candles(instrument, "5m", **{"from": t.isoformat(), "count": 5000})
+        if df.empty:                                      # e.g. the current month: nothing closed after t yet
+            break
         df = df[df.index < end]
         if df.empty:
             break
