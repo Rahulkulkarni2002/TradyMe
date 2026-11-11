@@ -194,7 +194,15 @@ def suggest(market: str, timeframe: str, strategy: str):
         from engine.strategies.chart_patterns import detect as detect_chart_patterns
         _, pats = detect_chart_patterns(df, with_drawings=True)
         first = int(df.index[-300].timestamp()) if len(df) >= 300 else 0
-        sug["patterns"] = [p for p in pats if p["time"] >= first][-6:]          # the most recent ones on screen
+        keep, spans = [], []                       # newest first, no overlapping patterns, at most 4
+        for p in reversed([p for p in pats if p["time"] >= first]):
+            span = (min(t for t, _ in p["points"]), p["time"])
+            if any(span[0] <= b and a <= span[1] for a, b in spans):
+                continue
+            keep.append(p); spans.append(span)
+            if len(keep) == 4:
+                break
+        sug["patterns"] = keep[::-1]
         return sug
     except KeyError as e:
         raise HTTPException(404, str(e))

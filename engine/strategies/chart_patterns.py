@@ -44,10 +44,13 @@ def detect(df: pd.DataFrame, k: int = 4, window: int = 120, with_drawings: bool 
     fired: dict[str, int] = {}                  # pattern → index of the last pivot set it fired for
     times = df.index
 
+    last_fire: dict[str, int] = {}             # cool-down: the same pattern can't fire again for 15 candles
+
     def emit(name: str, t: int, key: int, pts: list[tuple[int, float]], lines: list):
-        if fired.get(name) == key:
+        if fired.get(name) == key or t - last_fire.get(name, -10**9) < 15:
             return
         fired[name] = key
+        last_fire[name] = t
         out[name][t] = DIRECTION[name]
         if with_drawings:
             drawings.append({"name": NAMES[name][0], "key": name, "direction": "BUY" if DIRECTION[name] > 0 else "SELL",

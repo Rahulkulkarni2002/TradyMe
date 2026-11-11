@@ -42,6 +42,10 @@
   function render() {
     if (!svg || !chart || !candleSeries) return;
     svg.innerHTML = "";
+    // only cover the candle area: not the price scale on the right or the time axis below
+    const paneW = chart.timeScale().width(), paneH = svg.parentElement.clientHeight - (chart.timeScale().height ? chart.timeScale().height() : 26);
+    svg.style.width = paneW + "px"; svg.style.height = Math.max(0, paneH) + "px";
+    svg.setAttribute("viewBox", `0 0 ${paneW} ${Math.max(0, paneH)}`);
     const color = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#7c6cff";
     const W = svg.clientWidth;
     if (showPatterns) {
