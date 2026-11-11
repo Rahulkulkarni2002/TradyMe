@@ -27,6 +27,7 @@ def five_minute(code: str, metrics: pd.DataFrame | None = None, funding: pd.Data
     if metrics is None or not len(metrics):
         return None
     m = metrics.sort_index()
+    m.index = m.index.as_unit("ns")
     m = m[~m.index.duplicated(keep="last")]
     f = pd.DataFrame(index=m.index)
     oi = np.log(m["oi_usd"].where(m["oi_usd"] > 0))
@@ -42,10 +43,12 @@ def five_minute(code: str, metrics: pd.DataFrame | None = None, funding: pd.Data
     f["taker_1h"] = tk.rolling(12, min_periods=6).mean()
     f["taker_4h"] = tk.rolling(48, min_periods=24).mean()
     if close5 is not None:
-        px = np.log(close5.reindex(f.index, method="ffill"))
+        c5 = close5.copy(); c5.index = c5.index.as_unit("ns")
+        px = np.log(c5.reindex(f.index, method="ffill"))
         f["oi_price_div_4h"] = np.sign(px - px.shift(48)) * f["oi_ch_4h"]     # price & OI same way (+) or opposite (−)
     if funding is not None and len(funding):
         fu = funding["funding"].sort_index()
+        fu.index = fu.index.as_unit("ns")
         fu = fu[~fu.index.duplicated(keep="last")]
         fz = pd.DataFrame({"fund_last": fu, "fund_z": _z(fu, 90), "fund_3d": fu.rolling(9, min_periods=3).mean()})
         f = pd.merge_asof(f.sort_index(), fz.sort_index(), left_index=True, right_index=True, direction="backward",
@@ -57,8 +60,12 @@ def for_candles(index: pd.DatetimeIndex, timeframe_seconds: int, fut5: pd.DataFr
     """Align 5-minute futures features to candles (value known just before each candle closes)."""
     if fut5 is None or not len(fut5):
         return pd.DataFrame(index=index, columns=FUT_COLS, dtype=float)
-    known_at = index + pd.Timedelta(seconds=timeframe_seconds) - pd.Timedelta(minutes=5)
+    index = pd.DatetimeIndex(index)
+    fut5 = fut5.copy(); fut5.index = fut5.index.as_unit("ns")
+    known_at = index.as_unit("ns") + pd.Timedelta(seconds=timeframe_seconds) - pd.Timedelta(minutes=5)
     left = pd.DataFrame({"k": known_at}, index=index).sort_values("k")
     out = pd.merge_asof(left, fut5.sort_index(), left_on="k", right_index=True, direction="backward",
                         tolerance=pd.Timedelta(minutes=30))
-    return out.drop(columns="k").reindex(index)[FUT_COLS]
+    out = out.drop(columns="k")
+    out.index = out.index.as_unit("ns")
+    return out.reindex(index.as_unit("ns")).set_axis(index)[FUT_COLS]
