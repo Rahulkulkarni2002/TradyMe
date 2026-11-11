@@ -17,7 +17,7 @@ from .base import DataFeed, resample, tf_seconds
 _feeds: dict[str, DataFeed] = {}
 _cache: dict[tuple, tuple[float, pd.DataFrame]] = {}
 _last_good: dict[tuple, pd.DataFrame] = {}      # if a source is slow/down, keep showing the last prices
-CACHE_SECONDS = 20
+CACHE_SECONDS = 3
 
 # Which smaller candle to build each timeframe from, if not native
 BUILD_FROM = {"10m": "5m", "3h": "1h", "5m": "5m", "15m": "15m", "30m": "30m", "1h": "1h"}

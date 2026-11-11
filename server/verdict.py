@@ -56,7 +56,7 @@ def _level(buy: int, sell: int) -> tuple[str, float]:
 def verdict(market: Market, timeframe: str) -> dict:
     key = (market.code, timeframe)
     hit = _cache.get(key)
-    if hit and time.time() - hit[0] < 20:
+    if hit and time.time() - hit[0] < 3:
         return hit[1]
     df = get_candles(market, timeframe, bars=900)
     if len(df) < 300:

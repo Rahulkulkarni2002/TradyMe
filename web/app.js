@@ -256,8 +256,18 @@ function paintLive() {
   if (!liveCandle || !candleSeries || liveCandle.time <= (chart._closedLast || 0)) return;
   candleSeries.update({ time: liveCandle.time, open: liveCandle.open, high: liveCandle.high, low: liveCandle.low, close: liveCandle.close });
   $("#tb-price").textContent = px(SETTINGS.market, liveCandle.close);
+  const now = $("#now-price"); if (now) now.textContent = px(SETTINGS.market, liveCandle.close);
+  lastPriceAt = Date.now();
+  liveLabel();
+}
+let lastPriceAt = 0;
+function liveLabel() {                                   // ticks every second so you can see it's alive
+  const el = $("#chart-live"); if (!el || !liveCandle) return;
   const src = liveSocket && liveSocket.readyState === 1 ? `live prices (${liveSocket.kind})` : "updates every 10 s (add an OANDA key for live gold/forex)";
-  $("#chart-live").textContent = `● forming candle · ${src} · ${new Date().toLocaleTimeString()}`;
+  const ago = Math.max(0, Math.round((Date.now() - lastPriceAt) / 1000));
+  const tf = TF_SEC[SETTINGS.timeframe], left = tf - (Math.floor(Date.now() / 1000) % tf);
+  const mm = String(Math.floor(left / 60)), ss = String(left % 60).padStart(2, "0");
+  el.textContent = `● forming candle · ${src} · last price ${ago === 0 ? "just now" : ago + " s ago"} · candle closes in ${mm}:${ss}`;
 }
 
 function onTrade(price, tsMs) {                          // one real trade from the exchange
@@ -345,7 +355,7 @@ function renderSuggestion(s) {
       <div class="b" style="width:${s.buyers_pct}%">${s.buyers_pct >= 28 ? "Buyers " + s.buyers_pct + "%" : s.buyers_pct >= 8 ? s.buyers_pct + "%" : ""}</div>
       <div class="s" style="width:${s.sellers_pct}%">${s.sellers_pct >= 28 ? "Sellers " + s.sellers_pct + "%" : s.sellers_pct >= 8 ? s.sellers_pct + "%" : ""}</div></div>
       <div class="small muted">buyers vs sellers right now <span class="q" data-tip="tug">?</span></div>`;
-  html += `<div class="levels"><span class="level now">Now ${px(s.market, s.price)}</span>`;
+  html += `<div class="levels"><span class="level now">Now <span id="now-price">${px(s.market, s.price)}</span></span>`;
   if (s.action !== "WAIT") html += `<span class="level sl">Stop ${px(s.market, s.stop_loss)}</span><span class="level tp">Target ${px(s.market, s.take_profit)}</span>`;
   html += `</div>`;
   if (s.trap && s.trap.score > 0) {
@@ -605,5 +615,11 @@ function setupSettings() {
   setInterval(loadBroker, 60000);
   setInterval(loadSuggestion, 30000);
   setInterval(loadLive, 2000);
+  setInterval(liveLabel, 1000);
+  (function atCandleClose() {                             // new signal ~3 s after each candle closes
+    const tf = TF_SEC[SETTINGS.timeframe] || 300;
+    const wait = (tf - (Date.now() / 1000) % tf + 3) * 1000;
+    setTimeout(() => { loadSuggestion(); refreshAccount(); atCandleClose(); }, wait);
+  })();
   setInterval(refreshAccount, 10000);
 })();
