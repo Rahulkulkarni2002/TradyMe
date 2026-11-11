@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 import time
 from functools import lru_cache
 
@@ -23,22 +24,28 @@ HORIZON_HOURS = {("15m", ""): 2, ("1h", "_h6"): 6}
 _cache: dict = {}
 
 
-@lru_cache(maxsize=64)
 def _load_model(code: str, timeframe: str, tags: tuple = tuple(TAGS)):
+    """The first model file that exists for these tags. Checked on every call, so a model you train while
+    TradyMe is running is picked up straight away (files are loaded once and kept until they change)."""
     for tag in tags:
         p = MODELS / f"{code}_{timeframe}{tag}.joblib"
         if p.exists():
-            try:
-                bundle = joblib.load(p)
-            except Exception as e:          # usually: numpy / scikit-learn on this computer is older than the model
-                raise RuntimeError("The prediction model can't load — your Python packages are too old. "
-                                   "Run:  pip install -U -r requirements.txt   then restart TradyMe.") from e
-            bundle["tag"] = tag
-            r = RESULTS / f"{code}_{timeframe}{tag}_strategies.json"
-            bundle["hit_rates"] = {s["key"]: s["hit_rate"] for s in json.loads(r.read_text())["strategies"]} \
-                if r.exists() else {}
-            return bundle
+            return _load_file(str(p), p.stat().st_mtime, code, timeframe, tag)
     return None
+
+
+@lru_cache(maxsize=64)
+def _load_file(path: str, mtime: float, code: str, timeframe: str, tag: str):
+    try:
+        bundle = joblib.load(path)
+    except Exception as e:          # usually: numpy / scikit-learn on this computer is older than the model
+        raise RuntimeError("The prediction model can't load — your Python packages are too old. "
+                           "Run:  pip install -U -r requirements.txt   then restart TradyMe.") from e
+    bundle["tag"] = tag
+    r = RESULTS / f"{code}_{timeframe}{tag}_strategies.json"
+    bundle["hit_rates"] = {s["key"]: s["hit_rate"] for s in json.loads(r.read_text())["strategies"]} \
+        if r.exists() else {}
+    return bundle
 
 
 def _with_futures(market: Market, timeframe: str, tags: tuple, df, X):
