@@ -501,17 +501,22 @@ def ranking(market: str, timeframe: str):
     rows = []
     for s in r["strategies"]:
         s = {k: (0.0 if isinstance(v, float) and v != v else v) for k, v in s.items()}     # NaN → 0 (never fired)
+        mk = get_market(market)
+        s["profit_market"] = s["profit_no_fees"] - s.get("trades", 0) * 2 * (mk.fee_bps + mk.slippage_bps) / 100
         n, hit, yrs = s["signals"], s["hit_rate"], s["years"] or 1
         pos_share = s["years_positive_low_fees"] / yrs
         if n < 100:
             verdict, why = "🤷", f"Only {n} signals in {yrs} years — too few to judge."
-        elif s["profit_low_fees"] > 0 and pos_share >= 0.6 and hit >= 0.53:
+        elif max(s["profit_low_fees"], s["profit_market"] if mk.kind != "crypto" else -1e9) > 0 and pos_share >= 0.6 and hit >= 0.53:
             verdict, why = "✅", f"Made money after fees in {s['years_positive_low_fees']} of {yrs} years."
         elif s["profit_low_fees"] > 0 or (s["profit_no_fees"] > 0 and hit >= 0.53):
             verdict, why = "⚠️", "Has a small edge, but fees eat most of it. Use only with a cheap broker."
         else:
             verdict, why = "❌", "Not better than a coin flip here, or loses after fees."
+        # what THIS market really costs per round trip (gold/forex on OANDA ≈ 0.02–0.03 %, far below crypto fees)
+        cost = 2 * (mk.fee_bps + mk.slippage_bps) / 10_000
         rows.append({"key": s["key"], "code": f"lib_{s['key']}", "name": s["name"], "family": s["family"],
+                     "profit_market": round(s["profit_market"], 1), "cost_pct": round(cost * 100, 3),
                      "signals": n, "per_day": s["signals_per_day"], "hit_pct": round(100 * hit, 1),
                      "profit_no_fees": round(s["profit_no_fees"], 1), "profit_low_fees": round(s["profit_low_fees"], 1),
                      "profit_alpaca": round(s["profit_alpaca"], 1),

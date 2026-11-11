@@ -1060,10 +1060,12 @@ async function loadRanking() {
     const c = r.counts;
     $("#rank-summary").innerHTML = `<b>${c["✅"]}</b> ✅ worth using · <b>${c["⚠️"]}</b> ⚠️ fees eat it · <b>${c["🤷"]}</b> 🤷 too few · <b>${c["❌"]}</b> ❌ no edge`
       + (c["✅"] === 0 ? `<br><span class="muted">No strategy made money after fees here. Try a bigger candle size (1 hour / 3 hours).</span>` : "");
-    t.innerHTML = `<tr><th></th><th>Strategy</th><th>Right</th><th>Signals/day</th><th>Profit, no fees</th><th>Profit, cheap broker (0.1%)</th><th>Profit, Alpaca (0.25%)</th><th>Good years</th><th></th></tr>`
+    const crypto = market(m).kind === "crypto";
+    t.innerHTML = `<tr><th></th><th>Strategy</th><th>Right</th><th>Signals/day</th><th>Profit, no fees</th>${crypto ? "" : `<th>Profit, real ${esc(market(m).name)} cost</th>`}<th>Profit, cheap broker (0.1%)</th><th>Profit, Alpaca (0.25%)</th><th>Good years</th><th></th></tr>`
       + r.rows.map((x) => `<tr title="${esc(x.why)}"><td>${x.verdict}</td><td>${esc(x.name)} <span class="muted small">${esc(x.family)}</span></td>
         <td>${x.hit_pct}%</td><td>${x.per_day}</td>
         <td class="${x.profit_no_fees >= 0 ? "pnl-pos" : "pnl-neg"}">${x.profit_no_fees > 0 ? "+" : ""}${x.profit_no_fees}%</td>
+        ${crypto ? "" : `<td class="${x.profit_market >= 0 ? "pnl-pos" : "pnl-neg"}" title="about ${x.cost_pct}% per round trip"><b>${x.profit_market > 0 ? "+" : ""}${x.profit_market}%</b></td>`}
         <td class="${x.profit_low_fees >= 0 ? "pnl-pos" : "pnl-neg"}"><b>${x.profit_low_fees > 0 ? "+" : ""}${x.profit_low_fees}%</b></td>
         <td class="${x.profit_alpaca >= 0 ? "pnl-pos" : "pnl-neg"}">${x.profit_alpaca > 0 ? "+" : ""}${x.profit_alpaca}%</td>
         <td>${x.years_positive}/${x.years}</td>
