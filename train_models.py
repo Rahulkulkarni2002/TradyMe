@@ -1,6 +1,6 @@
 """Train the prediction models on YOUR computer from the history you downloaded.
 
-    python train_models.py                 (gold + forex, all candle sizes — about 30–90 min)
+    python train_models.py                 (gold + forex, all candle sizes + next-1/2/3/5-candle models — 1–3 h)
     python train_models.py --markets GOLD  (just gold)
     python train_models.py --timeframes 1h 3h
 
@@ -18,12 +18,16 @@ from research import store
 PLAN = {"5m": (24, 1.5, "_h2"), "15m": (24, 1.5, "_h6"), "30m": (12, 1.5, "_h6"), "1h": (6, 1.5, "_h6"),
         "3h": (2, 1.5, "_h6")}
 DEFAULT_MARKETS = ["GOLD", "EURUSD", "GBPUSD", "USDJPY"]
+# the "next 1 / 2 / 3 / 5 candles" models (Model arrows → "next N candles"): look-ahead, move size, tag
+SHORT = [(1, 0.4, "_n1"), (2, 0.5, "_n2"), (3, 0.6, "_n3"), (5, 0.8, "_n5")]
+SHORT_TF = ["5m", "15m", "1h"]
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--markets", nargs="+", default=DEFAULT_MARKETS)
     ap.add_argument("--timeframes", nargs="+", default=["15m", "1h", "3h", "30m", "5m"], choices=list(PLAN))
+    ap.add_argument("--no-short", action="store_true", help="skip the next-1/2/3/5-candle models")
     a = ap.parse_args()
     from research.strategy_league import MODELS, run
 
@@ -37,16 +41,18 @@ def main() -> int:
             print(f"⏭️  {code}: no downloaded history yet — run:  python download_history.py --only forex")
             continue
         print(f"\n📚 {code}: {len(df):,} candles, {df.index[0]:%d %b %Y} → {df.index[-1]:%d %b %Y}")
-        for tf in a.timeframes:
-            h, b, tag = PLAN[tf]
+        jobs = [(tf, *PLAN[tf]) for tf in a.timeframes]
+        if not a.no_short:
+            jobs += [(tf, h, b, tag) for h, b, tag in SHORT for tf in SHORT_TF if tf in a.timeframes]
+        for tf, h, b, tag in jobs:
             if (MODELS / f"{code}_{tf}{tag}.joblib").exists():
-                print(f"   ✅ {code} {tf}: already trained — skipping (delete the file in research/models to redo)")
+                print(f"   ✅ {code} {tf}{tag}: already trained — skipping")
                 continue
-            print(f"\n🏋️  {code} {tf} (next ~{h} candles, move {b}× normal size)…", flush=True)
+            print(f"\n🏋️  {code} {tf}{tag} (next {h} candles, move {b}× normal size)…", flush=True)
             try:
                 out = run(code, tf, h, b, tag)
                 s = out["combined_summary"]
-                done.append(f"{code} {tf}: right {s['accuracy']:.1%} overall, {s.get('thr65_right') or 0:.1%} when ≥65% sure")
+                done.append(f"{code} {tf}{tag}: right {s['accuracy']:.1%} overall, {s.get('thr65_right') or 0:.1%} when ≥65% sure")
             except KeyboardInterrupt:
                 print("\n⏸️  Stopped. Run the same command again to continue.")
                 return 1
