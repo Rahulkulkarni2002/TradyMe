@@ -428,12 +428,40 @@ function makeChart(el, height) {
 }
 // ───────────────────────── preview arrow on the forming candle (not final) ─────────────────────────
 let previewSignal = null;
+let arrowSource = (() => { try { return localStorage.getItem("arrowSource") || "model"; } catch { return "model"; } })();
+let modelMarkers = null;                                   // {available, markers, reason}
+async function loadModelMarkers() {
+  const m = SETTINGS.market, tf = SETTINGS.timeframe;
+  try {
+    const r = await api(`/api/model-markers?market=${m}&timeframe=${tf}`);
+    if (m !== SETTINGS.market || tf !== SETTINGS.timeframe) return;
+    modelMarkers = r; applyMarkers();
+  } catch { modelMarkers = null; }
+}
+function paintArrowSwitch() {
+  $$("#arrow-src button").forEach((b) => b.classList.toggle("on", b.dataset.v === arrowSource));
+}
+$$("#arrow-src button").forEach((b) => b.addEventListener("click", () => {
+  arrowSource = b.dataset.v; try { localStorage.setItem("arrowSource", arrowSource); } catch {}
+  paintArrowSwitch(); applyMarkers();
+}));
+paintArrowSwitch();
+
 function applyMarkers() {
   if (!candleSeries) return;
   const c = chartColors();
-  const marks = [...(chart._pastMarkers || [])];
+  const useModel = arrowSource === "model" && modelMarkers?.available;
+  const note = $("#arrow-note");
+  if (note) note.textContent = arrowSource === "model" && modelMarkers && !modelMarkers.available
+    ? `${modelMarkers.reason} Showing strategy arrows instead.`
+    : useModel ? `Model arrows: where the prediction model became ≥ ${Math.round(modelMarkers.threshold * 100)}% sure about the next ~${modelMarkers.horizon_hours} h.` : "";
+  const past = useModel
+    ? modelMarkers.markers.map((m) => ({ time: m.time, position: m.action === "BUY" ? "belowBar" : "aboveBar", text: m.pct + "%",
+        color: m.action === "BUY" ? c.buy : c.sell, shape: m.action === "BUY" ? "arrowUp" : "arrowDown" }))
+    : (chart._strategyMarkers || []);
+  const marks = [...past];
   const p = previewSignal;
-  if (p && (p.action === "BUY" || p.action === "SELL") && p.time > (chart._closedLast || 0)) {
+  if (!useModel && p && (p.action === "BUY" || p.action === "SELL") && p.time > (chart._closedLast || 0)) {
     marks.push({ time: p.time, position: p.action === "BUY" ? "belowBar" : "aboveBar", text: "?",
       color: (p.action === "BUY" ? c.buy : c.sell) + "88", shape: p.action === "BUY" ? "arrowUp" : "arrowDown" });
   }
@@ -501,11 +529,15 @@ function renderChart(s) {
   $("#chart-note").textContent = !last ? "" : s.market_closed
     ? `😴 Market closed — the last candle is from ${tzFormat(last, { weekday: "long", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}. It will move again when the market reopens (${market(s.market).hours}). Times shown in ${tzName}.`
     : `🟢 Live — a new candle appears every ${META.timeframes.find((t) => t.code === s.timeframe).label}. Times shown in ${tzName}.`;
-  chart._pastMarkers = s.markers.map((m) => ({ time: m.time, position: m.action === "BUY" ? "belowBar" : "aboveBar",
+  chart._strategyMarkers = s.markers.map((m) => ({ time: m.time, position: m.action === "BUY" ? "belowBar" : "aboveBar",
     color: m.action === "BUY" ? c.buy : c.sell, shape: m.action === "BUY" ? "arrowUp" : "arrowDown" }));
   applyMarkers();
+  loadModelMarkers();
   (candleSeries._lines || []).forEach((l) => candleSeries.removePriceLine(l));
   candleSeries._lines = [];
+  (s.levels || []).forEach((lv) => candleSeries._lines.push(candleSeries.createPriceLine({
+    price: lv.price, color: (lv.kind === "resistance" ? c.sell : c.buy) + "aa", lineStyle: 1, lineWidth: 1, axisLabelVisible: true,
+    title: `${lv.kind === "resistance" ? "Resistance" : "Support"} ×${lv.touches}` })));
   if (s.action !== "WAIT") {
     candleSeries._lines.push(candleSeries.createPriceLine({ price: s.stop_loss, color: c.sell, lineStyle: 2, title: "Stop" }));
     candleSeries._lines.push(candleSeries.createPriceLine({ price: s.take_profit, color: c.buy, lineStyle: 2, title: "Target" }));

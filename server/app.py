@@ -187,6 +187,7 @@ def suggest(market: str, timeframe: str, strategy: str):
         sug["candles"] = [{"time": int(t.timestamp()), "open": r.open, "high": r.high, "low": r.low, "close": r.close}
                           for t, r in tail.iterrows()]
         sug["markers"] = markers
+        sug["levels"] = analysis.support_resistance(df)
         return sug
     except KeyError as e:
         raise HTTPException(404, str(e))
@@ -222,6 +223,15 @@ def live_candle(market: str, timeframe: str):
         return {"candle": forming_candle(m, timeframe), "stream": stream_url(m)}
     except KeyError as e:
         raise HTTPException(404, str(e))
+
+
+@app.get("/api/model-markers")
+def model_markers(market: str, timeframe: str):
+    """Prediction-model arrows for the chart (where the model became ≥ 62% sure)."""
+    try:
+        return verdict_mod.model_markers(get_market(market), timeframe)
+    except requests.RequestException:
+        return {"available": False, "markers": [], "reason": "Price source slow — try again shortly."}
 
 
 @app.get("/api/preview")

@@ -277,3 +277,5 @@ footer { text-align: center; margin-top: 28px; }
   padding: 0 10px; border-radius: 8px; cursor: pointer; }
 .zoom button:hover { background: var(--surface); color: var(--text); }
 #zoom-today { font-size: .8rem; font-weight: 650; }
+
+.small-seg button { padding: 5px 10px; font-size: .78rem; }

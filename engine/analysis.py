@@ -262,3 +262,44 @@ def signal_dict(sig: Signal) -> dict:
     d["action"] = sig.action.value
     d["time"] = sig.time.isoformat() if sig.time is not None else None
     return d
+
+
+# ─────────────────────── support & resistance ───────────────────────
+def support_resistance(df: pd.DataFrame, lookback: int = 300, k: int = 3, max_each: int = 2) -> list[dict]:
+    """Price levels where the price turned several times.
+    Resistance = turned DOWN there (sellers stepped in); support = turned UP there (buyers stepped in).
+    A turning point is a candle whose high (or low) is the highest (lowest) of the k candles on each side."""
+    d = df.tail(lookback)
+    if len(d) < 4 * k + 10:
+        return []
+    h, l, c = d["high"].to_numpy(), d["low"].to_numpy(), float(d["close"].iloc[-1])
+    atr = float(ta.atr(d, 14).iloc[-1])
+    piv = []
+    for i in range(k, len(d) - k):
+        if h[i] == h[i - k:i + k + 1].max():
+            piv.append((h[i], i, "high"))
+        if l[i] == l[i - k:i + k + 1].min():
+            piv.append((l[i], i, "low"))
+    if not piv:
+        return []
+    piv.sort()
+    clusters, cur = [], [piv[0]]
+    for p in piv[1:]:                                      # group turning points within ~0.4 ATR of each other
+        if p[0] - cur[-1][0] <= 0.4 * atr:
+            cur.append(p)
+        else:
+            clusters.append(cur)
+            cur = [p]
+    clusters.append(cur)
+    levels = []
+    for cl in clusters:
+        if len(cl) < 2:
+            continue                                       # a level needs at least 2 touches
+        price = float(np.mean([p[0] for p in cl]))
+        last_touch = max(p[1] for p in cl)
+        levels.append({"price": price, "touches": len(cl), "last_touch_ago": len(d) - 1 - last_touch,
+                       "kind": "resistance" if price > c else "support",
+                       "distance_atr": round(abs(price - c) / atr, 2) if atr else None})
+    res = sorted([x for x in levels if x["kind"] == "resistance"], key=lambda x: x["price"])[:max_each]
+    sup = sorted([x for x in levels if x["kind"] == "support"], key=lambda x: -x["price"])[:max_each]
+    return res + sup

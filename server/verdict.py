@@ -130,3 +130,27 @@ def verdict(market: Market, timeframe: str) -> dict:
            "notes": notes, "families": FAMILIES}
     _cache[key] = (time.time(), out)
     return out
+
+
+def model_markers(market: Market, timeframe: str, bars: int = 300, threshold: float = 0.62) -> dict:
+    """The prediction model's view on every recent CLOSED candle. An arrow appears where it became
+    confident: ≥ threshold chance of UP first (▲) or of DOWN first (▼)."""
+    bundle = _load_model(market.code, timeframe)
+    if not bundle:
+        return {"available": False, "markers": [],
+                "reason": f"No prediction model for {market.name} on {timeframe} candles yet."}
+    df = get_candles(market, timeframe, bars=900)
+    V = build_votes(df)
+    A = agreement(V)
+    X = features.build(df, timeframe)
+    M = model_inputs(V, A, X).reindex(columns=bundle["columns"]).iloc[-bars:]
+    p = bundle["model"].predict_proba(M)[:, 1]
+    side = np.where(p >= threshold, 1, np.where(p <= 1 - threshold, -1, 0))
+    prev = np.concatenate([[0], side[:-1]])
+    out = []
+    for t, s_, pr, pv in zip(M.index, side, p, prev):
+        if s_ != 0 and s_ != pv:                           # only where it BECOMES confident (no clutter)
+            out.append({"time": int(t.timestamp()), "action": "BUY" if s_ == 1 else "SELL",
+                        "pct": round(100 * (pr if s_ == 1 else 1 - pr))})
+    return {"available": True, "markers": out, "threshold": threshold,
+            "horizon_hours": bundle.get("horizon_hours"), "exam_accuracy": bundle.get("exam_accuracy")}
