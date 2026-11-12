@@ -605,6 +605,12 @@ $("#arrow-sure").addEventListener("change", (e) => {
   loadModelMarkers();
 });
 // ───────────────────────── model plan: stop-loss + targets on the chart ─────────────────────────
+let showBoxes = (() => { try { return localStorage.getItem("showBoxes") === "1"; } catch { return false; } })();
+$("#box-toggle").classList.toggle("on", showBoxes);
+$("#box-toggle").addEventListener("click", () => {
+  showBoxes = !showBoxes; try { localStorage.setItem("showBoxes", showBoxes ? "1" : "0"); } catch {}
+  $("#box-toggle").classList.toggle("on", showBoxes); applyMarkers();
+});
 let showPlan = (() => { try { return localStorage.getItem("showPlan") !== "0"; } catch { return true; } })();
 function drawPlan() {
   if (!candleSeries) return;
@@ -768,6 +774,17 @@ function applyMarkers() {
       color: (p.action === "BUY" ? c.buy : c.sell) + "88", shape: p.action === "BUY" ? "arrowUp" : "arrowDown" });
   }
   candleSeries.setMarkers(marks);
+  // 📦 the same arrows as trades (only the ones with a known stop/target; "Every candle" → only the sure ones)
+  if (window.TradyDraw) {
+    const list = !showBoxes ? [] : src.filter((m) => m.target != null && m.stop != null && (!modelMarkers?.every || !useModel || m.strong));
+    window.TradyDraw.setBoxes(list);
+    const done = list.filter((m) => m.exit_how && m.exit_how !== "open");
+    const wins = done.filter((m) => m.exit_pct > 0), tot = done.reduce((s, m) => s + m.exit_pct, 0);
+    const el = $("#box-score");
+    if (el) el.textContent = showBoxes && done.length
+      ? `📦 Trades on this chart: ${wins.length} won · ${done.length - wins.length} lost · total ${tot >= 0 ? "+" : ""}${tot.toFixed(2)}% before fees`
+      : "";
+  }
 }
 async function loadPreview() {
   if (!lastSuggestion || !liveCandle) return;

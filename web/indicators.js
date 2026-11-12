@@ -12,6 +12,7 @@
     { key: "vwap", name: "VWAP (today)", group: "On the price", info: "Average price paid today, weighted by volume" },
     { key: "supertrend", name: "Supertrend (10, 3)", group: "On the price", info: "Green under price = uptrend, red above = downtrend" },
     { key: "donchian", name: "Donchian channel (20)", group: "On the price", info: "Highest high / lowest low of 20 candles — breakouts" },
+    { key: "ribbon", name: "Trend ribbon (EMA 20–60)", group: "On the price", info: "A band of averages: green & fanning out = up-trend, red = down-trend, tangled = no trend" },
     { key: "volume", name: "Volume", group: "Below the chart", info: "How much traded each candle" },
     { key: "rsi", name: "RSI (14)", group: "Below the chart", info: "Above 70 = overbought, below 30 = oversold" },
     { key: "macd", name: "MACD (12, 26, 9)", group: "Below the chart", info: "Momentum: histogram above 0 = buyers stronger" },
@@ -64,6 +65,13 @@
       });
       return [pts(c, upLine), pts(c, dnLine)];
     }
+    if (key === "ribbon") {
+      const spans = [20, 25, 30, 35, 40, 45, 50, 60];
+      const lines = spans.map((n) => ema(cl, n));
+      const up = lines[0].map((v, i) => v >= lines[lines.length - 1][i]);
+      return lines.map((ln, j) => c.map((x, i) => (i < 20 ? { time: x.time } : { time: x.time, value: ln[i],
+        color: (up[i] ? "rgba(10,148,99," : "rgba(208,51,62,") + (0.25 + 0.5 * (1 - j / spans.length)).toFixed(2) + ")" })));
+    }
     if (key === "volume") return [c.map((x) => ({ time: x.time, value: x.volume || 0,
       color: x.close >= x.open ? "rgba(10,148,99,.5)" : "rgba(208,51,62,.5)" }))];
     if (key === "rsi") return [pts(c, rsi(cl))];
@@ -83,6 +91,7 @@
     const mk = (o) => chart.addLineSeries({ lineWidth: 1.5, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, ...o });
     if (key === "bb") series[key] = [mk({ color: col, lineStyle: 2 }), mk({ color: col }), mk({ color: col })];
     else if (key === "donchian") series[key] = [mk({ color: col }), mk({ color: col })];
+    else if (key === "ribbon") series[key] = Array.from({ length: 8 }, () => mk({ color: "#888", lineWidth: 2 }));
     else if (key === "supertrend") series[key] = [mk({ color: "#0a9463", lineWidth: 2 }), mk({ color: "#d0333e", lineWidth: 2 })];
     else series[key] = [mk({ color: col })];
     return series[key];

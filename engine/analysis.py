@@ -352,6 +352,24 @@ def arrow_details(df: pd.DataFrame, arrows: list[dict], horizon_bars: int, barri
             a["max_down_pct"] = round(float((l[i + 1:j + 1].min() / c[i] - 1) * 100), 3)
             a["close_after_pct"] = round(float((c[j] / c[i] - 1) * 100), 3)
             a["complete"] = j == i + horizon_bars
+            # the trade as a box: target & stop = ±move, first one touched wins (both in one candle = stop first)
+            side = 1 if a.get("action") == "BUY" else -1
+            b = barrier_atr * atr[i]
+            tgt, stp = c[i] + side * b, c[i] - side * b
+            a["target"], a["stop"] = float(tgt), float(stp)
+            exit_k, exit_px, how = j, float(c[j]), "time"
+            for k in range(i + 1, j + 1):
+                hit_stop = l[k] <= stp if side > 0 else h[k] >= stp
+                hit_tgt = h[k] >= tgt if side > 0 else l[k] <= tgt
+                if hit_stop:
+                    exit_k, exit_px, how = k, float(stp), "stop"
+                    break
+                if hit_tgt:
+                    exit_k, exit_px, how = k, float(tgt), "target"
+                    break
+            a["exit_time"] = int(df.index[exit_k].timestamp())
+            a["exit_how"] = how if (how != "time" or a["complete"]) else "open"
+            a["exit_pct"] = round(float(side * (exit_px / c[i] - 1) * 100), 3)
 
 
 def trade_plan(df: pd.DataFrame, p_up: np.ndarray, threshold: float, horizon_bars: int,

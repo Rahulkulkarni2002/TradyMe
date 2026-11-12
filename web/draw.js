@@ -10,7 +10,8 @@
   let patterns = [];
   let forming = [];
   let plan = null;
-  let analog = null;               // 🔮 analog forecast: where price went after look-alike moments                 // the model's current call: entry, stop, targets, forecast cone
+  let analog = null;
+  let boxes = [];                  // 📦 past signals drawn as trades: entry, stop, target, result               // 🔮 analog forecast: where price went after look-alike moments                 // the model's current call: entry, stop, targets, forecast cone
   let showPatterns = (() => { try { return localStorage.getItem("showPatterns") !== "0"; } catch { return true; } })();
 
   const key = () => `drawings:${SETTINGS.market}`;
@@ -97,6 +98,7 @@
         }
       }
     }
+    if (boxes.length) drawBoxes(boxes);
     if (analog) drawAnalog(analog);
     if (plan) drawPlan(plan);
     for (const d of [...drawings, ...(draft ? [draft] : [])]) {
@@ -157,6 +159,32 @@
       "font-size": 12, "font-weight": 800, "text-anchor": "end", stroke: surf, "stroke-width": 3, "paint-order": "stroke" });
     sig.textContent = `${p.action === "BUY" ? "▲ Buy" : "▼ Sell"} ${p.p}%${p.confident ? "" : " (weak)"}`;
     g.appendChild(sig);
+    svg.appendChild(g);
+  }
+
+  function drawBoxes(list) {
+    const cs = getComputedStyle(document.getElementById("chart"));
+    const buyC = cs.getPropertyValue("--buy").trim(), sellC = cs.getPropertyValue("--sell").trim();
+    const g = el("g", {});
+    for (const b of list) {
+      const x0 = x(b.time), x1 = x(b.exit_time || b.time + (b.window_candles || 1) * tfSec());
+      const ye = y(b.price), yt = y(b.target), ys = y(b.stop);
+      if ([x0, x1, ye, yt, ys].some((v) => v == null)) continue;
+      const w = Math.max(3, x1 - x0);
+      g.appendChild(el("rect", { x: x0, y: Math.min(ye, yt), width: w, height: Math.abs(yt - ye), fill: buyC, "fill-opacity": 0.13, stroke: "none" }));
+      g.appendChild(el("rect", { x: x0, y: Math.min(ye, ys), width: w, height: Math.abs(ys - ye), fill: sellC, "fill-opacity": 0.13, stroke: "none" }));
+      g.appendChild(el("line", { x1: x0, x2: x0 + w, y1: ye, y2: ye, stroke: "#8a93a6", "stroke-width": 1, opacity: 0.8 }));
+      const open = b.exit_how === "open";
+      const win = b.exit_pct > 0;
+      const col = open ? "#6b7280" : win ? buyC : sellC;
+      const side = b.action === "BUY" ? "Long" : "Short";
+      const txt = open ? `Open (${side})` : `${win ? "Win" : "Loss"} (${side}) ${b.exit_pct > 0 ? "+" : ""}${b.exit_pct.toFixed(2)}%`;
+      const tw = txt.length * 6.3 + 12, lx = x0 + w / 2 - tw / 2;
+      const ly = win ? Math.min(ye, yt) - 24 : Math.max(ye, ys) + 4;           // label beside the side that was hit
+      g.appendChild(el("rect", { x: lx, y: ly, width: tw, height: 18, rx: 4, fill: col, stroke: "none", opacity: 0.92 }));
+      const t = el("text", { x: lx + tw / 2, y: ly + 12.5, fill: "#fff", "font-size": 10.5, "font-weight": 700, "text-anchor": "middle", stroke: "none" });
+      t.textContent = txt; g.appendChild(t);
+    }
     svg.appendChild(g);
   }
 
@@ -240,5 +268,6 @@
 
   window.TradyDraw = { init, reload: () => { load(); render(); }, render, setPatterns: (p, f) => { patterns = p || []; forming = f || []; render(); },
     setPlan: (p) => { plan = p || null; render(); },
-    setAnalog: (a) => { analog = a || null; render(); } };
+    setAnalog: (a) => { analog = a || null; render(); },
+    setBoxes: (b) => { boxes = b || []; render(); } };
 })();
