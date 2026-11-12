@@ -1,3 +1,10 @@
+// New TradingView-style screen: on the first visit every chart extra starts OFF (clean chart).
+try {
+  if (localStorage.getItem("ui") !== "tv1") {
+    ["showPlan", "showAnalog", "showBoxes", "showPatterns", "showLevels"].forEach((k) => localStorage.setItem(k, "0"));
+    localStorage.setItem("ui", "tv1");
+  }
+} catch {}
 /* TradyMe front-end — plain JavaScript, no build step. */
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -84,6 +91,7 @@ document.addEventListener("click", (e) => {
 
 // ───────────────────────── tabs & switches ─────────────────────────
 function showTab(name) {
+  document.body.dataset.tab = name;
   $$(".tabs button").forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
   $$(".tab").forEach((t) => t.classList.toggle("hidden", t.id !== `tab-${name}`));
   if (name === "watch") loadWatch();
@@ -193,47 +201,20 @@ async function loadVerdict() {
 }
 function renderVerdict(v) {
   const card = $("#verdict"), body = $("#verdict-body");
-  const key = v.market + v.timeframe;
-  const mk = market(v.market);
-  $("#verdict-sub").textContent = `${META.timeframes.find((t) => t.code === v.timeframe).label} candles`;
-  card.className = "card verdict";
-  if (!revealed.has(key)) {
-    body.innerHTML = `<button class="reveal-btn" id="reveal"><svg><use href="#i-spark"/></svg>Reveal the verdict</button>
-      <div class="small muted">${v.counts.total} strategies have voted${v.model.available ? " and the prediction model has weighed them" : ""}.</div>`;
-    $("#reveal").addEventListener("click", () => { revealed.add(key); renderVerdict(lastVerdict); });
-    return;
-  }
-  const d = v.verdict, c = v.counts, a = v.agreement;
+  $("#verdict-sub").textContent = `· ${META.timeframes.find((t) => t.code === v.timeframe).label}`;
+  card.className = "side-card verdict";
+  const d = v.verdict;
   card.classList.add("c-" + d.colour);
-  const word = d.action === "BUY" ? (d.strong ? "STRONG BUY" : "BUY") : d.action === "SELL" ? (d.strong ? "STRONG SELL" : "SELL") : "WAIT";
-  const w = (n) => (100 * n) / c.total;
-  let html = `<div class="verdict-word word-${d.action}">${word}</div>`;
+  const word = d.action === "BUY" ? "BUY" : d.action === "SELL" ? "SELL" : "WAIT";
+  let html = `<div class="pred-row"><div class="pred-word word-${d.action}">${d.action === "BUY" ? "▲" : d.action === "SELL" ? "▼" : "•"} ${word}</div>`;
   if (v.model.available) {
-    html += `<div class="small">Model: <b>${Math.round(v.model.p_up * 100)}%</b> chance the price goes <b>up</b> first in the next ~${v.model.horizon_hours} h
-      (${100 - Math.round(v.model.p_up * 100)}% down first)</div>`;
+    const up = Math.round(v.model.p_up * 100);
+    html += `<div class="pred-pct"><b>${Math.max(up, 100 - up)}%</b><span>${up >= 50 ? "up" : "down"} · next ~${v.model.horizon_hours} h</span></div></div>
+      <div class="pred-bar"><div style="width:${up}%"></div></div>
+      <div class="pred-foot">Right ${Math.round(v.model.exam_accuracy * 1000) / 10}% on unseen years</div>`;
+  } else {
+    html += `</div><div class="pred-foot">No prediction model for this market & candle size yet.</div>`;
   }
-  html += `<div class="vote-bar" title="${c.buy} BUY · ${c.neutral} no opinion · ${c.sell} SELL">
-      <div class="vb" style="width:${w(c.buy)}%">${c.buy >= 4 ? c.buy + " BUY" : c.buy || ""}</div>
-      <div class="vn" style="width:${w(c.neutral)}%">${c.neutral >= 6 ? c.neutral + " —" : ""}</div>
-      <div class="vs" style="width:${w(c.sell)}%">${c.sell >= 4 ? c.sell + " SELL" : c.sell || ""}</div></div>
-    <div class="small muted">Of the strategies with an opinion: <b>${a.buy_pct}% BUY</b> · <b>${a.sell_pct}% SELL</b></div>`;
-  html += `<div class="verdict-stats">`;
-  if (v.model.available) {
-    html += `<div class="stat">Model exam score<b>${Math.round(v.model.exam_accuracy * 1000) / 10}% right</b><span class="small muted">on years it never saw (coin flip = 50%)</span></div>`;
-  }
-  html += `<div class="stat">Agreement<b>${{ strong_buy: "Strong BUY", buy: "Leaning BUY", mixed: "Mixed", sell: "Leaning SELL", strong_sell: "Strong SELL", quiet: "Quiet" }[a.level]}</b></div></div>`;
-  if (!v.model.available) html += `<div class="note">${esc(v.model.reason)}</div>`;
-  v.notes.forEach((n) => (html += `<div class="note">${esc(n)}</div>`));
-  html += `<details class="votes"><summary>See all ${c.total} votes</summary>`;
-  Object.entries(v.families).forEach(([fam, label]) => {
-    const rows = v.votes.filter((x) => x.family === fam).sort((x, y) => Math.abs(y.vote) - Math.abs(x.vote));
-    html += `<h4 style="text-align:left;margin:14px 0 4px">${esc(label)}</h4><div class="votes-grid">` + rows.map((x) =>
-      `<div class="vote-row" title="${esc(x.kid)}"><span class="vote-pill v${x.vote}">${x.vote === 1 ? "BUY" : x.vote === -1 ? "SELL" : "—"}</span>
-       <span>${esc(x.name)}</span>${x.hit_rate != null ? `<span class="hr">won ${Math.round(x.hit_rate * 100)}%</span>` : ""}</div>`).join("") + `</div>`;
-  });
-  html += `<p class="small muted" style="text-align:left">"won X%" = how often this strategy's signals went the right way on this market, 2015–2024 (before fees). 2025 onward is kept aside as the final exam.</p></details>`;
-  const vClosed = new Date(new Date(v.time).getTime() + (TF_SEC[v.timeframe] || 0) * 1000).toISOString();
-  html += `<div class="small muted">Last candle closed ${ago(vClosed)} · updates when each candle closes</div>`;
   body.innerHTML = html;
 }
 
@@ -247,7 +228,9 @@ async function loadSuggestion() {
     if (s.market !== SETTINGS.market) return;      // user switched meanwhile
     lastSuggestion = s; renderSuggestion(s); renderPrescan(s.prescan); renderChart(s); renderTicker(s);
   } catch (e) {
-    $("#suggestion").innerHTML = `<p>😕 ${esc(e.message)}</p><p class="small muted">Check your internet connection. Forex & gold are closed on weekends.</p>`;
+    $("#suggestion").innerHTML = `<p>😕 ${esc(e.message)}</p>`;
+    const st = $("#chart-live"); if (st) st.textContent = "⚠️ Price source slow — retrying…";
+    clearTimeout(loadSuggestion._retry); loadSuggestion._retry = setTimeout(loadSuggestion, 5000);
   }
 }
 
@@ -282,7 +265,9 @@ function liveLabel() {                                   // ticks every second s
   const ago = Math.max(0, Math.round((Date.now() - lastPriceAt) / 1000));
   const tf = TF_SEC[SETTINGS.timeframe], left = tf - (Math.floor(Date.now() / 1000) % tf);
   const mm = String(Math.floor(left / 60)), ss = String(left % 60).padStart(2, "0");
-  el.textContent = `● forming candle · ${src} · last price ${ago === 0 ? "just now" : ago + " s ago"} · candle closes in ${mm}:${ss}`;
+  const live = liveSocket && liveSocket.readyState === 1;
+  el.textContent = `● ${live ? "Live" : "Delayed"} · next candle ${mm}:${ss}`;
+  el.title = `${src} · last price ${ago === 0 ? "just now" : ago + " s ago"}`;
 }
 
 function onTrade(price, tsMs) {                          // one real trade from the exchange
@@ -411,7 +396,7 @@ async function loadManualDefaults() {
       tpShow = false;                                       // new market: no setup lines until you start one
     }
     const live = SETTINGS.mode === "live";
-    $("#tp-mode").textContent = live ? "· 💰 LIVE money" : "· 📝 paper (practice money)";
+    $("#tp-mode").textContent = live ? "· 💰 Live money" : "· Paper";
     $("#tp-sell").textContent = d.allow_short ? "SELL" : "SELL (n/a)";
     $("#tp-sell").disabled = !d.allow_short;
     $("#tp-sell").title = !d.allow_short ? "Live crypto on Alpaca can't bet on a fall — practise SELLs in Paper mode"
@@ -605,6 +590,14 @@ $("#arrow-sure").addEventListener("change", (e) => {
   loadModelMarkers();
 });
 // ───────────────────────── model plan: stop-loss + targets on the chart ─────────────────────────
+$("#more-btn").addEventListener("click", (e) => { e.stopPropagation(); $("#more-menu").classList.toggle("hidden"); });
+document.addEventListener("click", (e) => { const m = $("#more-menu"); if (!m.contains(e.target) && e.target.id !== "more-btn") m.classList.add("hidden"); });
+let showLevels = (() => { try { return localStorage.getItem("showLevels") === "1"; } catch { return false; } })();
+$("#levels-toggle").classList.toggle("on", showLevels);
+$("#levels-toggle").addEventListener("click", () => {
+  showLevels = !showLevels; try { localStorage.setItem("showLevels", showLevels ? "1" : "0"); } catch {}
+  $("#levels-toggle").classList.toggle("on", showLevels); if (lastSuggestion) renderChart(lastSuggestion);
+});
 let showBoxes = (() => { try { return localStorage.getItem("showBoxes") === "1"; } catch { return false; } })();
 $("#box-toggle").classList.toggle("on", showBoxes);
 $("#box-toggle").addEventListener("click", () => {
@@ -874,7 +867,7 @@ function sizeChart() {
   const panes = $$("#ind-panes .ind-pane").length;
   const full = document.body.classList.contains("chart-max");
   // fill the window below where the chart starts (page scrolled to the top), leaving room for indicator panels
-  const top = full ? 60 : el.getBoundingClientRect().top + window.scrollY;
+  const top = el.getBoundingClientRect().top + (full ? 0 : window.scrollY);
   const h = Math.max(380, window.innerHeight - top - panes * 128 - 24);
   el.style.height = h + "px";
   chart.applyOptions({ width: el.clientWidth, height: h });
@@ -882,7 +875,7 @@ function sizeChart() {
 }
 $("#chart-max").addEventListener("click", () => {
   const on = document.body.classList.toggle("chart-max");
-  $("#chart-max").textContent = on ? "✕ Exit full screen" : "⛶ Full screen";
+  $("#chart-max").textContent = on ? "✕" : "⛶";
   $("#chart-max").classList.toggle("on", on);
   setTimeout(() => { sizeChart(); if (!on) $(".chart-card").scrollIntoView({ block: "start" }); }, 30);
 });
@@ -891,7 +884,7 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape" && document
 function renderChart(s) {
   if (!window.LightweightCharts) return;
   const sub = $("#chart-title-sub");
-  if (sub) sub.textContent = `· ${market(s.market).emoji} ${market(s.market).name} · ${META.timeframes.find((t) => t.code === s.timeframe)?.label || s.timeframe}`;
+  if (sub) sub.textContent = `${market(s.market).emoji} ${market(s.market).name} · ${META.timeframes.find((t) => t.code === s.timeframe)?.label || s.timeframe}`;
   const c = chartColors();
   if (!chart) {
     chart = makeChart($("#chart"), 380);
@@ -925,10 +918,10 @@ function renderChart(s) {
   loadModelMarkers();
   (candleSeries._lines || []).forEach((l) => candleSeries.removePriceLine(l));
   candleSeries._lines = [];
-  (s.levels || []).forEach((lv) => candleSeries._lines.push(candleSeries.createPriceLine({
+  (showLevels ? s.levels || [] : []).forEach((lv) => candleSeries._lines.push(candleSeries.createPriceLine({
     price: lv.price, color: (lv.kind === "resistance" ? c.sell : c.buy) + "aa", lineStyle: 1, lineWidth: 1, axisLabelVisible: true,
     title: `${lv.kind === "resistance" ? "Resistance" : "Support"} ×${lv.touches}` })));
-  if (s.action !== "WAIT") {
+  if (s.action !== "WAIT" && arrowSource === "strategy") {
     candleSeries._lines.push(candleSeries.createPriceLine({ price: s.stop_loss, color: c.sell, lineStyle: 2, title: "Stop" }));
     candleSeries._lines.push(candleSeries.createPriceLine({ price: s.take_profit, color: c.buy, lineStyle: 2, title: "Target" }));
   }
@@ -991,10 +984,14 @@ async function refreshAccount() {
     t.status === "max_loss" ? "🛑 Daily max loss reached. No more trades today — tomorrow is a new day." :
     t.total >= 0 ? `${Math.round(pct)}% of today's goal` : `Down today — ${Math.round(pct)}% of your max loss used`;
 
+  const am = $("#acct-mini");
+  if (am) am.innerHTML = `<span class="am-mode">${a.mode === "live" ? "💰 Live" : "Paper"}</span>
+    <span>${a.equity == null ? "—" : money(a.equity)}</span>
+    <span class="${t.total >= 0 ? "pnl-pos" : "pnl-neg"}">${signed(t.total)} today</span>`;
   OPEN_POS = a.positions;
   drawPositions();
   $("#positions").innerHTML = a.positions.length ? a.positions.map((p) => `
-    <div class="pos">
+    <div class="pos compact">
       <div class="pos-head"><span>${market(p.market).emoji} ${esc(market(p.market).name)} · <span class="${p.side === "LONG" ? "pnl-pos" : "pnl-neg"}">${p.side === "LONG" ? "BUY" : "SELL"}</span></span>
         <span class="${p.upnl >= 0 ? "pnl-pos" : "pnl-neg"}">${signed(p.upnl)}</span></div>
       <div class="small muted">In at ${px(p.market, p.entry)} → now ${px(p.market, p.price)} · 🛑 ${px(p.market, p.stop_loss)} · 🎯 ${px(p.market, p.take_profit)} · ${p.how === "auto" ? "🤖 auto" : "🙋 you"} · ${ago(p.opened_at)}</div>
@@ -1003,7 +1000,7 @@ async function refreshAccount() {
         <button class="btn" data-close="${p.id}">Close now</button>
         ${p.advice.advice === "PROTECT" ? `<button class="btn" data-protect="${p.id}">🔒 Move stop to entry</button>` : ""}
       </div>
-    </div>`).join("") : `<p class="muted">No open trades. ${SETTINGS.auto ? "🤖 Auto-trader is watching…" : ""}</p>`;
+    </div>`).join("") : `<p class="muted small">None${SETTINGS.auto ? " · 🤖 auto is watching" : ""}</p>`;
   $$("[data-close]").forEach((b) => b.addEventListener("click", async () => {
     const r = await api(`/api/close/${b.dataset.close}`, { method: "POST" }); toast(`Closed: ${signed(r.pnl)}`); refreshAccount();
   }));
