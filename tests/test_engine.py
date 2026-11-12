@@ -233,3 +233,17 @@ def test_bigger_candle_context_never_peeks():
     df2 = df.copy(); df2.loc[idx[2000]:, ["open", "high", "low", "close"]] += 50      # change the future only
     b = build(df2, 900)
     pd.testing.assert_frame_equal(a.iloc[:2000], b.iloc[:2000])
+
+
+def test_news_features_use_only_yesterday(tmp_path, monkeypatch):
+    """A candle on day D may only see news up to day D−1."""
+    import numpy as np, pandas as pd
+    from research import extra_features, store
+    idx = pd.date_range("2024-01-01", periods=10, freq="D", tz="UTC")
+    g = pd.DataFrame({"news_crypto_tone": np.arange(10.0), "news_crypto_volume": np.arange(1.0, 11.0)}, index=idx)
+    monkeypatch.setattr(store, "NEWS", tmp_path)
+    g.to_parquet(tmp_path / "gdelt_daily.parquet")
+    candles = pd.date_range("2024-01-05", periods=48, freq="1h", tz="UTC")
+    f = extra_features.news(candles, "BTC")
+    assert (f.loc["2024-01-05", "nw_crypto_tone"] == 3.0).all()       # Jan 4's value, never Jan 5's
+    assert (f.loc["2024-01-06", "nw_crypto_tone"] == 4.0).all()
