@@ -746,7 +746,7 @@ function applyMarkers() {
   if (ts) {
     const votes = useModel && modelMarkers.source === "strategies";
     ts.textContent = sc && sc.wins + sc.losses
-      ? `${votes ? "⚠️ No model here — strategy-vote arrows (weak)" : "Model arrows"}: ${sc.wins} right · ${sc.losses} wrong (${Math.round(100 * sc.wins / (sc.wins + sc.losses))}%)` : "";
+      ? `${votes ? "⚠️ No model here — strategy-vote arrows (weak)" : `Model arrows (next ${modelMarkers.short ? modelMarkers.candles + " candles" : "~" + modelMarkers.horizon_hours + " h"})`}: ${sc.wins} right · ${sc.losses} wrong (${Math.round(100 * sc.wins / (sc.wins + sc.losses))}%)` : "";
     ts.title = votes ? "No prediction model for this market & candle size yet, so these arrows are the 71 strategies' combined vote. "
       + "That is not a probability and has tested close to a coin flip. Train the model: python train_models.py" : "";
   }
