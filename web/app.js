@@ -712,7 +712,12 @@ async function loadModelMarkers() {
       : `/api/model-markers?market=${m}&timeframe=${tf}&sure=${arrowSure}&horizon=${arrowHorizon}`);
     if (m !== SETTINGS.market || tf !== SETTINGS.timeframe) return;
     modelMarkers = r; applyMarkers(); drawPlan();
-  } catch { modelMarkers = null; }
+    if (!r.available) { const ts = $("#tv-score"); if (ts) ts.textContent = "⚠️ " + (r.reason || "No arrows for this chart"); }
+  } catch (e) {
+    modelMarkers = null;
+    const ts = $("#tv-score"); if (ts) ts.textContent = "⚠️ Arrows failed: " + e.message;    // never fail silently
+    clearTimeout(loadModelMarkers._retry); loadModelMarkers._retry = setTimeout(loadModelMarkers, 15000);
+  }
 }
 function paintArrowSwitch() {
   $$("#arrow-src button").forEach((b) => b.classList.toggle("on", b.dataset.v === arrowSource));

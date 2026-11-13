@@ -311,7 +311,13 @@ def model_markers(market: str, timeframe: str, sure: int = 62, horizon: str = "l
     every=N: an arrow on every N-th candle for ANY market (model, or the strategies' vote if no model)."""
     try:
         if every > 0:
-            return verdict_mod.candle_arrows(get_market(market), timeframe, step=max(1, min(every, 10)))
+            try:
+                return verdict_mod.candle_arrows(get_market(market), timeframe, step=max(1, min(every, 10)))
+            except requests.RequestException:
+                raise
+            except Exception as e:                          # show the reason on the chart instead of failing silently
+                log.exception("candle arrows failed")
+                return {"available": False, "markers": [], "reason": f"Arrows failed: {type(e).__name__}: {e}"}
         h = horizon if horizon in ("n1", "n2", "n3", "n5") else ("n2" if horizon == "short" else "long")
         return verdict_mod.model_markers(get_market(market), timeframe, threshold=min(max(sure, 50), 80) / 100, horizon=h)
     except requests.RequestException:
