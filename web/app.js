@@ -1017,7 +1017,7 @@ async function refreshAccount() {
   if (latest) refreshAccount._seen = latest.time;
   const rc = $("#recent-closed");
   if (rc) {
-    const closed = (a.activity || []).filter((x) => /closed|stop|target|day end/i.test(x.text)).slice(0, 4);
+    const closed = (a.activity || []).filter((x) => /\bclosed\b|EMERGENCY/i.test(x.text) && !/opened/i.test(x.text)).slice(0, 4);
     rc.innerHTML = closed.length ? closed.map((x) => `<div class="rc-row ${x.kind === "win" ? "pnl-pos" : x.kind === "loss" ? "pnl-neg" : ""}">
       <span class="muted">${tzFormat(new Date(x.time).getTime() / 1000, { hour: "numeric", minute: "2-digit" })}</span> ${esc(x.text)}</div>`).join("")
       : `<p class="muted small">None yet</p>`;
