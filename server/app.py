@@ -112,6 +112,14 @@ async def loop() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     account.ensure("paper")
+    s = db.settings()
+    if not s.get("limits_migrated"):          # you asked for no daily limits: drop the OLD default ones once
+        changes = {"limits_migrated": True}
+        if s["daily_target"] == 100.0:
+            changes["daily_target"] = 0.0
+        if s["daily_max_loss"] == 200.0:
+            changes["daily_max_loss"] = 0.0
+        db.save_settings(changes)
     task = None if os.environ.get("TRADYME_NO_LOOP") else asyncio.create_task(loop())
     note("👋 TradyMe started" + (" in OFFLINE demo mode (simulated prices)" if offline() else ""))
     yield
