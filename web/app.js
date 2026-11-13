@@ -180,7 +180,9 @@ function fillStrategies(sel, value) {
 }
 function marketItems() { return META.markets.map((m) => ({ code: m.code, label: `${m.emoji} ${m.name}` })); }
 
+function showVersion() { const v = $("#app-version"); if (v && META?.version) v.textContent = `TradyMe version ${META.version}`; }
 function setupFilters() {
+  showVersion();
   fillSelect($("#f-market"), marketItems(), SETTINGS.market);
   fillStrategies($("#f-strategy"), SETTINGS.strategy);
   $("#f-tf").innerHTML = META.timeframes.map((t) => `<button data-v="${t.code}">${t.label}</button>`).join("");
@@ -470,6 +472,10 @@ $("#tp-hide").addEventListener("click", () => { tpShow = false; tpLines(); });
 })();
 setInterval(() => { if (lastSuggestion) tpLines(); }, 5000);          // keep the "% from now" fresh as the price moves
 
+function tpMsg(text, ok) {                 // stays in the Trade box, so a message can't be missed
+  const el = $("#tp-msg"); if (!el) return;
+  el.textContent = text; el.className = "tp-msg " + (ok ? "ok" : "bad");
+}
 async function manualTrade(side) {
   let stop = parseFloat($("#tp-stop").value), target = parseFloat($("#tp-target").value);
   const price = nowPrice(), name = market(SETTINGS.market).name, mk = SETTINGS.market;
@@ -480,13 +486,15 @@ async function manualTrade(side) {
     const dec = market(mk).decimals;
     $("#tp-stop").value = stop.toFixed(dec); $("#tp-target").value = target.toFixed(dec); tpLines();
   }
-  if (!price || !(stop > 0) || !(target > 0)) { toast("⚠️ Type a stop-loss price and a target price first."); return; }
+  if (!price || !(stop > 0) || !(target > 0)) { toast("⚠️ Type a stop-loss price and a target price first."); tpMsg("⚠️ Type a stop and a target first.", false); return; }
   const buy = side === "BUY";
   if (buy && !(stop < price && target > price)) {
-    toast(`⚠️ For a BUY: stop must be BELOW the price now (${px(mk, price)}) and target ABOVE it.`, 6000); return;
+    toast(`⚠️ For a BUY: stop must be BELOW the price now (${px(mk, price)}) and target ABOVE it.`, 6000);
+    tpMsg(`⚠️ BUY: stop must be below ${px(mk, price)} and target above it.`, false); return;
   }
   if (!buy && !(stop > price && target < price)) {
-    toast(`⚠️ For a SELL: stop must be ABOVE the price now (${px(mk, price)}) and target BELOW it.`, 6000); return;
+    toast(`⚠️ For a SELL: stop must be ABOVE the price now (${px(mk, price)}) and target BELOW it.`, 6000);
+    tpMsg(`⚠️ SELL: stop must be above ${px(mk, price)} and target below it.`, false); return;
   }
   const stopPct = Math.abs(price - stop) / price * 100, targetPct = Math.abs(target - price) / price * 100;
   const msg = `${side} ${name} with ${SETTINGS.mode === "live" ? "💰 LIVE" : "📝 PAPER"} money?\n\n` +
@@ -497,7 +505,8 @@ async function manualTrade(side) {
     await api("/api/trade", { method: "POST", body: JSON.stringify({ market: mk, timeframe: SETTINGS.timeframe,
       strategy: SETTINGS.strategy, side, stop_pct: +stopPct.toFixed(4), target_pct: +targetPct.toFixed(4) }) });
     toast("✅ Trade opened — its lines are on the chart (✕ closes it)"); tpShow = false; tpLines(); refreshAccount();
-  } catch (e) { toast("⚠️ " + e.message, 5000); }
+    tpMsg(`✅ ${side} opened at ≈ ${px(mk, price)}`, true);
+  } catch (e) { toast("⚠️ " + e.message, 8000); tpMsg("⚠️ " + e.message, false); }
 }
 $("#tp-buy").addEventListener("click", () => manualTrade("BUY"));
 $("#tp-sell").addEventListener("click", () => manualTrade("SELL"));
@@ -1006,6 +1015,13 @@ async function refreshAccount() {
     toast(latest.text, 7000);
   }
   if (latest) refreshAccount._seen = latest.time;
+  const rc = $("#recent-closed");
+  if (rc) {
+    const closed = (a.activity || []).filter((x) => /closed|stop|target|day end/i.test(x.text)).slice(0, 4);
+    rc.innerHTML = closed.length ? closed.map((x) => `<div class="rc-row ${x.kind === "win" ? "pnl-pos" : x.kind === "loss" ? "pnl-neg" : ""}">
+      <span class="muted">${tzFormat(new Date(x.time).getTime() / 1000, { hour: "numeric", minute: "2-digit" })}</span> ${esc(x.text)}</div>`).join("")
+      : `<p class="muted small">None yet</p>`;
+  }
   OPEN_POS = a.positions;
   drawPositions();
   $("#positions").innerHTML = a.positions.length ? a.positions.map((p) => `

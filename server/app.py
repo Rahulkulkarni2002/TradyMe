@@ -127,9 +127,37 @@ def blocked(e: Exception) -> HTTPException:
 
 
 # ───────────────────────────── API ─────────────────────────────
+def app_version() -> str:
+    """The git commit this copy of TradyMe is running (so we can tell if an update was pulled)."""
+    import subprocess
+    try:
+        out = subprocess.run(["git", "log", "-1", "--format=%h %cd", "--date=format:%d %b %H:%M"], cwd=Path(__file__).parent.parent,
+                             capture_output=True, text=True, timeout=3)
+        return out.stdout.strip() or "unknown"
+    except Exception:
+        return "unknown"
+
+
+VERSION = app_version()
+
+
+@app.get("/api/debug")
+def debug():
+    """🩺 Diagnosis: which version is running, where it looks for models, and what happened to recent trades."""
+    s = db.settings()
+    models = verdict_mod.available_models()
+    recent = db.q("SELECT market, side, entry, exit, pnl, reason, opened_at, closed_at FROM trades ORDER BY id DESC LIMIT 8")
+    return {"version": VERSION, "folder": str(Path(__file__).parent.parent), "models_folder": str(verdict_mod.MODELS),
+            "models_for_market": [m for m in models if m.startswith(s["market"] + "_")], "all_models": len(models),
+            "settings": {k: s[k] for k in ("mode", "market", "timeframe", "daily_target", "daily_max_loss", "day_end", "timezone")},
+            "open_positions": account.positions(s["mode"]), "recent_trades": recent,
+            "recent_activity": list(activity)[:10]}
+
+
 @app.get("/api/meta")
 def meta():
     return {
+        "version": VERSION,
         "offline": offline(),
         "markets": [{"code": m.code, "name": m.name, "kind": m.kind, "emoji": m.emoji, "hours": m.hours,
                      "allow_short": m.allow_short, "decimals": m.price_decimals,

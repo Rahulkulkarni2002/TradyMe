@@ -469,3 +469,10 @@ body.chart-max .tv-side { top: 8px; }
 @media (max-width: 900px) { .tv-tf { flex-wrap: wrap; } .tv-tf button { padding: 0 6px; font-size: .8rem; } }
 
 .tv-score { margin-left: auto; font-weight: 650; color: var(--text-2); }
+
+.tp-msg { margin-top: 8px; font-size: .8rem; font-weight: 600; padding: 6px 8px; border-radius: 7px; }
+.tp-msg.ok { background: var(--buy-soft); color: var(--buy); }
+.tp-msg.bad { background: var(--sell-soft); color: var(--sell); }
+.recent-closed .rc-row { font-size: .76rem; padding: 4px 0; border-bottom: 1px solid var(--line); }
+.recent-closed .rc-row:last-child { border-bottom: 0; }
+.app-version { font-size: .7rem; color: var(--muted); text-align: right; padding: 0 4px; }
