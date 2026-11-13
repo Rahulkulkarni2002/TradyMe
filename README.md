@@ -152,12 +152,9 @@ tests/                  ← 73 automated tests:  python -m pytest -q
 
 ---
 
-## 🛣️ Next
+## 🚧 Status
 
-- Record order-book (buy/sell pressure) data to improve short-candle predictions
-- Better indicators menu
-- Live gold & forex through OANDA (crypto live via Alpaca already works)
-- Telegram alerts
+In progress.
 
 ---
 
