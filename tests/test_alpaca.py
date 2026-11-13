@@ -116,7 +116,7 @@ def live(tmp_path, monkeypatch):
     from server import broker as broker_mod
     broker_mod.set_broker(make_broker(fake))
     price = {"close": 100.0, "high": 100.0, "low": 100.0}
-    monkeypatch.setattr(appmod.account, "last_price", lambda code: (price["close"], price["high"], price["low"]))
+    monkeypatch.setattr(appmod.account, "last_price", lambda code, since=None: (price["close"], price["high"], price["low"]))
     appmod.db.save_settings({"mode": "live", "live_max_trade": 50, "risk_pct": 1.0, "day_end": "23:59",
                              "timezone": "UTC"})
     with TestClient(appmod.app) as c:

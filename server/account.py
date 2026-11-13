@@ -2,6 +2,8 @@
 Also: stops/targets, daily target & max loss, intraday close, and the 6-month memory-pad reset."""
 from __future__ import annotations
 
+import pandas as pd
+
 from datetime import date, datetime, time as dtime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
@@ -42,11 +44,19 @@ class Account:
         return self.ensure(mode)
 
     @staticmethod
-    def last_price(code: str) -> tuple[float, float, float]:
-        """(close, high, low) of the latest closed 5-minute candle."""
-        df = get_candles(get_market(code), "5m", bars=3)
-        row = df.iloc[-1]
-        return float(row.close), float(row.high), float(row.low)
+    def last_price(code: str, since: str | None = None) -> tuple[float, float, float]:
+        """(close, high, low) of the latest closed 5-minute candle.
+        With `since` (a trade's open time): high/low only of candles that STARTED after the trade opened,
+        so prices from before you bought can never trigger your stop or target."""
+        df = get_candles(get_market(code), "5m", bars=60)
+        close_ = float(df["close"].iloc[-1])
+        if since is None:
+            row = df.iloc[-1]
+            return close_, float(row.high), float(row.low)
+        after = df[df.index >= pd.Timestamp(since).tz_convert("UTC")]
+        if after.empty:
+            return close_, close_, close_
+        return close_, float(after["high"].max()), float(after["low"].min())
 
     def positions(self, mode: str) -> list[dict]:
         return self.db.q("SELECT * FROM positions WHERE mode=? ORDER BY id", (mode,))
@@ -262,7 +272,7 @@ class Account:
         broker = broker_mod.get_broker() if mode == "live" else None
         for p in self.positions(mode):
             try:
-                close_, high, low = self.last_price(p["market"])
+                close_, high, low = self.last_price(p["market"], since=p["opened_at"])
             except Exception:
                 continue
             if broker is not None:

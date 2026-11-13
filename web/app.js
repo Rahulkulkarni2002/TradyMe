@@ -997,6 +997,15 @@ async function refreshAccount() {
   if (am) am.innerHTML = `<span class="am-mode">${a.mode === "live" ? "💰 Live" : "Paper"}</span>
     <span>${a.equity == null ? "—" : money(a.equity)}</span>
     <span class="${t.total >= 0 ? "pnl-pos" : "pnl-neg"}">${signed(t.total)} today</span>`;
+  const prevIds = new Set(OPEN_POS.map((x) => x.id));
+  const nowIds = new Set(a.positions.map((x) => x.id));
+  const latest = (a.activity || [])[0];
+  if (latest && refreshAccount._seen && latest.time !== refreshAccount._seen && ["win", "loss", "warn"].includes(latest.kind)) {
+    toast(latest.text, 7000);                                     // e.g. "Gold closed: stop-loss hit (−$12)"
+  } else if ([...prevIds].some((id) => !nowIds.has(id)) && latest) {
+    toast(latest.text, 7000);
+  }
+  if (latest) refreshAccount._seen = latest.time;
   OPEN_POS = a.positions;
   drawPositions();
   $("#positions").innerHTML = a.positions.length ? a.positions.map((p) => `

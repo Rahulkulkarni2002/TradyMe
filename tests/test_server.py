@@ -162,3 +162,18 @@ def test_forming_patterns_shape(client):
     for p in s["forming"]:
         assert p["lean"] in ("BUY", "SELL", "EITHER") and p["side"] in ("above", "below")
         assert p["distance_atr"] <= 4
+
+
+def test_stop_ignores_prices_from_before_the_trade(monkeypatch):
+    """A candle that finished BEFORE you bought must not hit your stop (it did: trades closed instantly)."""
+    import pandas as pd
+    from server import account as acc_mod
+    idx = pd.date_range("2026-11-13 10:00", periods=6, freq="5min", tz="UTC")
+    df = pd.DataFrame({"open": 100.0, "high": 100.2, "low": 100.0, "close": 100.1, "volume": 1.0}, index=idx)
+    df.loc[idx[-1], "low"] = 99.0                                   # big dip in the candle before the trade
+    monkeypatch.setattr(acc_mod, "get_candles", lambda *a, **k: df)
+    opened = (idx[-1] + pd.Timedelta(minutes=3)).isoformat()        # bought during the next (still forming) candle
+    close_, high, low = acc_mod.Account.last_price("GOLD", since=opened)
+    assert low == close_ == high == 100.1                             # the 99.0 dip is not counted
+    close_, high, low = acc_mod.Account.last_price("GOLD")          # without `since`: old behaviour
+    assert low == 99.0
