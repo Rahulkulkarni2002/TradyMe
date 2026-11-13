@@ -20,7 +20,7 @@ PLAN = {"5m": (24, 1.5, "_h2"), "10m": (24, 1.5, "_h6"), "15m": (24, 1.5, "_h6")
 DEFAULT_MARKETS = ["GOLD", "EURUSD", "GBPUSD", "USDJPY"]
 # the "next 1 / 2 / 3 / 5 candles" models (Model arrows → "next N candles"): look-ahead, move size, tag
 SHORT = [(1, 0.4, "_n1"), (2, 0.5, "_n2"), (3, 0.6, "_n3"), (5, 0.8, "_n5")]
-SHORT_TF = ["5m", "15m", "1h"]
+SHORT_TF = ["5m", "10m", "15m", "30m", "1h", "3h"]          # every candle size
 
 
 def main() -> int:
