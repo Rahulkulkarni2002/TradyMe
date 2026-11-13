@@ -78,6 +78,8 @@ def tick() -> None:
     for code in s["watch"]:
         if mode == "live" and not get_market(code).alpaca_symbol:
             continue                                     # Alpaca can't trade forex/gold
+        if any(p["market"] == code for p in account.positions(mode)):
+            continue                                     # auto-trader: one trade per market at a time
         try:
             sug = analysis.suggest(get_market(code), s["timeframe"], s["strategy"])
         except Exception as e:

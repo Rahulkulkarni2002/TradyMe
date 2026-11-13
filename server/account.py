@@ -142,8 +142,11 @@ class Account:
                 raise TradeBlocked("Connect Alpaca first: add your keys to the .env file (see README → Connect Alpaca).")
             if not market.alpaca_symbol:
                 raise TradeBlocked(f"Alpaca can't trade {market.name}. Forex & gold: use 📝 Paper mode for now.")
-        if any(p["market"] == code for p in self.positions(mode)):
-            raise TradeBlocked(f"You already have an open {market.name} trade. Close it first.")
+        same = [p for p in self.positions(mode) if p["market"] == code]
+        if mode == "live" and same:          # Alpaca merges trades on one coin → one at a time there
+            raise TradeBlocked(f"You already have an open live {market.name} trade. Close it first.")
+        if len(same) >= 10:                   # paper: several BUYs/SELLs at once are fine, up to 10 per market
+            raise TradeBlocked(f"You already have 10 open {market.name} trades — close some first.")
         day = self.today(mode)
         if day["status"] == "target":
             raise TradeBlocked("🎉 Daily target reached — done for today! (Change the target in Settings.)")

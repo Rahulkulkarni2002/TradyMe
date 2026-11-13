@@ -38,10 +38,11 @@ def test_paper_trade_cycle(client):
     sig.update(price=price, stop_loss=price * 0.99, take_profit=price * 1.02)
     pos = acct.open("paper", "ETH", sig, timeframe="15m", strategy="ema_rsi")
     assert pos["qty"] > 0
-    # can't open twice, can't trade live, can't short spot crypto
+    # paper: a second trade on the same market is allowed; live is not; spot crypto can't short live
     from server.account import TradeBlocked
-    with pytest.raises(TradeBlocked):
-        acct.open("paper", "ETH", sig, timeframe="15m", strategy="ema_rsi")
+    second = acct.open("paper", "ETH", sig, timeframe="15m", strategy="ema_rsi")
+    assert second["id"] != pos["id"] and len([p for p in acct.positions("paper") if p["market"] == "ETH"]) == 2
+    acct.close(second["id"])
     with pytest.raises(TradeBlocked):
         acct.open("live", "BTC", sig, timeframe="15m", strategy="ema_rsi")
     with pytest.raises(TradeBlocked):                    # live spot crypto can't short
@@ -50,10 +51,10 @@ def test_paper_trade_cycle(client):
     assert len(a["positions"]) == 1 and "advice" in a["positions"][0]
     r = c.post(f"/api/close/{pos['id']}").json()
     j = c.get("/api/journal").json()
-    assert j["stats"]["paper"]["trades"] == 1
+    assert j["stats"]["paper"]["trades"] == 2                       # the second ETH trade + this one
     assert j["trades"][0]["pnl"] == pytest.approx(r["pnl"], abs=0.01)
     bal = c.get("/api/account").json()["balance"]
-    assert bal == pytest.approx(10_000 + j["trades"][0]["pnl"], abs=0.01)
+    assert bal == pytest.approx(10_000 + sum(t["pnl"] for t in j["trades"]), abs=0.01)
 
 
 def test_daily_max_loss_blocks(client):
