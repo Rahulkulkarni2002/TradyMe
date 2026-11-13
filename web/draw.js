@@ -211,8 +211,8 @@
       const up = a.up_share, side = up >= 55 ? "UP" : up <= 45 ? "DOWN" : "FLAT";
       const cs = getComputedStyle(document.getElementById("chart"));
       const col = side === "UP" ? cs.getPropertyValue("--buy").trim() : side === "DOWN" ? cs.getPropertyValue("--sell").trim() : "#6b7280";
-      const txt = side === "UP" ? `▲ UP ${up}%` : side === "DOWN" ? `▼ DOWN ${100 - up}%` : `↔ no clear side`;
-      const w = txt.length * 8 + 16, bx = Math.min(ex - w / 2, svg.clientWidth - w - 4), by = side === "DOWN" ? ey + 14 : ey - 34;
+      const txt = side === "UP" ? `Look-alikes ▲ UP ${up}%` : side === "DOWN" ? `Look-alikes ▼ DOWN ${100 - up}%` : `Look-alikes ↔ no clear side`;
+      const w = txt.length * 7.4 + 16, bx = Math.min(ex - w / 2, svg.clientWidth - w - 4), by = side === "DOWN" ? ey + 14 : ey - 34;
       g.appendChild(el("rect", { x: bx, y: by, width: w, height: 22, rx: 6, fill: col, stroke: "none" }));
       const t = el("text", { x: bx + w / 2, y: by + 15.5, fill: "#fff", "font-size": 13, "font-weight": 800, "text-anchor": "middle", stroke: "none" });
       t.textContent = txt; g.appendChild(t);

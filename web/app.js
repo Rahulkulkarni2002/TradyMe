@@ -624,7 +624,9 @@ function drawPlan() {
   (candleSeries._plan || []).forEach((l) => candleSeries.removePriceLine(l));
   candleSeries._plan = [];
   const box = $("#plan-box");
-  const p = modelMarkers?.available && arrowSource === "model" ? modelMarkers.plan : null;
+  const tradeOpen = (OPEN_POS || []).some((x) => x.market === SETTINGS.market);
+  let p = modelMarkers?.available && arrowSource === "model" ? modelMarkers.plan : null;
+  if (p && (!p.confident || tradeOpen)) p = null;      // only a SURE call, and never over your own open trade
   if (!p || !showPlan) {
     box.classList.add("hidden");
     if (window.TradyDraw) window.TradyDraw.setPlan(null);
@@ -1023,6 +1025,7 @@ async function refreshAccount() {
       : `<p class="muted small">None yet</p>`;
   }
   OPEN_POS = a.positions;
+  if (typeof drawPlan === "function") drawPlan();
   drawPositions();
   $("#positions").innerHTML = a.positions.length ? a.positions.map((p) => `
     <div class="pos compact">
