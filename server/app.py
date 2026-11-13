@@ -399,7 +399,7 @@ def manual_signal(market, timeframe: str, side: str, stop_pct: float | None, tar
     if side not in ("BUY", "SELL"):
         raise HTTPException(400, "side must be BUY or SELL")
     df = get_candles(market, timeframe, bars=200)
-    price = float(df["close"].iloc[-1])
+    price = account.live_price(market.code) or float(df["close"].iloc[-1])      # live price, like the chart
     if not stop_pct:
         stop_pct = round(1.5 * float(ta.atr(df, 14).iloc[-1]) / price * 100, 3)
     if not target_pct:

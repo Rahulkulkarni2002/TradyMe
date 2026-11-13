@@ -177,3 +177,15 @@ def test_stop_ignores_prices_from_before_the_trade(monkeypatch):
     assert low == close_ == high == 100.1                             # the 99.0 dip is not counted
     close_, high, low = acc_mod.Account.last_price("GOLD")          # without `since`: old behaviour
     assert low == 99.0
+
+
+def test_trades_use_the_live_price(monkeypatch):
+    """Profit/loss and stops follow the live price (like the chart), not a 5-minute-old candle."""
+    import pandas as pd
+    from server import account as acc_mod
+    idx = pd.date_range("2026-11-13 10:00", periods=6, freq="5min", tz="UTC")
+    df = pd.DataFrame({"open": 100.0, "high": 100.2, "low": 99.9, "close": 100.0, "volume": 1.0}, index=idx)
+    monkeypatch.setattr(acc_mod, "get_candles", lambda *a, **k: df)
+    monkeypatch.setattr(acc_mod.Account, "live_price", staticmethod(lambda code: 101.5))
+    close_, high, low = acc_mod.Account.last_price("GOLD", since=(idx[-1] + pd.Timedelta(minutes=6)).isoformat())
+    assert close_ == high == low == 101.5

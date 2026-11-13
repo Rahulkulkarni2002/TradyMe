@@ -49,14 +49,33 @@ class Account:
         With `since` (a trade's open time): high/low only of candles that STARTED after the trade opened,
         so prices from before you bought can never trigger your stop or target."""
         df = get_candles(get_market(code), "5m", bars=60)
-        close_ = float(df["close"].iloc[-1])
+        live = Account.live_price(code)                          # the price right now (same as the chart)
+        close_ = live if live is not None else float(df["close"].iloc[-1])
         if since is None:
             row = df.iloc[-1]
-            return close_, float(row.high), float(row.low)
+            return close_, max(float(row.high), close_), min(float(row.low), close_)
         after = df[df.index >= pd.Timestamp(since).tz_convert("UTC")]
         if after.empty:
             return close_, close_, close_
-        return close_, float(after["high"].max()), float(after["low"].min())
+        return close_, max(float(after["high"].max()), close_), min(float(after["low"].min()), close_)
+
+    @staticmethod
+    def live_price(code: str) -> float | None:
+        """Live price: the OANDA tick stream (gold/forex) or the forming 5-minute candle. None if unavailable."""
+        import time as _t
+        m = get_market(code)
+        try:
+            from engine.data import oanda_stream
+            if m.oanda_symbol and oanda_stream.available():
+                oanda_stream.ensure(m.oanda_symbol)
+                tick = oanda_stream.latest.get(m.oanda_symbol)
+                if tick and tick.get("price") and _t.time() * 1000 - tick.get("time", 0) < 10 * 60 * 1000:
+                    return float(tick["price"])
+            from engine.data.live import forming_candle
+            c = forming_candle(m, "5m")
+            return float(c["close"]) if c and c.get("close") else None
+        except Exception:
+            return None
 
     def positions(self, mode: str) -> list[dict]:
         return self.db.q("SELECT * FROM positions WHERE mode=? ORDER BY id", (mode,))
