@@ -273,8 +273,8 @@
             <label>My time zone <select id="s-timezone">
               <option>America/Los_Angeles</option><option>America/New_York</option><option>America/Chicago</option>
               <option>Asia/Kolkata</option><option>Europe/London</option><option>UTC</option></select></label>
-            <label>Daily target — stop when I've made this much <input type="number" id="s-daily_target" min="0" step="10"></label>
-            <label>Daily max loss — stop when I've lost this much <input type="number" id="s-daily_max_loss" min="0" step="10"></label>
+            <label>Daily target — stop when I've made this much (0 = no limit) <input type="number" id="s-daily_target" min="0" step="10"></label>
+            <label>Daily max loss — stop when I've lost this much (0 = no limit) <input type="number" id="s-daily_max_loss" min="0" step="10"></label>
             <label><span>Risk per trade — % of my account I'm OK losing if the stop is hit <span class="q" data-tip="risk">?</span></span>
               <input type="number" id="s-risk_pct" min="0.1" max="5" step="0.1"></label>
             <label>Day end — all trades close at (intraday only) <input type="time" id="s-day_end"></label>
@@ -320,7 +320,7 @@
 
   <div id="tip" class="tip hidden"></div>
   <div id="toast" class="toast hidden"></div>
-  <script src="/static/app.js?v=38"></script>
+  <script src="/static/app.js?v=39"></script>
   <script src="/static/draw.js?v=13"></script>
   <script src="/static/indicators.js?v=4"></script>
 </body>

@@ -18,8 +18,8 @@ DEFAULT_SETTINGS = {
     "strategy": "ema_rsi",
     "watch": ["BTC", "ETH", "GOLD", "EURUSD"],   # markets the auto-trader may trade
     "risk_pct": 1.0,                # % of account lost if the stop is hit
-    "daily_target": 100.0,          # stop for the day after making this much
-    "daily_max_loss": 200.0,        # stop for the day after losing this much
+    "daily_target": 0.0,            # stop for the day after making this much (0 = no limit)
+    "daily_max_loss": 0.0,          # stop for the day after losing this much (0 = no limit)
     "day_end": "23:00",             # intraday: everything closes at this local time
     "min_confidence": 55,           # auto mode ignores weaker signals
     "paper_start_balance": 10000.0,

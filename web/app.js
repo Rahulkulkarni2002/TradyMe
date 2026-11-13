@@ -984,7 +984,7 @@ async function refreshAccount() {
   const t = a.today;
   $("#today-pnl").textContent = signed(t.total);
   $("#today-pnl").className = t.total >= 0 ? "pnl-pos" : "pnl-neg";
-  $("#today-goal").textContent = `goal ${money(t.target)} · max loss ${money(t.max_loss)}`;
+  $("#today-goal").textContent = `goal ${t.target ? money(t.target) : "no limit"} · max loss ${t.max_loss ? money(t.max_loss) : "no limit"}`;
   const pct = t.total >= 0 ? Math.min(100, (t.total / (t.target || 1)) * 100) : Math.min(100, (-t.total / (t.max_loss || 1)) * 100);
   $("#goal-bar").style.width = pct + "%";
   $("#goal-bar").style.background = t.total >= 0 ? "var(--buy)" : "var(--sell)";
