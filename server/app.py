@@ -267,10 +267,13 @@ def live_candle(market: str, timeframe: str):
 
 
 @app.get("/api/model-markers")
-def model_markers(market: str, timeframe: str, sure: int = 62, horizon: str = "long"):
+def model_markers(market: str, timeframe: str, sure: int = 62, horizon: str = "long", every: int = 0):
     """Prediction-model arrows for the chart (where the model is ≥ `sure`% sure).
-    horizon=long: next ~2–6 hours; horizon=short: the next 2 candles."""
+    horizon=long: next ~2–6 hours; horizon=short: the next 2 candles.
+    every=N: an arrow on every N-th candle for ANY market (model, or the strategies' vote if no model)."""
     try:
+        if every > 0:
+            return verdict_mod.candle_arrows(get_market(market), timeframe, step=max(1, min(every, 10)))
         h = horizon if horizon in ("n1", "n2", "n3", "n5") else ("n2" if horizon == "short" else "long")
         return verdict_mod.model_markers(get_market(market), timeframe, threshold=min(max(sure, 50), 80) / 100, horizon=h)
     except requests.RequestException:

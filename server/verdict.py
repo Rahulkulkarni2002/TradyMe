@@ -235,3 +235,45 @@ def model_markers(market: Market, timeframe: str, bars: int = 300, threshold: fl
             "confident_share": round(100 * conf_share, 1),
             "candles": int(horizon[1:]) if short else None,
             "horizon_hours": bundle.get("horizon_hours"), "exam_accuracy": bundle.get("exam_accuracy")}
+
+
+def candle_arrows(market: Market, timeframe: str, step: int = 2) -> dict:
+    """An arrow on every `step`-th closed candle (counted back from the newest), for EVERY market:
+    the prediction model's lean for the next 2 candles if that model exists, else its main model,
+    else — for markets without a trained model — the combined vote of all 71 strategies."""
+    from engine.analysis import arrow_details, grade_arrows
+    from engine.data.base import tf_seconds
+    has = lambda tag: (MODELS / f"{market.code}_{timeframe}{tag}.joblib").exists()
+    horizon = "n2" if has("_n2") else ("long" if any(has(t) for t in TAGS) else None)
+    if horizon:
+        r = model_markers(market, timeframe, threshold=0.5, horizon=horizon)
+        if r.get("available"):
+            marks = r["markers"]
+            keep = {m["time"] for m in marks[::-1][::step]}            # newest closed candle always has one
+            r["markers"] = [m for m in marks if m["time"] in keep]
+            done = [m for m in r["markers"] if m.get("result") in ("win", "loss")]
+            r["score"] = {"wins": sum(m["result"] == "win" for m in done),
+                          "losses": sum(m["result"] == "loss" for m in done)}
+            r.update(every=True, step=step, source="model")
+            return r
+    # no trained model for this market/candle size → the strategies' combined vote
+    df = get_candles(market, timeframe, bars=600)
+    V = build_votes(df)
+    A = agreement(V).iloc[-300:]
+    lean = (A["agree"].fillna(0) * (A["n_active"].clip(upper=12) / 12)).to_numpy()
+    p = 0.5 + 0.4 * lean
+    idx = A.index
+    out = []
+    for k in range(len(idx) - 1, -1, -step):
+        out.append({"time": int(idx[k].timestamp()), "action": "BUY" if p[k] >= 0.5 else "SELL",
+                    "pct": round(100 * max(p[k], 1 - p[k])), "p_up": round(100 * float(p[k])),
+                    "strong": bool(abs(p[k] - 0.5) >= 0.2)})
+    out.reverse()
+    H = 2
+    grade_arrows(df, out, H, 0.5)
+    arrow_details(df, out, H, 0.5)
+    done = [m for m in out if m.get("result") in ("win", "loss")]
+    return {"available": True, "markers": out, "threshold": 0.5, "every": True, "step": step, "short": True,
+            "candles": 2, "source": "strategies", "now": {**out[-1], "confident": out[-1]["strong"]} if out else None,
+            "score": {"wins": sum(m["result"] == "win" for m in done), "losses": sum(m["result"] == "loss" for m in done)},
+            "horizon_hours": round(H * tf_seconds(timeframe) / 3600, 2)}

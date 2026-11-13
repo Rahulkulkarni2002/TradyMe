@@ -467,3 +467,5 @@ body.chart-max .tv-side { top: 8px; }
 @media (max-width: 1250px) { .tv-bar { flex-wrap: wrap; } }
 .tv-tf button { white-space: nowrap; }
 @media (max-width: 900px) { .tv-tf { flex-wrap: wrap; } .tv-tf button { padding: 0 6px; font-size: .8rem; } }
+
+.tv-score { margin-left: auto; font-weight: 650; color: var(--text-2); }

@@ -1,8 +1,13 @@
 // New TradingView-style screen: on the first visit every chart extra starts OFF (clean chart).
 try {
-  if (localStorage.getItem("ui") !== "tv1") {
+  if (localStorage.getItem("ui") === "tv1") {                 // second update: arrows every 2 candles + forecast range on
+    localStorage.setItem("arrowSure", "every2"); localStorage.setItem("arrowSource", "model"); localStorage.setItem("showAnalog", "1");
+    localStorage.setItem("ui", "tv2");
+  }
+  if (!localStorage.getItem("ui")) {
     ["showPlan", "showAnalog", "showBoxes", "showPatterns", "showLevels"].forEach((k) => localStorage.setItem(k, "0"));
-    localStorage.setItem("ui", "tv1");
+    localStorage.setItem("arrowSure", "every2"); localStorage.setItem("arrowSource", "model"); localStorage.setItem("showAnalog", "1");
+    localStorage.setItem("ui", "tv2");
   }
 } catch {}
 /* TradyMe front-end — plain JavaScript, no build step. */
@@ -583,10 +588,10 @@ $("#arrow-horizon").addEventListener("change", (e) => {
   arrowHorizon = e.target.value; try { localStorage.setItem("arrowHorizon", arrowHorizon); } catch {}
   loadModelMarkers();
 });
-let arrowSure = (() => { try { return +localStorage.getItem("arrowSure") || 62; } catch { return 62; } })();
+let arrowSure = (() => { try { return localStorage.getItem("arrowSure") || "every2"; } catch { return "every2"; } })();
 $("#arrow-sure").value = String(arrowSure);
 $("#arrow-sure").addEventListener("change", (e) => {
-  arrowSure = +e.target.value; try { localStorage.setItem("arrowSure", arrowSure); } catch {}
+  arrowSure = e.target.value; try { localStorage.setItem("arrowSure", arrowSure); } catch {}
   loadModelMarkers();
 });
 // ───────────────────────── model plan: stop-loss + targets on the chart ─────────────────────────
@@ -692,7 +697,8 @@ $("#analog-toggle").addEventListener("click", () => {
 async function loadModelMarkers() {
   const m = SETTINGS.market, tf = SETTINGS.timeframe;
   try {
-    const r = await api(`/api/model-markers?market=${m}&timeframe=${tf}&sure=${arrowSure}&horizon=${arrowHorizon}`);
+    const r = await api(arrowSure === "every2" ? `/api/model-markers?market=${m}&timeframe=${tf}&every=2`
+      : `/api/model-markers?market=${m}&timeframe=${tf}&sure=${arrowSure}&horizon=${arrowHorizon}`);
     if (m !== SETTINGS.market || tf !== SETTINGS.timeframe) return;
     modelMarkers = r; applyMarkers(); drawPlan();
   } catch { modelMarkers = null; }
@@ -725,16 +731,19 @@ function applyMarkers() {
         : `Model arrows: where the prediction model became ≥ ${Math.round(modelMarkers.threshold * 100)}% sure about the next ~${modelMarkers.horizon_hours} h. Click an arrow for details.`)
         + ` The "NOW" arrow is always shown: the model's lean on the newest candle (faded = under ${Math.round(modelMarkers.threshold * 100)}% sure, so no real arrow). It is this sure on only ${modelMarkers.confident_share}% of candles.` : "";
   const sc = useModel ? modelMarkers.score : chart._strategyScore;
+  const ts = $("#tv-score");
+  if (ts) ts.textContent = sc && sc.wins + sc.losses
+    ? `${useModel && modelMarkers.source === "strategies" ? "Strategy-vote" : "Model"} arrows: ${sc.wins} right · ${sc.losses} wrong (${Math.round(100 * sc.wins / (sc.wins + sc.losses))}%)` : "";
   const scoreEl = $("#arrow-score");
   if (scoreEl) scoreEl.textContent = sc && sc.wins + sc.losses
     ? `Arrows on this chart: ${sc.wins} ✓ worked · ${sc.losses} ✗ failed (${Math.round(100 * sc.wins / (sc.wins + sc.losses))}% right)` : "";
   const past = useModel
     ? modelMarkers.markers.map((m) => {
-        const weak = modelMarkers.every && !m.strong;             // "Every candle": small faded lean, big bold when sure
+        const weak = modelMarkers.every && !m.strong;             // every-N: normal arrow; bigger with % when sure
         return { time: m.time, position: m.action === "BUY" ? "belowBar" : "aboveBar",
-          text: weak ? "" : modelMarkers.short || modelMarkers.every ? `${m.pct}%` : `${m.pct}% ${RESULT_MARK[m.result] || ""}`.trim(),
-          size: weak ? 0.45 : modelMarkers.short ? 0.6 : 1,
-          color: (m.action === "BUY" ? c.buy : c.sell) + (weak ? "66" : ""), shape: m.action === "BUY" ? "arrowUp" : "arrowDown" };
+          text: weak ? "" : modelMarkers.every ? `${m.pct}%` : modelMarkers.short ? `${m.pct}%` : `${m.pct}% ${RESULT_MARK[m.result] || ""}`.trim(),
+          size: modelMarkers.every ? (weak ? 0.8 : 1.3) : modelMarkers.short ? 0.6 : 1,
+          color: (m.action === "BUY" ? c.buy : c.sell) + (weak ? "bb" : ""), shape: m.action === "BUY" ? "arrowUp" : "arrowDown" };
       })
     : (chart._strategyMarkers || []);
   if (arrowSource === "pattern") {

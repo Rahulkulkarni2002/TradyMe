@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css?v=30">
+  <link rel="stylesheet" href="/static/style.css?v=31">
   <script src="/static/vendor/lightweight-charts.standalone.production.js"></script>
 </head>
 <body data-tab="trade">
@@ -119,7 +119,7 @@
                 <option value="long">Next ~2–6 h</option><option value="n1">Next 1 candle</option><option value="n2">Next 2 candles</option><option value="n3">Next 3 candles</option><option value="n5">Next 5 candles</option>
               </select>
               <select id="arrow-sure" class="mini-select" title="Only show arrows this sure">
-                <option value="50">Every candle</option><option value="55">≥ 55% sure</option><option value="58">≥ 58% sure</option>
+                <option value="every2">Every 2nd candle</option><option value="50">Every candle</option><option value="55">≥ 55% sure</option><option value="58">≥ 58% sure</option>
                 <option value="62" selected>≥ 62% sure</option><option value="66">≥ 66% sure</option>
               </select>
               <label class="mm-field">Strategy (for Strategy arrows)<select id="f-strategy" class="mini-select"></select></label>
@@ -143,7 +143,7 @@
 
         <div class="tv-body">
           <div class="tv-chart">
-            <div class="tv-status"><b id="chart-title-sub"></b> <span id="chart-live" class="live-dot"></span></div>
+            <div class="tv-status"><b id="chart-title-sub"></b> <span id="chart-live" class="live-dot"></span> <span id="tv-score" class="tv-score"></span></div>
             <div id="chart" class="chart"><div id="arrow-pop" class="arrow-pop hidden"></div></div>
             <div id="ind-panes" class="ind-panes"></div>
             <div id="plan-box" class="plan-box hidden"></div>
@@ -320,7 +320,7 @@
 
   <div id="tip" class="tip hidden"></div>
   <div id="toast" class="toast hidden"></div>
-  <script src="/static/app.js?v=37"></script>
+  <script src="/static/app.js?v=38"></script>
   <script src="/static/draw.js?v=13"></script>
   <script src="/static/indicators.js?v=4"></script>
 </body>
