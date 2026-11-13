@@ -1,13 +1,46 @@
 # 📈 TradyMe
 
-**An easy trading assistant for crypto, forex and gold**: it suggests BUY / SELL / WAIT with a
-confidence meter and trap warnings, and lets you practise with paper money before using real money.
+**An intraday trading assistant for crypto, gold and forex, powered by machine learning.**
+It predicts whether price goes up or down, puts BUY ▲ / SELL ▼ arrows on the chart, shows where price
+went after similar past patterns, and lets you practise trades with paper money in a TradingView-style screen.
 
-> 🚧 **Prototype v0.1 — not final.** This is a first working version to try out and learn from.
-> Strategies, rules and features will change as research continues.
->
-> ⚠️ TradyMe gives *suggestions*, not guarantees. No tool predicts markets reliably.
-> Always start with 📝 Paper mode. Never trade money you can't afford to lose.
+**Markets:** Bitcoin, Ethereum, Solana, XRP · Gold · EUR/USD, GBP/USD, USD/JPY
+**Candle sizes:** 5 min, 10 min, 15 min, 30 min, 1 hour, 3 hours
+
+> ⚠️ TradyMe gives *predictions with honest odds*, not guarantees. Every number below was measured on
+> years the models never learned from. Start with 📝 Paper mode. Never trade money you can't afford to lose.
+
+---
+
+## ✨ What it does
+
+| Feature | What you see |
+|---|---|
+| 🧠 **Prediction models** | Machine-learning models (gradient boosting) trained on ~10 years of candles per market and candle size. Each one gives "up X% / down Y%" for the next few candles or hours. |
+| ▲▼ **Chart arrows** | An up/down arrow on every 2nd candle, for every market and candle size. Big arrows with a % mean the model is sure. A live score ("58 right · 77 wrong") is shown on the chart. |
+| 🔮 **Look-alike forecast** | Finds the most similar moments in history and draws the range price moved in afterwards (likely band, wide band, middle path), compared against a random-walk baseline. |
+| 🎯 **Trade plan** | Stop-loss and 3 targets as prices, each with "how often this was reached before". |
+| 📐 **Patterns before they finish** | Double top/bottom, head & shoulders, triangles and wedges, flagged while still forming, with "BUY above / SELL below this line". |
+| 📊 **TradingView-style chart** | Indicators (EMA, SMA, Bollinger, VWAP, Supertrend, Donchian, RSI, MACD, Stochastic, ATR, volume), drawing tools, full screen, dark/light themes. |
+| 📝 **Paper trading** | BUY or SELL any time. Drag stop/target lines on the chart, run several trades at once, close with ✕. Live prices from OANDA or the forming candle. |
+| 🤖 **Auto-trader** | Optional: opens and closes paper trades by itself from the predictions, with stop/target rules. |
+| 🧪 **Backtests** | 73 strategies (trend, reversal, breakout, candle and chart patterns) tested fairly year by year, with fees. |
+| 🛡️ **Safety** | Risk per trade, optional daily target / max loss, STOP ALL button, intraday close at your day-end time. |
+
+---
+
+## 📏 Honest results (tested on 2025 → now, never seen in training)
+
+| Model | Right |
+|---|---|
+| Forex, 5–15 min, when the model is ≥ 65% sure | 65–70% |
+| Gold, 5 min, when the model is ≥ 65% sure | 63–71% |
+| Bitcoin, 1 hour (next ~6 h) | ~56% |
+| Crypto, 5–15 min, "next 2 candles" | 52–55% |
+
+**Tested and rejected** (no gain on unseen years): daily news, dollar-index features, "follow the bigger trend"
+filter, busy-hours-only filter, look-alike direction alone.
+**Tested and kept:** Bitcoin futures data (funding, open interest), bigger-candle context for short candles.
 
 ---
 
@@ -24,10 +57,19 @@ pip install -r requirements.txt
 python run.py
 ```
 
-Your browser opens **http://localhost:8000**. That's it: real prices, paper money, no API keys needed.
+Your browser opens **http://localhost:8000**. Stop with **Ctrl + C**.
+The version you're running is shown at the bottom right (and at `/api/debug`).
 
-- No internet, or just want to look around? `python run.py --demo` uses **simulated** prices.
-- Stop the app with **Ctrl + C**. Next time, just run `source .venv/bin/activate` and `python run.py`.
+### Train the models for gold and forex
+Crypto models come with the project. For gold and forex, download the history and train on your own computer
+(a free OANDA practice token in `.env` gives the best data):
+
+```bash
+python download_history.py --only forex
+python train_models.py
+```
+
+Restart TradyMe afterwards and the new models are used automatically.
 
 ## 🔌 Connect Alpaca (💰 Live mode, crypto)
 
@@ -68,53 +110,21 @@ If a key leaks, delete it in the Alpaca dashboard and generate a new one.
 | Market | Source | Notes |
 |---|---|---|
 | Bitcoin, Ethereum, Solana, XRP | Binance public data | In the US, it switches to Binance.US automatically |
-| Gold | Yahoo Finance (gold futures) | 5–30 min candles only for the last ~60 days |
+| Gold | OANDA (free practice token) or Yahoo Finance | Yahoo has 5–30 min candles only for the last ~60 days |
 | EUR/USD, GBP/USD, USD/JPY, USD/INR | Yahoo Finance | Same limit. Add a free OANDA practice token in `.env` for better forex data |
 
----
-
-## ✅ Your 16 requirements: what's done
-
-| # | Feature | Status |
-|---|---|---|
-| 1 | Pre-scan before a trade (last 30 days: trend, swings, ceiling/floor) | ✅ |
-| 2 | Live scanning of open trades → HOLD / PROTECT / CAREFUL / EXIT | ✅ |
-| 3 | Confidence meter %, adjusted by the strategy's real recent win rate | ✅ |
-| 4 | Manual or Auto switch (auto = paper only for now) | ✅ |
-| 5 | Timeframes 5m, 10m, 15m, 30m, 1h, 3h | ✅ |
-| 6 | Intraday only: every trade closes at your day-end time | ✅ |
-| 7 | Memory pad, archived and restarted every 6 months, CSV download | ✅ |
-| 8 | Today's watchlist (top 5 markets, closed markets marked) | ✅ on demand · ⏳ automatic morning message (with Telegram) |
-| 9 | Daily news tracking + AI summary | ⏳ next |
-| 10 | Kid-friendly: plain words, ❓ explanations everywhere, colours | ✅ |
-| 11 | Filters: market, timeframe, strategy, backtest period | ✅ |
-| 12 | Build your own strategy (no-code block builder) | ⏳ next (coders can add one now, see below) |
-| 13 | Backtest anytime ("🧪 Test this" button on every suggestion) | ✅ |
-| 14 | 10-year history study + ML model (big moves, news, traps) | ⏳ big next step |
-| 15 | Daily target + daily max loss (stops trading for the day) | ✅ |
-| 16 | Paper trading + Paper/Live switch | ✅ paper · ✅ live via Alpaca (crypto) · ⏳ OANDA for live forex/gold |
-
-Also included: 🛑 STOP ALL emergency button, trap warning, "move stop to entry" button, light and dark mode,
-works on a phone screen, and a TradingView Pine Script of the same strategy (`pine/trend_rider.pine`).
 
 ---
 
-## 🧠 How the suggestion is made
+## 🧠 How a prediction is made
 
-1. **Pre-scan:** the last 30 days of hourly candles give the trend, typical move size, and 30-day ceiling and floor.
-2. **Strategy:** the chosen strategy checks its rules on the last *closed* candle and outputs BUY / SELL / WAIT
-   with a stop-loss and target.
-3. **Confidence meter:** the strategy's own checklist score is blended with how often its signals actually
-   won on this market recently (a quick backtest). The more history, the more weight it gets.
-4. **Trap check:** warning signs (low volume, against the bigger trend, buying right under a ceiling,
-   long wick, overstretched RSI, weekend) raise the 🪤 trap % and lower the confidence.
-5. **Risk manager:** sizes the trade so hitting the stop loses only your "risk per trade" %, and blocks trades
-   after your daily target or max loss, after day end, or when shorting isn't possible.
-
-### Backtest "exams" (fair test)
-The chosen period is cut into **5 pieces**, and the strategy is tested on each piece separately.
-Passing 1 of 5 can be luck. Passing 4–5 means it held up in different conditions.
-Backtests include fees and spread, fill at the next candle's open, and close every trade at day end.
+1. **Features:** for each candle, ~100 numbers: trend, momentum, volatility, volume, candle shapes, what 73
+   strategies are saying, bigger-candle context and (for Bitcoin) futures data. Only data available *at that
+   moment* is used. Tests check that nothing peeks into the future.
+2. **Labels:** did price move up or down by a set size (based on normal volatility) within the next N candles?
+3. **Training:** one model per market × candle size × look-ahead (next 1, 2, 3, 5 candles, and a longer one).
+4. **Walk-forward exams:** trained on past years, tested on the next year, repeated. 2025 onward is held out completely.
+5. **On the chart:** the model scores every closed candle, so arrows and their right/wrong score are shown live.
 
 ---
 
@@ -122,42 +132,32 @@ Backtests include fees and spread, fill at the next candle's open, and close eve
 
 ```
 run.py                  ← start here
-server/                 ← web server (FastAPI) + SQLite database (data/tradyme.db)
-  app.py                  API + background auto-trader (every 30 s)
-  account.py              paper + live accounts, stops, daily target, intraday close, memory pad reset
-  broker.py               Alpaca connection status (reads keys from .env)
-  backtest_service.py     backtest + exams + plain-English results
-engine/                 ← the trading brain (no web code)
-  markets.py              the list of markets (add one here)
-  data/                   price feeds: Binance, Yahoo, OANDA, CSV, simulated
-  features/indicators.py  EMA, RSI, ATR, MACD, Bollinger, VWAP (same formulas as TradingView)
-  strategies/             🏄 Trend Rider (ema_rsi), 🏀 Bounce Trader (bb_reversion), add yours here
-  analysis.py             pre-scan, confidence meter, trap check, live advice, watchlist
-  risk/manager.py         position sizing + safety rules
-  backtest/               bar-by-bar backtester + metrics
-  execution/              paper broker, Alpaca (live crypto), OANDA practice / Binance testnet adapters
-web/                    ← the website (plain HTML/CSS/JS, TradingView Lightweight Charts)
-pine/                   ← TradingView Pine Script versions of the strategies
-tests/                  ← 36 automated tests (incl. a fake Alpaca):  python -m pytest -q
+train_models.py         ← train gold/forex models on your computer
+download_history.py     ← download 10 years of prices (+ news)
+server/                 ← FastAPI web server + SQLite
+  app.py                  API + background auto-trader
+  verdict.py              loads the models, chart arrows, trade plan
+  account.py              paper + live accounts, stops, targets, live prices
+engine/                 ← the trading brain
+  analysis.py             pre-scan, confidence, trap check, trade plan
+  analogs.py              look-alike forecast
+  strategies/             73 strategies incl. chart patterns
+  data/                   Binance, OANDA (incl. live stream), Yahoo, futures
+  backtest/  risk/  execution/
+research/               ← features, labels, model training, fair experiments, saved models
+web/                    ← the website (HTML/CSS/JS, TradingView Lightweight Charts)
+pine/                   ← TradingView Pine Script version of a strategy
+tests/                  ← 73 automated tests:  python -m pytest -q
 ```
-
-### Add your own strategy (code version, until the block builder exists)
-1. Copy `engine/strategies/ema_rsi.py` to `engine/strategies/my_idea.py` and change the rules in `on_bar()`.
-2. Register it in `engine/strategies/__init__.py`, and give it a friendly name in `STRATEGY_INFO` in `server/app.py`.
-3. Run `python -m pytest -q`. `test_no_lookahead` checks that your strategy doesn't peek into the future.
 
 ---
 
-## 🛣️ Roadmap (draft, open to change)
+## 🛣️ Next
 
-1. ✅ **Step 1: Test version:** website, paper trading, suggestions, meter, backtest, memory pad *(this version)*
-2. ⏳ **10-year study:** collect 10 years of prices, news and events; find big moves and why they happened;
-   ML model for confidence and trap detection; strategy league table by market mood
-3. ⏳ **Strategy builder + news summary + Telegram alerts** (incl. automatic morning watchlist)
-4. 🟡 **🇺🇸 Live trading:** ✅ Alpaca (crypto) · ⏳ OANDA (forex and gold)
-5. ⏳ **🇮🇳 India version:** Indian brokers (Zerodha / Upstox / Dhan), ₹, IST, NSE currency pairs, MCX gold,
-   FIU-registered crypto exchanges. Indian residents generally may **not** trade forex through foreign
-   brokers; check current RBI/SEBI rules first.
+- Record order-book (buy/sell pressure) data to improve short-candle predictions
+- Better indicators menu
+- Live gold & forex through OANDA (crypto live via Alpaca already works)
+- Telegram alerts
 
 ---
 
