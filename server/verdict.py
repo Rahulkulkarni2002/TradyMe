@@ -267,7 +267,7 @@ def candle_arrows(market: Market, timeframe: str, step: int = 2) -> dict:
     for k in range(len(idx) - 1, -1, -step):
         out.append({"time": int(idx[k].timestamp()), "action": "BUY" if p[k] >= 0.5 else "SELL",
                     "pct": round(100 * max(p[k], 1 - p[k])), "p_up": round(100 * float(p[k])),
-                    "strong": bool(abs(p[k] - 0.5) >= 0.2)})
+                    "strong": False, "votes": True})        # a vote count, not a probability → never big, no %
     out.reverse()
     H = 2
     grade_arrows(df, out, H, 0.5)

@@ -743,8 +743,13 @@ function applyMarkers() {
         + ` The "NOW" arrow is always shown: the model's lean on the newest candle (faded = under ${Math.round(modelMarkers.threshold * 100)}% sure, so no real arrow). It is this sure on only ${modelMarkers.confident_share}% of candles.` : "";
   const sc = useModel ? modelMarkers.score : chart._strategyScore;
   const ts = $("#tv-score");
-  if (ts) ts.textContent = sc && sc.wins + sc.losses
-    ? `${useModel && modelMarkers.source === "strategies" ? "Strategy-vote" : "Model"} arrows: ${sc.wins} right · ${sc.losses} wrong (${Math.round(100 * sc.wins / (sc.wins + sc.losses))}%)` : "";
+  if (ts) {
+    const votes = useModel && modelMarkers.source === "strategies";
+    ts.textContent = sc && sc.wins + sc.losses
+      ? `${votes ? "⚠️ No model here — strategy-vote arrows (weak)" : "Model arrows"}: ${sc.wins} right · ${sc.losses} wrong (${Math.round(100 * sc.wins / (sc.wins + sc.losses))}%)` : "";
+    ts.title = votes ? "No prediction model for this market & candle size yet, so these arrows are the 71 strategies' combined vote. "
+      + "That is not a probability and has tested close to a coin flip. Train the model: python train_models.py" : "";
+  }
   const scoreEl = $("#arrow-score");
   if (scoreEl) scoreEl.textContent = sc && sc.wins + sc.losses
     ? `Arrows on this chart: ${sc.wins} ✓ worked · ${sc.losses} ✗ failed (${Math.round(100 * sc.wins / (sc.wins + sc.losses))}% right)` : "";
