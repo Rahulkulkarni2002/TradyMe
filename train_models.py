@@ -4,7 +4,9 @@
     python train_models.py --markets GOLD  (just gold)
     python train_models.py --timeframes 1h 3h
 
-Each model is tested fairly (year by year, on years it did not learn from) and saved to research/models/.
+Each model is tested fairly (year by year, on years it did not learn from), then on 100 different situations
+(months, weekdays, sessions, calm/wild and rising/falling markets, random weeks). Only a model that PASSES is
+saved to research/models/ — a failed one goes to research/models/rejected/ and the app does not use it.
 Restart TradyMe afterwards and the app uses them automatically. Safe to stop with Ctrl+C and run again."""
 from __future__ import annotations
 
@@ -28,8 +30,10 @@ def main() -> int:
     ap.add_argument("--markets", nargs="+", default=DEFAULT_MARKETS)
     ap.add_argument("--timeframes", nargs="+", default=["15m", "1h", "3h", "30m", "5m", "10m"], choices=list(PLAN))
     ap.add_argument("--no-short", action="store_true", help="skip the next-1/2/3/5-candle models")
+    ap.add_argument("--no-stress", action="store_true", help="skip the 100-situation test")
     a = ap.parse_args()
     from research.strategy_league import MODELS, run
+    from research import stress_test
 
     t0, done, failed = time.time(), [], []
     for code in [m.upper() for m in a.markets]:
@@ -45,14 +49,23 @@ def main() -> int:
         if not a.no_short:
             jobs += [(tf, h, b, tag) for h, b, tag in SHORT for tf in SHORT_TF if tf in a.timeframes]
         for tf, h, b, tag in jobs:
-            if (MODELS / f"{code}_{tf}{tag}.joblib").exists():
+            if (MODELS / f"{code}_{tf}{tag}.joblib").exists() or (MODELS / "rejected" / f"{code}_{tf}{tag}.joblib").exists():
                 print(f"   ✅ {code} {tf}{tag}: already trained — skipping")
                 continue
             print(f"\n🏋️  {code} {tf}{tag} (next {h} candles, move {b}× normal size)…", flush=True)
             try:
                 out = run(code, tf, h, b, tag)
                 s = out["combined_summary"]
-                done.append(f"{code} {tf}{tag}: right {s['accuracy']:.1%} overall, {s.get('thr65_right') or 0:.1%} when ≥65% sure")
+                line = f"{code} {tf}{tag}: right {s['accuracy']:.1%} overall, {s.get('thr65_right') or 0:.1%} when ≥65% sure"
+                if not a.no_stress:
+                    st = stress_test.run(code, tf, tag, quiet=True)
+                    line += f" · 100-situation test: {st['verdict']} ({st['passed']}/{st['counted']})"
+                    if st["verdict"] != "PASS":
+                        rej = MODELS / "rejected"; rej.mkdir(exist_ok=True)
+                        (MODELS / f"{code}_{tf}{tag}.joblib").replace(rej / f"{code}_{tf}{tag}.joblib")
+                        failed.append(line + " → not used (moved to research/models/rejected/)")
+                        continue
+                done.append(line)
             except KeyboardInterrupt:
                 print("\n⏸️  Stopped. Run the same command again to continue.")
                 return 1
