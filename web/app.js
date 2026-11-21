@@ -598,7 +598,8 @@ function makeChart(el, height) {
 // ───────────────────────── preview arrow on the forming candle (not final) ─────────────────────────
 let previewSignal = null;
 const RESULT_MARK = { win: "✓", loss: "✗", flat: "–", open: "" };
-let arrowSource = (() => { try { return localStorage.getItem("arrowSource") || "model"; } catch { return "model"; } })();
+let arrowSource = (() => { try { const v = localStorage.getItem("arrowSource") || "model"; return v === "strategy" ? "model" : v; } catch { return "model"; } })();
+// (strategy arrows were removed from the screen: ticked indicators now draw their own ▲▼ arrows)
 let modelMarkers = null;                                   // {available, markers, reason}
 let arrowHorizon = (() => { try { return localStorage.getItem("arrowHorizon") || "long"; } catch { return "long"; } })();
 $("#arrow-horizon").value = arrowHorizon;
@@ -805,6 +806,8 @@ function applyMarkers() {
     marks.push({ time: p.time, position: p.action === "BUY" ? "belowBar" : "aboveBar", text: "?",
       color: (p.action === "BUY" ? c.buy : c.sell) + "88", shape: p.action === "BUY" ? "arrowUp" : "arrowDown" });
   }
+  const indMarks = window.TradyInd?.markers ? window.TradyInd.markers() : [];   // ▲▼ from the ticked indicators
+  if (indMarks.length) { marks.push(...indMarks); marks.sort((a, b) => a.time - b.time); }
   candleSeries.setMarkers(marks);
   // 📦 the same arrows as trades (only the ones with a known stop/target; "Every candle" → only the sure ones)
   if (window.TradyDraw) {

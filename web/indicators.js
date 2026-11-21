@@ -84,6 +84,57 @@
     return [];
   }
 
+  // ── ▲▼ arrows: when an indicator is ticked, it also marks its own BUY / SELL moments on the chart ──
+  const TAG = { ema9: "EMA9/21", ema21: "EMA9/21", ema50: "EMA50", ema200: "EMA200", sma20: "SMA20", bb: "BB", vwap: "VWAP",
+    supertrend: "ST", donchian: "DC", ribbon: "Ribbon", rsi: "RSI", macd: "MACD", stoch: "Stoch" };
+  const crossUp = (a, b, i) => a[i - 1] != null && b[i - 1] != null && a[i] != null && b[i] != null && a[i - 1] <= b[i - 1] && a[i] > b[i];
+  const crossDn = (a, b, i) => a[i - 1] != null && b[i - 1] != null && a[i] != null && b[i] != null && a[i - 1] >= b[i - 1] && a[i] < b[i];
+  function signals(key, c) {
+    const cl = c.map((x) => x.close), hi = c.map((x) => x.high), lo = c.map((x) => x.low), out = [];
+    const add = (i, side) => out.push({ time: c[i].time, side });
+    const lineCross = (line) => { for (let i = 1; i < c.length; i++) { if (crossUp(cl, line, i)) add(i, 1); else if (crossDn(cl, line, i)) add(i, -1); } };
+    const lineVsLine = (a, b) => { for (let i = 1; i < c.length; i++) { if (crossUp(a, b, i)) add(i, 1); else if (crossDn(a, b, i)) add(i, -1); } };
+    const level = (v, low, high) => { for (let i = 1; i < c.length; i++) { if (v[i - 1] != null && v[i] != null) {
+      if (v[i - 1] < low && v[i] >= low) add(i, 1); else if (v[i - 1] > high && v[i] <= high) add(i, -1); } } };
+    if (key === "ema9" || key === "ema21") lineVsLine(ema(cl, 9), ema(cl, 21));                     // fast crosses slow
+    else if (key === "ema50" || key === "ema200") lineCross(ema(cl, +key.slice(3)));               // price crosses the line
+    else if (key === "sma20") lineCross(sma(cl, 20));
+    else if (key === "vwap") lineCross(compute("vwap", c)[0].map((p) => p.value ?? null));
+    else if (key === "bb") { const m = sma(cl, 20), sd = std(cl, 20);                              // back inside the band
+      for (let i = 1; i < c.length; i++) { if (m[i] == null || m[i - 1] == null) continue;
+        const lw = (j) => m[j] - 2 * sd[j], up = (j) => m[j] + 2 * sd[j];
+        if (cl[i - 1] < lw(i - 1) && cl[i] >= lw(i)) add(i, 1); else if (cl[i - 1] > up(i - 1) && cl[i] <= up(i)) add(i, -1); } }
+    else if (key === "donchian") { for (let i = 20; i < c.length; i++) {                           // breaks the 20-candle high / low
+        if (cl[i] > Math.max(...hi.slice(i - 20, i)) && cl[i - 1] <= Math.max(...hi.slice(i - 21, i - 1))) add(i, 1);
+        else if (cl[i] < Math.min(...lo.slice(i - 20, i)) && cl[i - 1] >= Math.min(...lo.slice(i - 21, i - 1))) add(i, -1); } }
+    else if (key === "supertrend") { const [u, d] = compute("supertrend", c);                       // line flips colour
+      for (let i = 1; i < c.length; i++) { const wasUp = u[i - 1].value != null, isUp = u[i].value != null, wasDn = d[i - 1].value != null;
+        if (isUp && wasDn && !wasUp) add(i, 1); else if (!isUp && d[i].value != null && wasUp) add(i, -1); } }
+    else if (key === "ribbon") { const a = ema(cl, 20), b = ema(cl, 60); lineVsLine(a, b); }
+    else if (key === "rsi") level(rsi(cl), 30, 70);                                                 // leaves oversold / overbought
+    else if (key === "macd") { const m = ema(cl, 12).map((x, i) => x - ema(cl, 26)[i]); lineVsLine(m, ema(m, 9)); }
+    else if (key === "stoch") level(compute("stoch", c)[0].map((p) => p.value ?? null), 20, 80);
+    return out;
+  }
+  let sigMarks = [], sigKey = "";
+  function refreshSignals() {
+    const closedLast = (typeof chart !== "undefined" && chart && chart._closedLast) || Infinity;
+    const c = last.filter((x) => x.time <= closedLast);                     // closed candles only — no flickering arrows
+    const byTime = new Map();
+    if (c.length > 30) for (const k of [...on]) {
+      if (!TAG[k]) continue;
+      for (const s of signals(k, c)) {
+        const key = s.time + ":" + s.side, cur = byTime.get(key);
+        if (cur) { if (!cur.tags.includes(TAG[k])) cur.tags.push(TAG[k]); } else byTime.set(key, { time: s.time, side: s.side, tags: [TAG[k]] });
+      }
+    }
+    const col = typeof chartColors === "function" ? chartColors() : { buy: "#0a9463", sell: "#d0333e" };
+    sigMarks = [...byTime.values()].map((s) => ({ time: s.time, position: s.side > 0 ? "belowBar" : "aboveBar",
+      shape: s.side > 0 ? "arrowUp" : "arrowDown", color: s.side > 0 ? col.buy : col.sell, size: 1, text: s.tags.join("·") }));
+    const sig = sigMarks.map((m) => m.time + m.text + m.shape).join("|");
+    if (sig !== sigKey) { sigKey = sig; if (typeof applyMarkers === "function") applyMarkers(); }
+  }
+
   // ── main-chart overlays ──
   function ensureOverlay(key) {
     if (series[key]) return series[key];
@@ -142,9 +193,10 @@
   }
   function update(candles) {
     last = candles || [];
-    if (!last.length) return;
+    if (!last.length) { refreshSignals(); return; }
     for (const [k, ss] of Object.entries(series)) compute(k, last).forEach((d, i) => ss[i] && ss[i].setData(d));
     for (const [k, p] of Object.entries(panes)) compute(k, last).forEach((d, i) => p.series[i] && p.series[i].setData(d));
+    refreshSignals();
   }
 
   function paintMenu() {
@@ -152,7 +204,7 @@
     const groups = [...new Set(LIST.map((x) => x.group))];
     m.innerHTML = groups.map((g) => `<div class="ind-group">${g}</div>` + LIST.filter((x) => x.group === g).map((x) =>
       `<label class="ind-item" title="${x.info}"><input type="checkbox" data-k="${x.key}" ${on.has(x.key) ? "checked" : ""}>
-        <span><b>${x.name}</b><br><span class="muted small">${x.info}</span></span></label>`).join("")).join("") +
+        <span><b>${x.name}</b><br><span class="muted small">${x.info}${TAG[x.key] ? " · ▲▼ arrows when it signals" : ""}</span></span></label>`).join("")).join("") +
       `<div class="ind-foot"><button class="btn ghost small-btn" id="ind-none">Remove all</button><button class="btn primary small-btn" id="ind-done">Done</button></div>`;
     m.querySelectorAll("input[data-k]").forEach((i) => i.addEventListener("change", () => {
       i.checked ? on.add(i.dataset.k) : on.delete(i.dataset.k); save(); sync();
@@ -173,5 +225,5 @@
   function restyle() { Object.keys(panes).forEach((k) => { dropPane(k); }); sync(); }
 
   function resize() { Object.values(panes).forEach((p) => p.chart.applyOptions({ width: p.box.clientWidth })); }
-  window.TradyInd = { init, update, restyle, resize };
+  window.TradyInd = { init, update, restyle, resize, markers: () => sigMarks };
 })();

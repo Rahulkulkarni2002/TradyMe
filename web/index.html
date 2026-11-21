@@ -113,7 +113,7 @@
             <div id="more-menu" class="more-menu hidden">
               <div class="mm-label">Arrows</div>
               <div class="seg small-seg" id="arrow-src">
-                <button data-v="model">Model</button><button data-v="strategy">Strategy</button><button data-v="pattern">Pattern</button>
+                <button data-v="model">Model</button><button data-v="pattern">Pattern</button>
               </div>
               <select id="arrow-horizon" class="mini-select" title="What the model arrows predict">
                 <option value="long">Next ~2–6 h</option><option value="n1">Next 1 candle</option><option value="n2">Next 2 candles</option><option value="n3">Next 3 candles</option><option value="n5">Next 5 candles</option>
@@ -122,7 +122,7 @@
                 <option value="every2">Every 2nd candle</option><option value="50">Every candle</option><option value="55">≥ 55% sure</option><option value="58">≥ 58% sure</option>
                 <option value="62" selected>≥ 62% sure</option><option value="66">≥ 66% sure</option>
               </select>
-              <label class="mm-field">Strategy (for Strategy arrows)<select id="f-strategy" class="mini-select"></select></label>
+              <label class="mm-field hidden">Strategy<select id="f-strategy" class="mini-select"></select></label>
               <div class="mm-label">Extras on the chart</div>
               <button class="mm-toggle" id="plan-toggle">🎯 Stop &amp; targets</button>
               <button class="mm-toggle" id="analog-toggle">🔮 Look-alike forecast</button>
@@ -324,8 +324,8 @@
 
   <div id="tip" class="tip hidden"></div>
   <div id="toast" class="toast hidden"></div>
-  <script src="/static/app.js?v=49"></script>
+  <script src="/static/app.js?v=51"></script>
   <script src="/static/draw.js?v=14"></script>
-  <script src="/static/indicators.js?v=4"></script>
+  <script src="/static/indicators.js?v=5"></script>
 </body>
 </html>
