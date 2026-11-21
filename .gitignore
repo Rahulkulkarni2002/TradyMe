@@ -9,3 +9,4 @@ reports/
 .DS_Store
 research/models/pooled/
 research/models/replaced/
+research/results/*_pooled_stress.json
