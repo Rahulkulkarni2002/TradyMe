@@ -1,0 +1,84 @@
+{
+ "market": "BTC",
+ "timeframe": "1h",
+ "results": {
+  "R1.5": {
+   "2015\u20132024 (rules chosen here)": {
+    "trades": 2345,
+    "win_rate": 0.3970149253731343,
+    "avg_trade_pct": -0.3027013963135314,
+    "profit_factor": 0.7241841392104584,
+    "total_pct": -99.95579509675764,
+    "max_drawdown_pct": -99.96471055436328
+   },
+   "2025 (check)": {
+    "trades": 245,
+    "win_rate": 0.40816326530612246,
+    "avg_trade_pct": -0.28558671576665995,
+    "profit_factor": 0.6082528543363481,
+    "total_pct": -51.31919582618517,
+    "max_drawdown_pct": -53.578364379663725
+   },
+   "2026 (final test)": {
+    "trades": 218,
+    "win_rate": 0.3853211009174312,
+    "avg_trade_pct": -0.3231224135698642,
+    "profit_factor": 0.5535205013446526,
+    "total_pct": -51.386752114315,
+    "max_drawdown_pct": -52.453845769051895
+   }
+  },
+  "R2.0": {
+   "2015\u20132024 (rules chosen here)": {
+    "trades": 2206,
+    "win_rate": 0.34587488667271077,
+    "avg_trade_pct": -0.28693725325290387,
+    "profit_factor": 0.7586815642525466,
+    "total_pct": -99.91547187863162,
+    "max_drawdown_pct": -99.93258266621083
+   },
+   "2025 (check)": {
+    "trades": 227,
+    "win_rate": 0.3436123348017621,
+    "avg_trade_pct": -0.3017222387516494,
+    "profit_factor": 0.6224694420016483,
+    "total_pct": -50.75240392733592,
+    "max_drawdown_pct": -52.62900753010948
+   },
+   "2026 (final test)": {
+    "trades": 209,
+    "win_rate": 0.33014354066985646,
+    "avg_trade_pct": -0.3598009205938259,
+    "profit_factor": 0.5523527129312646,
+    "total_pct": -53.785504395928264,
+    "max_drawdown_pct": -55.2465239108328
+   }
+  },
+  "R3.0": {
+   "2015\u20132024 (rules chosen here)": {
+    "trades": 2022,
+    "win_rate": 0.2952522255192878,
+    "avg_trade_pct": -0.2508351333803458,
+    "profit_factor": 0.7998286247659443,
+    "total_pct": -99.74016066640206,
+    "max_drawdown_pct": -99.78092975108247
+   },
+   "2025 (check)": {
+    "trades": 211,
+    "win_rate": 0.2890995260663507,
+    "avg_trade_pct": -0.2956985227977395,
+    "profit_factor": 0.65531547339988,
+    "total_pct": -47.89485141658818,
+    "max_drawdown_pct": -52.71789816467631
+   },
+   "2026 (final test)": {
+    "trades": 191,
+    "win_rate": 0.25654450261780104,
+    "avg_trade_pct": -0.3524856376498063,
+    "profit_factor": 0.5968365299832712,
+    "total_pct": -50.24895627005841,
+    "max_drawdown_pct": -53.1526268323806
+   }
+  }
+ }
+}
