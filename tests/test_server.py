@@ -97,9 +97,12 @@ def test_verdict_endpoint(client):
 
 def test_library_strategy_selectable(client):
     c, _ = client
-    codes = {s["code"] for s in c.get("/api/meta").json()["strategies"]}
+    meta = c.get("/api/meta").json()
+    codes = {s["code"] for s in meta["all_strategies"]}               # every strategy stays in the back end
     from engine.strategies.library import INFO
-    assert "lib_bollinger_squeeze" in codes and "lib_cdl_morning_evening_star" in codes and len(codes) == len(INFO) + 3          # + Trend Rider, Bounce Trader, SuperTrend
+    assert "lib_bollinger_squeeze" in codes and "lib_cdl_morning_evening_star" in codes and len(codes) == len(INFO) + 3
+    shown = {s["code"] for s in meta["strategies"]}                   # the app only shows ones that passed our tests
+    assert shown == {"supertrend_kivanc"}
     r = c.post("/api/backtest", json={"market": "BTC", "timeframe": "1h", "strategy": "lib_bollinger_squeeze", "days": 120})
     assert r.status_code == 200 and len(r.json()["exams"]) == 5
 

@@ -46,6 +46,11 @@ STRATEGY_INFO = {
 STRATEGY_INFO.update({f"lib_{k}": {"label": f"{_FAM[f].split()[0]} {n}", "kid": kid, "family": f}
                       for k, (n, f, kid) in _LIB.items()})
 
+# Only strategies that PASSED our fair tests (100-situation test + year by year, real costs) are shown in the app.
+# All others stay in the back end: the prediction model still uses their votes, and research can still test them.
+UI_STRATEGIES = {"supertrend_kivanc": "Passed only on Gold, 3-hour candles, buy only (made money 10 of 12 years). "
+                                      "Lost money on crypto and forex."}
+
 db = DB()
 account = Account(db)
 activity: deque = deque(maxlen=60)          # recent events shown in the app
@@ -125,6 +130,8 @@ async def lifespan(app: FastAPI):
         if s["daily_max_loss"] == 200.0:
             changes["daily_max_loss"] = 0.0
         db.save_settings(changes)
+    if s.get("strategy") not in UI_STRATEGIES:            # the old default was a strategy that failed our tests
+        db.save_settings({"strategy": next(iter(UI_STRATEGIES))})
     task = None if os.environ.get("TRADYME_NO_LOOP") else asyncio.create_task(loop())
     note("👋 TradyMe started" + (" in OFFLINE demo mode (simulated prices)" if offline() else ""))
     yield
@@ -178,7 +185,9 @@ def meta():
                      "max_days": {tf: backtest_service.max_days(m, tf) for tf in TIMEFRAMES}}
                     for m in MARKETS.values()],
         "timeframes": [{"code": t, "label": TIMEFRAME_LABELS[t]} for t in TIMEFRAMES],
-        "strategies": [{"code": k, **STRATEGY_INFO.get(k, {"label": k, "kid": ""})} for k in REGISTRY],
+        "strategies": [{"code": k, **STRATEGY_INFO.get(k, {"label": k, "kid": ""}), "works_on": UI_STRATEGIES[k]}
+                       for k in REGISTRY if k in UI_STRATEGIES],
+        "all_strategies": [{"code": k, **STRATEGY_INFO.get(k, {"label": k, "kid": ""})} for k in REGISTRY],
         "models": verdict_mod.available_models(),
     }
 

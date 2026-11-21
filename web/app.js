@@ -168,15 +168,17 @@ function fillSelect(sel, items, value) {
   sel.innerHTML = items.map((i) => `<option value="${i.code}">${esc(i.label)}</option>`).join("");
   if (value) sel.value = value;
 }
+function stratName(code) { return (META.all_strategies || META.strategies).find((x) => x.code === code)?.label || code || "Strategy"; }
 function fillStrategies(sel, value) {
-  const groups = { "⭐ Classic": META.strategies.filter((s) => !s.code.startsWith("lib_")) };
+  const groups = { "✅ Passed our tests": META.strategies.filter((s) => !s.code.startsWith("lib_")) };
   META.strategies.filter((s) => s.code.startsWith("lib_")).forEach((s) => {
     const g = { trend: "🏄 Trend", reversion: "🏀 Bounce", breakout: "💥 Breakout", momentum: "⚡ Momentum", pattern: "🕯️ Candle pattern", session: "🕐 Time of day" }[s.family] || "Other";
     (groups[g] = groups[g] || []).push(s);
   });
-  sel.innerHTML = Object.entries(groups).map(([g, items]) =>
-    `<optgroup label="${esc(g)}">${items.map((i) => `<option value="${i.code}">${esc(i.label)}</option>`).join("")}</optgroup>`).join("");
-  if (value) sel.value = value;
+  sel.innerHTML = Object.entries(groups).filter(([, items]) => items.length).map(([g, items]) =>
+    `<optgroup label="${esc(g)}">${items.map((i) => `<option value="${i.code}" title="${esc(i.works_on || "")}">${esc(i.label)}</option>`).join("")}</optgroup>`).join("")
+    + `<option disabled>— only strategies that passed our tests are shown —</option>`;
+  if (value && META.strategies.some((s) => s.code === value)) sel.value = value;
 }
 function marketItems() { return META.markets.map((m) => ({ code: m.code, label: `${m.emoji} ${m.name}` })); }
 
@@ -194,7 +196,7 @@ function setupFilters() {
     await saveSettings({ strategy: e.target.value });
     arrowSource = "strategy"; try { localStorage.setItem("arrowSource", "strategy"); } catch {}   // show THIS strategy's arrows
     paintArrowSwitch();
-    const name = META.strategies.find((x) => x.code === e.target.value)?.label || e.target.value;
+    const name = stratName(e.target.value) || e.target.value;
     toast(`📈 Chart now shows ${name} arrows (▲ buy · ▼ sell). Back to the model: More ▾ → Arrows: Model`, 6000);
     loadSuggestion();
   });
@@ -351,7 +353,7 @@ function renderSuggestion(s) {
   if (!s) return;
   const el = $("#suggestion");
   const mk = market(s.market);
-  const stratLabel = META.strategies.find((x) => x.code === s.strategy)?.label || s.strategy;
+  const stratLabel = stratName(s.strategy);
   const live = SETTINGS.mode === "live";
   let html = `<div class="card-head"><h3><svg class="ic"><use href="#i-target"/></svg>Focus strategy</h3><span class="muted small">${esc(stratLabel)}</span></div>`;
   if (s.market_closed) html += `<div class="trap">This market looks closed right now (no new prices). Hours: ${esc(mk.hours)}.</div>`;
@@ -758,7 +760,7 @@ function applyMarkers() {
   if (ts) {
     const votes = useModel && modelMarkers.source === "strategies";
     ts.textContent = sc && sc.wins + sc.losses
-      ? `${!useModel ? `${META.strategies.find((x) => x.code === SETTINGS.strategy)?.label || "Strategy"} arrows` : votes ? "⚠️ No model here — strategy-vote arrows (weak)" : `Model arrows (next ${modelMarkers.short || modelMarkers.every ? modelMarkers.candles + " candles" : "~" + modelMarkers.horizon_hours + " h"})`}: ${sc.wins} right · ${sc.losses} wrong (${Math.round(100 * sc.wins / (sc.wins + sc.losses))}%)` : "";
+      ? `${!useModel ? `${stratName(SETTINGS.strategy)} arrows` : votes ? "⚠️ No model here — strategy-vote arrows (weak)" : `Model arrows (next ${modelMarkers.short || modelMarkers.every ? modelMarkers.candles + " candles" : "~" + modelMarkers.horizon_hours + " h"})`}: ${sc.wins} right · ${sc.losses} wrong (${Math.round(100 * sc.wins / (sc.wins + sc.losses))}%)` : "";
     ts.title = votes ? "No prediction model for this market & candle size yet, so these arrows are the 71 strategies' combined vote. "
       + "That is not a probability and has tested close to a coin flip. Train the model: python train_models.py" : "";
   }
@@ -797,7 +799,7 @@ function applyMarkers() {
     : useModel ? modelMarkers.markers : (lastSuggestion?.markers || []);
   if (useModel && modelMarkers.now && !src.some((m) => m.time === modelMarkers.now.time))
     chart._arrowInfo[modelMarkers.now.time] = { ...modelMarkers.now, source: modelMarkers.now.confident ? "Model · NOW" : "Model · NOW (not sure enough for a real arrow)" };
-  for (const m of src) chart._arrowInfo[m.time] = { ...m, source: arrowSource === "pattern" ? `📐 ${m.name}` : useModel ? (modelMarkers.short ? `Model · next ${modelMarkers.candles} candle${modelMarkers.candles > 1 ? "s" : ""}` : `Model · next ~${modelMarkers.horizon_hours} h`) : (META.strategies.find((x) => x.code === SETTINGS.strategy)?.label || "Strategy") };
+  for (const m of src) chart._arrowInfo[m.time] = { ...m, source: arrowSource === "pattern" ? `📐 ${m.name}` : useModel ? (modelMarkers.short ? `Model · next ${modelMarkers.candles} candle${modelMarkers.candles > 1 ? "s" : ""}` : `Model · next ~${modelMarkers.horizon_hours} h`) : stratName(SETTINGS.strategy) };
   const p = previewSignal;
   if (!useModel && p && (p.action === "BUY" || p.action === "SELL") && p.time > (chart._closedLast || 0)) {
     marks.push({ time: p.time, position: p.action === "BUY" ? "belowBar" : "aboveBar", text: "?",
@@ -1213,7 +1215,7 @@ function setupSettings() {
     <li>Press the button to trade with <b>paper money</b>. The app keeps watching your trade and tells you what to do.</li>
     <li>Everything is saved in your <b>📒 Memory Pad</b>.</li></ol>
     <h3>Words</h3><dl>${GLOSSARY.map(([t, d]) => `<dt>${t}</dt><dd>${esc(d)}</dd>`).join("")}</dl>
-    <h3>Strategies</h3><dl>${META.strategies.map((s) => `<dt>${esc(s.label)}</dt><dd>${esc(s.kid)}</dd>`).join("")}</dl>`;
+    <h3>Strategies</h3><dl>${META.strategies.map((s) => `<dt>${esc(s.label)}</dt><dd>${esc(s.kid)} ${esc(s.works_on || "")}</dd>`).join("")}</dl>`;
 }
 
 // ───────────────────────── start ─────────────────────────
