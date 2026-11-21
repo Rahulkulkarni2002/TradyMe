@@ -27,6 +27,7 @@ import pandas as pd
 
 from engine.data.base import tf_seconds
 from server.verdict import MODELS, _load_file
+from . import btc_lead
 from .strategy_league import HOLDOUT_START, RESULTS, agreement, model_inputs, prepare
 
 MIN_ARROWS = 30
@@ -60,8 +61,9 @@ def situations(idx: pd.DatetimeIndex, X: pd.DataFrame, total: int = 100, seed: i
     return [(n, np.asarray(m, dtype=bool)) for n, m in out[:total]]
 
 
-def run(code: str, timeframe: str, tag: str, sure: float = 0.55, need: float = 80.0, quiet: bool = False) -> dict:
-    path = MODELS / f"{code}_{timeframe}{tag}.joblib"
+def run(code: str, timeframe: str, tag: str, sure: float = 0.55, need: float = 80.0, quiet: bool = False,
+        folder=None) -> dict:
+    path = (folder or MODELS) / f"{code}_{timeframe}{tag}.joblib"
     if not path.exists():
         raise SystemExit(f"no model {path.name}")
     b = _load_file(path, path.stat().st_mtime, code, timeframe, tag)
@@ -70,7 +72,8 @@ def run(code: str, timeframe: str, tag: str, sure: float = 0.55, need: float = 8
     df, X, V, lab = prepare(code, timeframe, H, b["barrier_atr"], futures=any(c.startswith("fund_") for c in cols),
                             mtf=any(c.startswith("x4_") for c in cols))
     keep = (df.index >= HOLDOUT_START) & lab["label"].notna().to_numpy()
-    M = model_inputs(V, agreement(V), X).reindex(columns=cols)[keep]
+    M = model_inputs(V, agreement(V), X)
+    M = btc_lead.pooled_inputs(M, code, df, timeframe, cols).reindex(columns=cols)[keep]
     p = b["model"].predict_proba(M)[:, 1]
     y = lab["label"][keep].astype(int).to_numpy()
     right = (p >= 0.5) == (y == 1)
@@ -92,7 +95,7 @@ def run(code: str, timeframe: str, tag: str, sure: float = 0.55, need: float = 8
            "counted": len(counted), "passed": passed, "pass_pct": round(pass_pct, 1), "overall_right": round(overall, 4),
            "sure_arrows": int(is_sure.sum()), "worst": worst, "verdict": "PASS" if ok else "FAIL", "rows": rows}
     RESULTS.mkdir(parents=True, exist_ok=True)
-    (RESULTS / f"{code}_{timeframe}{tag}_stress.json").write_text(json.dumps(res, indent=1, default=float))
+    (RESULTS / f"{code}_{timeframe}{tag}{'_pooled' if folder else ''}_stress.json").write_text(json.dumps(res, indent=1, default=float))
     if not quiet:
         print(f"\n🧪 {res['model']} · sure ≥{sure:.0%} · {df.index[keep][0]:%b %Y} → {df.index[keep][-1]:%b %Y} (unseen)")
         for r in rows:

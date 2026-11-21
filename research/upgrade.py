@@ -69,7 +69,8 @@ def tests(index: pd.DatetimeIndex):
     return out + [("2025→now", HOLDOUT_START, index[-1] + pd.Timedelta(days=1))]
 
 
-def run(timeframe: str, markets: list[str], horizon: int = 2, barrier: float = 0.5, pooled: bool = True) -> dict:
+def run(timeframe: str, markets: list[str], horizon: int = 2, barrier: float = 0.5, pooled: bool = True,
+        only: list[str] | None = None, pool_drop: tuple = ()) -> dict:
     data = {}
     for code in markets if not pooled else COINS:
         print(f"📚 loading {code} {timeframe}…", flush=True)
@@ -78,6 +79,8 @@ def run(timeframe: str, markets: list[str], horizon: int = 2, barrier: float = 0
     for code in markets:
         M, y = data[code]
         ideas = ["base", "+bigger", "+futures"] + (["+btc"] if code != "BTC" else []) + ["all", "all+tuned"]
+        if only is not None:
+            ideas = [i for i in ideas if i in only]
         for tname, ts, te_ in tests(M.index):
             tr = (M.index < ts - pd.Timedelta(days=1)) & y.notna().to_numpy()
             te = (M.index >= ts) & (M.index < te_) & y.notna().to_numpy()
@@ -91,7 +94,7 @@ def run(timeframe: str, markets: list[str], horizon: int = 2, barrier: float = 0
                 parts = []
                 for c2, (M2, y2) in data.items():
                     m2 = (M2.index < ts - pd.Timedelta(days=1)) & y2.notna().to_numpy()
-                    part = M2.loc[m2].reindex(columns=M.columns).copy()
+                    part = M2.loc[m2].reindex(columns=[c for c in M.columns if c not in pool_drop]).copy()
                     for c3 in COINS:
                         part[f"coin_{c3}"] = float(c2 == c3)
                     parts.append((part, y2[m2].astype(int)))
@@ -106,7 +109,7 @@ def run(timeframe: str, markets: list[str], horizon: int = 2, barrier: float = 0
                 if tname in v and v[tname]["sure_right"] is not None), flush=True)
     RESULTS.mkdir(parents=True, exist_ok=True)
     out = {"timeframe": timeframe, "horizon": horizon, "barrier": barrier, "results": results}
-    (RESULTS / f"upgrade_{timeframe}_h{horizon}_{'-'.join(markets)}.json").write_text(json.dumps(out, indent=1))
+    (RESULTS / f"upgrade_{timeframe}_h{horizon}_{'-'.join(markets)}{'_nofut' if pool_drop else ''}.json").write_text(json.dumps(out, indent=1))
     print(f"\n📊 {timeframe} · next {horizon} candles · right when ≥55% sure (share of candles with such an arrow)")
     for code, ideas in results.items():
         print(f"  {code}")
@@ -124,5 +127,8 @@ if __name__ == "__main__":
     ap.add_argument("--horizon", type=int, default=2)
     ap.add_argument("--barrier", type=float, default=0.5)
     ap.add_argument("--no-pooled", action="store_true")
+    ap.add_argument("--only", nargs="*", help="only these ideas (besides pooled), e.g. --only base")
+    ap.add_argument("--pool-no-futures", action="store_true", help="pooled model without futures inputs (as used live in the US)")
     a = ap.parse_args()
-    run(a.timeframe, [m.upper() for m in a.markets], a.horizon, a.barrier, pooled=not a.no_pooled)
+    run(a.timeframe, [m.upper() for m in a.markets], a.horizon, a.barrier, pooled=not a.no_pooled, only=a.only,
+        pool_drop=tuple(FUT_COLS) if a.pool_no_futures else ())

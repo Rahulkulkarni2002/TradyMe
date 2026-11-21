@@ -24,9 +24,10 @@ COLS = ["btc_ret1", "btc_ret3", "btc_ret12", "btc_rsi", "btc_dist21", "btc_slope
         "rel_ret3", "rel_ret12", "btc_corr48"]
 
 
-def build(df: pd.DataFrame, timeframe: str) -> pd.DataFrame:
-    """df = the coin's candles. Returns Bitcoin clues aligned to the same candles (both candles closed together)."""
-    b = features.candles(store.load_prices("BTC"), timeframe).reindex(df.index)
+def build(df: pd.DataFrame, timeframe: str, btc: pd.DataFrame | None = None) -> pd.DataFrame:
+    """df = the coin's candles. Returns Bitcoin clues aligned to the same candles (both candles closed together).
+    btc = Bitcoin's candles at the same size (live app); by default from the downloaded history."""
+    b = (btc if btc is not None else features.candles(store.load_prices("BTC"), timeframe)).reindex(df.index)
     c, cb = df["close"], b["close"]
     atr_b = ta.atr(b, 14) / cb                                    # Bitcoin's normal move, in %
     atr_c = ta.atr(df, 14) / c
@@ -43,6 +44,20 @@ def build(df: pd.DataFrame, timeframe: str) -> pd.DataFrame:
         f[f"rel_ret{n}"] = (c / c.shift(n) - 1) / atr_c - f[f"btc_ret{n}"]
     f["btc_corr48"] = c.pct_change().rolling(48).corr(cb.pct_change())
     return f.replace([np.inf, -np.inf], np.nan).astype("float32")
+
+
+COINS = ["BTC", "ETH", "SOL", "XRP"]
+
+
+def pooled_inputs(M: pd.DataFrame, code: str, df: pd.DataFrame, timeframe: str, columns: list[str],
+                  btc: pd.DataFrame | None = None) -> pd.DataFrame:
+    """Extra inputs a ONE-MODEL-FOR-ALL-COINS model needs: which coin this is, and Bitcoin's clues."""
+    if not any(c.startswith("coin_") for c in columns):
+        return M
+    extra = pd.DataFrame({f"coin_{c}": float(code == c) for c in COINS}, index=M.index)
+    if code != "BTC" and any(c in columns for c in COLS):
+        extra = pd.concat([extra, build(df, timeframe, btc).reindex(M.index)], axis=1)
+    return pd.concat([M, extra], axis=1)
 
 
 def run(code: str, timeframe: str, horizon: int = 2, barrier: float = 0.5, years=(2023, 2024)) -> dict:

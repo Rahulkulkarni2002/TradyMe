@@ -84,6 +84,24 @@ def _with_mtf(bundle, market: Market, timeframe: str, df, X):
     return pd.concat([X, F], axis=1)
 
 
+def _pooled(bundle, market: Market, timeframe: str, df, M):
+    """ONE-model-for-all-coins: add which coin this is, and Bitcoin's clues (from live Bitcoin candles)."""
+    if not bundle or not bundle.get("pooled"):
+        return M
+    from research import btc_lead
+    btc = None
+    if market.code != "BTC":
+        try:
+            from engine.markets import get_market
+            btc = get_candles(get_market("BTC"), timeframe, bars=len(df) + 50)
+        except Exception:
+            btc = None
+    if btc is None and market.code != "BTC":
+        return btc_lead.pooled_inputs(M, market.code, df, timeframe, [c for c in bundle["columns"]
+                                                                       if c not in btc_lead.COLS])
+    return btc_lead.pooled_inputs(M, market.code, df, timeframe, bundle["columns"], btc=btc)
+
+
 def available_models() -> list[str]:
     return sorted(p.stem for p in MODELS.glob("*.joblib"))
 
@@ -125,7 +143,7 @@ def verdict(market: Market, timeframe: str) -> dict:
         fb, X = _with_futures(market, timeframe, tuple(TAGS), df, X)
         bundle = fb or bundle
         X = _with_mtf(bundle, market, timeframe, df, X)
-        M = model_inputs(V, A, X).reindex(columns=bundle["columns"])
+        M = _pooled(bundle, market, timeframe, df, model_inputs(V, A, X)).reindex(columns=bundle["columns"])
         p_up = float(bundle["model"].predict_proba(M.iloc[[-1]])[:, 1][0])
         model = {"available": True, "p_up": p_up,
                  "horizon_hours": bundle.get("horizon_hours", HORIZON_HOURS.get((timeframe, bundle["tag"]), 2)),
@@ -203,7 +221,7 @@ def model_markers(market: Market, timeframe: str, bars: int = 300, threshold: fl
     fb, X = _with_futures(market, timeframe, (f"_{horizon}",) if short else tuple(TAGS), df, X)
     bundle = fb or bundle
     X = _with_mtf(bundle, market, timeframe, df, X)
-    M_all = model_inputs(V, A, X).reindex(columns=bundle["columns"])
+    M_all = _pooled(bundle, market, timeframe, df, model_inputs(V, A, X)).reindex(columns=bundle["columns"])
     p_all = bundle["model"].predict_proba(M_all)[:, 1]          # all ~900 candles: for the target statistics
     M, p = M_all.iloc[-bars:], p_all[-bars:]
     side = np.where(p >= threshold, 1, np.where(p <= 1 - threshold, -1, 0))
