@@ -717,5 +717,6 @@
    "counts": true,
    "beats_coin": false
   }
- ]
+ ],
+ "pooled_now": true
 }
