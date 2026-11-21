@@ -93,12 +93,41 @@ def run(code: str, timeframe: str) -> dict:
     return out
 
 
+def by_year(code: str, timeframe: str, long_only: bool = True) -> None:
+    """Every year since 2015: strategy vs simply buying and holding (does it only win when the price rises?)."""
+    df = features.candles(store.load_prices(code), timeframe)
+    m = get_market(code)
+    cost = (m.fee_bps + m.slippage_bps) / 10_000
+    t = flip_trades(df, supertrend(df), cost, long_only)
+    print(f"\n📅 Supertrend (10, 3) {'long only' if long_only else 'long + short'} · {code} {timeframe} · year by year")
+    print(f"   {'year':<6}{'trades':>7}{'strategy':>11}{'buy & hold':>12}   better?")
+    wins = 0; years = 0
+    for y in sorted(set(df.index.year)):
+        d = df[df.index.year == y]
+        if len(d) < 50:
+            continue
+        ty = t[pd.DatetimeIndex(t["time"]).year == y] if len(t) else t
+        strat = float(np.prod(1 + ty["ret"]) - 1) * 100 if len(ty) else 0.0
+        bh = float(d["close"].iloc[-1] / d["close"].iloc[0] - 1) * 100
+        better = strat > bh
+        years += 1; wins += better
+        print(f"   {y:<6}{len(ty):>7}{strat:>+10.1f}%{bh:>+11.1f}%   {'✅' if better else '❌'}{'  (made money)' if strat > 0 else '  (lost money)'}")
+    print(f"   → beat buy-and-hold in {wins} of {years} years", flush=True)
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--strategy", default="supertrend", choices=["supertrend"])
     ap.add_argument("--markets", nargs="+", default=["BTC", "ETH", "SOL", "XRP"])
     ap.add_argument("--timeframes", nargs="+", default=["15m", "1h", "3h"])
+    ap.add_argument("--by-year", action="store_true", help="every year since 2015 vs buy-and-hold")
+    ap.add_argument("--long-short", action="store_true", help="with --by-year: long + short instead of long only")
     a = ap.parse_args()
+    if a.by_year:
+        for tf in a.timeframes:
+            for mk in a.markets:
+                by_year(mk.upper(), tf, long_only=not a.long_short)
+        raise SystemExit(0)
     for tf in a.timeframes:
         for mk in a.markets:
             try:
