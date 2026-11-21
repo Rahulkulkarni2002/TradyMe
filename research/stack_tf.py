@@ -70,8 +70,11 @@ def run(code: str, short_tf: str) -> dict:
     extra["big_agree"] = np.sign(extra["big_1h_p"] - 0.5) * np.sign(extra["big_3h_p"] - 0.5)
     M1 = pd.concat([M0, extra], axis=1)
     y = lab["label"]
-    start = pd.Timestamp("2019-06-01", tz="UTC")                       # big predictions exist from 2019
+    first = max(extra["big_1h_p"].first_valid_index(), extra["big_3h_p"].first_valid_index())
+    start = max(pd.Timestamp("2019-06-01", tz="UTC"), first)          # only where big predictions exist
     tr = (M0.index >= start) & (M0.index < HOLDOUT_START - pd.Timedelta(days=1)) & y.notna().to_numpy()
+    empty = [c for c in M1.columns if M1.loc[tr, c].notna().sum() == 0]   # e.g. data that starts later
+    M0, M1 = M0.drop(columns=[c for c in empty if c in M0]), M1.drop(columns=empty)
     out = {"market": code, "short": short_tf, "tests": {}}
     models = {k: new_model().fit(M[tr], y[tr].astype(int)) for k, M in (("without", M0), ("with big picture", M1))}
     for name, a, b in (("2025", "2025-01-01", "2026-01-01"), ("2026", "2026-01-01", None)):
