@@ -39,6 +39,9 @@ from engine.strategies.library import FAMILIES as _FAM, INFO as _LIB  # noqa: E4
 STRATEGY_INFO = {
     "ema_rsi": {"label": "🏄 Trend Rider", "kid": "Waits for the price to start a new wave in the direction of the big trend, then rides it."},
     "bb_reversion": {"label": "🏀 Bounce Trader", "kid": "When the price stretches too far from normal, it bets on it bouncing back to the middle."},
+    "supertrend_kivanc": {"label": "📈 SuperTrend (TradingView, KivancOzbilgic)",
+                          "kid": "BUY when the SuperTrend line turns green, SELL when it turns red. Tested with real costs: "
+                                 "lost money on crypto in 2025 and 2026 — practise only."},
 }
 STRATEGY_INFO.update({f"lib_{k}": {"label": f"{_FAM[f].split()[0]} {n}", "kid": kid, "family": f}
                       for k, (n, f, kid) in _LIB.items()})

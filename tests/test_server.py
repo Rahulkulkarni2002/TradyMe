@@ -99,7 +99,7 @@ def test_library_strategy_selectable(client):
     c, _ = client
     codes = {s["code"] for s in c.get("/api/meta").json()["strategies"]}
     from engine.strategies.library import INFO
-    assert "lib_bollinger_squeeze" in codes and "lib_cdl_morning_evening_star" in codes and len(codes) == len(INFO) + 2
+    assert "lib_bollinger_squeeze" in codes and "lib_cdl_morning_evening_star" in codes and len(codes) == len(INFO) + 3          # + Trend Rider, Bounce Trader, SuperTrend
     r = c.post("/api/backtest", json={"market": "BTC", "timeframe": "1h", "strategy": "lib_bollinger_squeeze", "days": 120})
     assert r.status_code == 200 and len(r.json()["exams"]) == 5
 
@@ -190,3 +190,11 @@ def test_trades_use_the_live_price(monkeypatch):
     monkeypatch.setattr(acc_mod.Account, "live_price", staticmethod(lambda code: 101.5))
     close_, high, low = acc_mod.Account.last_price("GOLD", since=(idx[-1] + pd.Timedelta(minutes=6)).isoformat())
     assert close_ == high == low == 101.5
+
+
+def test_supertrend_strategy_selectable(client):
+    c, _ = client
+    codes = {s["code"] for s in c.get("/api/meta").json()["strategies"]}
+    assert "supertrend_kivanc" in codes
+    r = c.post("/api/backtest", json={"market": "BTC", "timeframe": "1h", "strategy": "supertrend_kivanc", "days": 120})
+    assert r.status_code == 200
