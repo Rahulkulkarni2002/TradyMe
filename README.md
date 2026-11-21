@@ -1,5 +1,7 @@
 # 📈 TradyMe
 
+> **Educational project, not financial advice. Paper trading only by default.**
+
 **An intraday trading assistant for crypto, gold and forex, powered by machine learning.**
 It predicts whether price goes up or down, puts BUY ▲ / SELL ▼ arrows on the chart, shows where price
 went after similar past patterns, and lets you practise trades with paper money in a TradingView-style screen.
