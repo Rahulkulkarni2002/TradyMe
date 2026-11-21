@@ -38,7 +38,7 @@ def big_predictions(code: str, tf: str) -> pd.Series:
     for a, b in zip(cuts[:-1], cuts[1:]):
         tr = (M.index < a - pd.Timedelta(days=1)) & y.notna().to_numpy()
         te = (M.index >= a) & (M.index < b)
-        if tr.sum() < 2000 or te.sum() == 0:
+        if tr.sum() < 500 or te.sum() == 0:            # 3h: few candles have a clear move
             continue
         p[te] = new_model().fit(M[tr], y[tr].astype(int)).predict_proba(M[te])[:, 1]
     p.index = (p.index + pd.Timedelta(seconds=tf_seconds(tf))).as_unit("ns")      # known only after the close
