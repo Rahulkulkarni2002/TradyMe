@@ -7,3 +7,5 @@ venv/
 .pytest_cache/
 reports/
 .DS_Store
+research/models/pooled/
+research/models/replaced/
