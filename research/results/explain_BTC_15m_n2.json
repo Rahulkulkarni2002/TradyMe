@@ -1,0 +1,125 @@
+{
+ "model": "BTC_15m_n2",
+ "rows": [
+  {
+   "input": "williams_r",
+   "name": "williams_r",
+   "importance": 0.0032962049554440633,
+   "low_value": -1.0,
+   "p_up_low": 0.44386453162201744,
+   "high_value": 1.0,
+   "p_up_high": 0.5341041568945603,
+   "tips_at": 0.1394918514940987
+  },
+  {
+   "input": "lower_wick",
+   "name": "Lower wick share",
+   "importance": 0.003020928916564506,
+   "low_value": 0.0,
+   "p_up_low": 0.554352190516799,
+   "high_value": 0.7914131752308884,
+   "p_up_high": 0.4371229057669803,
+   "tips_at": 0.17450358966418317
+  },
+  {
+   "input": "heikin_ashi",
+   "name": "heikin_ashi",
+   "importance": 0.0018463860357915696,
+   "low_value": -1.0,
+   "p_up_low": 0.5039476430481153,
+   "high_value": 1.0,
+   "p_up_high": 0.4814303222839461,
+   "tips_at": -0.7234456943052194
+  },
+  {
+   "input": "x4_body",
+   "name": "x4_body",
+   "importance": 0.001581871275459612,
+   "low_value": -1.5208313608169555,
+   "p_up_low": 0.499185634092657,
+   "high_value": 1.4088872861862185,
+   "p_up_high": 0.4957677575383158,
+   "tips_at": -1.0143791519032297
+  },
+  {
+   "input": "rsi2_connors",
+   "name": "rsi2_connors",
+   "importance": 0.0008020486247304337,
+   "low_value": -1.0,
+   "p_up_low": 0.4858692706667432,
+   "high_value": 1.0,
+   "p_up_high": 0.5098428962233345,
+   "tips_at": 0.46556476770993055
+  },
+  {
+   "input": "rsi_50",
+   "name": "rsi_50",
+   "importance": 0.0007812361520005048,
+   "low_value": -1.0,
+   "p_up_low": 0.49494576509467225,
+   "high_value": 1.0,
+   "p_up_high": 0.4882390645040725,
+   "tips_at": null
+  },
+  {
+   "input": "vol_z",
+   "name": "Volume vs normal (z)",
+   "importance": 0.0007292133044993395,
+   "low_value": -1.8617426435517395,
+   "p_up_low": 0.492508483524742,
+   "high_value": 2.4276649050331605,
+   "p_up_high": 0.4958865548481555,
+   "tips_at": null
+  },
+  {
+   "input": "x16_body",
+   "name": "x16_body",
+   "importance": 0.0006422529727423409,
+   "low_value": -1.5507838726043701,
+   "p_up_low": 0.49442143107576647,
+   "high_value": 1.3869802951812744,
+   "p_up_high": 0.4899411756610092,
+   "tips_at": null
+  },
+  {
+   "input": "x16_ret4",
+   "name": "x16_ret4",
+   "importance": 0.0005950873689969013,
+   "low_value": -2.6875064373016357,
+   "p_up_low": 0.4815092559004666,
+   "high_value": 2.9552459716796875,
+   "p_up_high": 0.503342105569157,
+   "tips_at": 2.137279632247794
+  },
+  {
+   "input": "ret_96",
+   "name": "ret_96",
+   "importance": 0.0005458315169091602,
+   "low_value": -13.721188293033483,
+   "p_up_low": 0.4960598154613851,
+   "high_value": 14.93200063349952,
+   "p_up_high": 0.49079573878410593,
+   "tips_at": null
+  },
+  {
+   "input": "weekend",
+   "name": "weekend",
+   "importance": 0.0005158046160797328,
+   "low_value": 0.0,
+   "p_up_low": 0.49213559960538233,
+   "high_value": 1.0,
+   "p_up_high": 0.4921865992209834,
+   "tips_at": null
+  },
+  {
+   "input": "x4_ret4",
+   "name": "x4_ret4",
+   "importance": 0.00044920003612295795,
+   "low_value": -2.8351251554489134,
+   "p_up_low": 0.4698647040467762,
+   "high_value": 2.775763216018678,
+   "p_up_high": 0.49339768161336306,
+   "tips_at": null
+  }
+ ]
+}
