@@ -94,7 +94,27 @@ Download history (2015 → today), Mac plugged in: `caffeinate -i python downloa
 - 📈 **Indicators menu** (EMAs, Bollinger, VWAP, Supertrend, Donchian, Volume, RSI, MACD, Stochastic, ATR) —
   first version; **I'm not happy with it yet, we'll improve it later.**
 
+### 2026-11-13 → 2026-11-23
+- **100-situation test:** every model and every strategy is checked on 100 slices of 2025 → now (each month,
+  weekday, session, calm/wild, rising/falling market, random 2-week windows). Needs ≥ 80% won to PASS.
+- **One model for all 4 coins** (BTC, ETH, SOL, XRP learn together): about 45 crypto charts got a better model
+  (+1–2 points). Tried and dropped: Bitcoin as a clue, futures for ETH/SOL/XRP, bigger candles, tuned model.
+- **Honest trading tests (real costs, 2026 as final exam):** my own "TradyMe Trend" strategy lost money; trading
+  only the model's sure signals lost money on crypto (fees too big) and on gold/forex in 2026. The 63–71% "right"
+  for gold/forex was the model's exam score, NOT trade profit (trades were right only ~40–55%).
+- **SuperTrend (TradingView, KivancOzbilgic, 10 / 3)** added as a strategy. Results:
+  - Crypto: FAILS everywhere (lost 38–100% since Jan 2025, made money in only 0–33% of situations).
+  - Forex: fails (mostly sideways → too many flips).
+  - ⭐ **Gold 3-hour, buy only: PASSED** — made money in 12 of 12 situations, +68.8% since Jan 2025.
+    Year by year 2015 → 2026: **made money in 10 of 12 years** (worst year −4.7%); total ≈ +222% vs buy & hold
+    ≈ +220%. Same profit as holding gold, but it **steps aside when gold falls** (2026: gold −10.9%, strategy
+    +6.1%). About 2 trades a week. → **Best strategy found so far. Paper-trade 1–2 months before real money.**
+  - Run: `python -m research.tv_strategies --by-year --markets GOLD --timeframes 3h`
+    and `python -m research.strategy_stress --markets GOLD`.
+
 ## ⏭️ Next steps
+- [ ] Paper-trade SuperTrend on Gold 3h for 1–2 months (alert / auto paper trader)
+- [ ] Keep sending TradingView strategies → each one gets the 100-situation + year-by-year test
 - [ ] History download finishes on my Mac
 - [x] Strategy library (46) → votes → combined model % → Strategy League
 - [x] Website: Reveal button, colour verdict, all votes
