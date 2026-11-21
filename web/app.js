@@ -190,7 +190,14 @@ function setupFilters() {
   paintTf();
   $$("#f-tf button").forEach((b) => b.addEventListener("click", async () => { await saveSettings({ timeframe: b.dataset.v }); paintTf(); loadSuggestion(); }));
   $("#f-market").addEventListener("change", async (e) => { await saveSettings({ market: e.target.value }); loadSuggestion(); });
-  $("#f-strategy").addEventListener("change", async (e) => { await saveSettings({ strategy: e.target.value }); loadSuggestion(); });
+  $("#f-strategy").addEventListener("change", async (e) => {
+    await saveSettings({ strategy: e.target.value });
+    arrowSource = "strategy"; try { localStorage.setItem("arrowSource", "strategy"); } catch {}   // show THIS strategy's arrows
+    paintArrowSwitch();
+    const name = META.strategies.find((x) => x.code === e.target.value)?.label || e.target.value;
+    toast(`📈 Chart now shows ${name} arrows (▲ buy · ▼ sell). Back to the model: More ▾ → Arrows: Model`, 6000);
+    loadSuggestion();
+  });
 }
 
 // ───────────────────────── 🔮 all-strategy verdict ─────────────────────────
@@ -751,7 +758,7 @@ function applyMarkers() {
   if (ts) {
     const votes = useModel && modelMarkers.source === "strategies";
     ts.textContent = sc && sc.wins + sc.losses
-      ? `${!useModel ? "Strategy arrows" : votes ? "⚠️ No model here — strategy-vote arrows (weak)" : `Model arrows (next ${modelMarkers.short || modelMarkers.every ? modelMarkers.candles + " candles" : "~" + modelMarkers.horizon_hours + " h"})`}: ${sc.wins} right · ${sc.losses} wrong (${Math.round(100 * sc.wins / (sc.wins + sc.losses))}%)` : "";
+      ? `${!useModel ? `${META.strategies.find((x) => x.code === SETTINGS.strategy)?.label || "Strategy"} arrows` : votes ? "⚠️ No model here — strategy-vote arrows (weak)" : `Model arrows (next ${modelMarkers.short || modelMarkers.every ? modelMarkers.candles + " candles" : "~" + modelMarkers.horizon_hours + " h"})`}: ${sc.wins} right · ${sc.losses} wrong (${Math.round(100 * sc.wins / (sc.wins + sc.losses))}%)` : "";
     ts.title = votes ? "No prediction model for this market & candle size yet, so these arrows are the 71 strategies' combined vote. "
       + "That is not a probability and has tested close to a coin flip. Train the model: python train_models.py" : "";
   }
