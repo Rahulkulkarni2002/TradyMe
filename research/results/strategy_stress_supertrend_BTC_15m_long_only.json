@@ -1,0 +1,714 @@
+{
+ "strategy": "supertrend",
+ "mode": "long only",
+ "market": "BTC",
+ "timeframe": "15m",
+ "trades": 840,
+ "overall_pct": -99.05044811619142,
+ "counted": 100,
+ "won": 2,
+ "won_pct": 2.0,
+ "verdict": "FAIL",
+ "rows": [
+  {
+   "situation": "month 2025-01",
+   "trades": 36,
+   "total_pct": -16.5312411713488,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "month 2025-02",
+   "trades": 34,
+   "total_pct": -23.726908572982254,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "month 2025-03",
+   "trades": 37,
+   "total_pct": -16.06507919146587,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "month 2025-04",
+   "trades": 33,
+   "total_pct": -6.544494425075875,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "month 2025-05",
+   "trades": 41,
+   "total_pct": -21.583005695860102,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "month 2025-06",
+   "trades": 43,
+   "total_pct": -21.6895853773307,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "month 2025-07",
+   "trades": 46,
+   "total_pct": -24.20592633323132,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "month 2025-08",
+   "trades": 40,
+   "total_pct": -22.290722813982168,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "month 2025-09",
+   "trades": 41,
+   "total_pct": -14.425952567124344,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "month 2025-10",
+   "trades": 38,
+   "total_pct": -19.29487002087793,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "month 2025-11",
+   "trades": 38,
+   "total_pct": -25.636873063009812,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "month 2025-12",
+   "trades": 38,
+   "total_pct": -19.875050121615367,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "month 2026-01",
+   "trades": 36,
+   "total_pct": -21.800982360637843,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "month 2026-02",
+   "trades": 28,
+   "total_pct": -11.115996549822793,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "month 2026-03",
+   "trades": 36,
+   "total_pct": -21.57352761711303,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "month 2026-04",
+   "trades": 34,
+   "total_pct": -7.661069140175414,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "month 2026-05",
+   "trades": 37,
+   "total_pct": -23.625649652727677,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "month 2026-06",
+   "trades": 37,
+   "total_pct": -31.861826619382725,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "month 2026-07",
+   "trades": 42,
+   "total_pct": -21.590157172333303,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "month 2026-08",
+   "trades": 39,
+   "total_pct": -2.298255497180546,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "month 2026-09",
+   "trades": 36,
+   "total_pct": -13.578132801263854,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "month 2026-10",
+   "trades": 36,
+   "total_pct": -18.203194381523836,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "month 2026-11",
+   "trades": 14,
+   "total_pct": -9.941227931330909,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "weekday Mon",
+   "trades": 128,
+   "total_pct": -55.25788381009329,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "weekday Tue",
+   "trades": 129,
+   "total_pct": -46.390622297570175,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "weekday Wed",
+   "trades": 123,
+   "total_pct": -45.16741369698585,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "weekday Thu",
+   "trades": 109,
+   "total_pct": -55.09667766530448,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "weekday Fri",
+   "trades": 107,
+   "total_pct": -48.89790565830242,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "weekday Sat",
+   "trades": 104,
+   "total_pct": -44.03395400667585,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "weekday Sun",
+   "trades": 140,
+   "total_pct": -43.78128921003908,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "session Asia",
+   "trades": 221,
+   "total_pct": -67.76261533392379,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "session London",
+   "trades": 170,
+   "total_pct": -59.84962605595692,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "session London+NY",
+   "trades": 222,
+   "total_pct": -73.53219546658187,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "session New York",
+   "trades": 133,
+   "total_pct": -50.89909865602231,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "session late",
+   "trades": 94,
+   "total_pct": -43.55026329428785,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "hours 00-02 UTC",
+   "trades": 67,
+   "total_pct": -20.141335888566037,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "hours 02-04 UTC",
+   "trades": 64,
+   "total_pct": -26.35768064449421,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "hours 04-06 UTC",
+   "trades": 65,
+   "total_pct": -34.9893638095522,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "hours 06-08 UTC",
+   "trades": 56,
+   "total_pct": -26.597492272600697,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "hours 08-10 UTC",
+   "trades": 75,
+   "total_pct": -29.389890472713088,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "hours 10-12 UTC",
+   "trades": 64,
+   "total_pct": -34.68127510314284,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "hours 12-14 UTC",
+   "trades": 100,
+   "total_pct": -46.70462744348508,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "hours 14-16 UTC",
+   "trades": 122,
+   "total_pct": -50.337518505285914,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "hours 16-18 UTC",
+   "trades": 61,
+   "total_pct": -19.290034207862984,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "hours 18-20 UTC",
+   "trades": 44,
+   "total_pct": -30.192314775236774,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "hours 20-22 UTC",
+   "trades": 68,
+   "total_pct": -26.9767754211803,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "hours 22-24 UTC",
+   "trades": 54,
+   "total_pct": -32.63101908829805,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "calm market",
+   "trades": 289,
+   "total_pct": -72.7048492632147,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "normal market",
+   "trades": 270,
+   "total_pct": -81.85637180465616,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "wild market",
+   "trades": 281,
+   "total_pct": -80.82616149782615,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "falling market",
+   "trades": 88,
+   "total_pct": -31.677156068130795,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "flat market",
+   "trades": 515,
+   "total_pct": -94.89687669875205,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "rising market",
+   "trades": 237,
+   "total_pct": -72.76566957324555,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "quiet volume",
+   "trades": 380,
+   "total_pct": -88.6810278719621,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "busy volume",
+   "trades": 460,
+   "total_pct": -91.61097073950309,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "falling + calm",
+   "trades": 19,
+   "total_pct": 10.668531209026156,
+   "counts": true,
+   "won": true
+  },
+  {
+   "situation": "falling + normal",
+   "trades": 20,
+   "total_pct": -10.662448325405672,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "falling + wild",
+   "trades": 49,
+   "total_pct": -30.89527498034892,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "flat + calm",
+   "trades": 171,
+   "total_pct": -56.45868264636695,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "flat + normal",
+   "trades": 179,
+   "total_pct": -70.28798309368489,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "flat + wild",
+   "trades": 165,
+   "total_pct": -60.55405510003292,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "rising + calm",
+   "trades": 99,
+   "total_pct": -43.35523408637538,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "rising + normal",
+   "trades": 71,
+   "total_pct": -31.646940607402552,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "rising + wild",
+   "trades": 67,
+   "total_pct": -29.660551619261167,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "random 2 weeks from 20 Feb 2026",
+   "trades": 15,
+   "total_pct": -3.071798432124706,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "random 2 weeks from 19 Aug 2026",
+   "trades": 14,
+   "total_pct": -8.381001977322756,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "random 2 weeks from 31 May 2026",
+   "trades": 20,
+   "total_pct": -24.70508255055429,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "random 2 weeks from 30 May 2025",
+   "trades": 20,
+   "total_pct": -11.25182915379841,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "random 2 weeks from 19 Jul 2025",
+   "trades": 20,
+   "total_pct": -15.70264715930435,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "random 2 weeks from 04 Aug 2026",
+   "trades": 22,
+   "total_pct": -11.338400457224084,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "random 2 weeks from 04 Jan 2025",
+   "trades": 16,
+   "total_pct": -2.561187201010562,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "random 2 weeks from 30 Jun 2026",
+   "trades": 17,
+   "total_pct": -3.645742149548026,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "random 2 weeks from 14 Jun 2026",
+   "trades": 16,
+   "total_pct": -7.641440932810173,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "random 2 weeks from 07 Nov 2025",
+   "trades": 15,
+   "total_pct": -10.825432625385723,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "random 2 weeks from 21 Jul 2025",
+   "trades": 20,
+   "total_pct": -15.815141779201369,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "random 2 weeks from 04 Jul 2025",
+   "trades": 20,
+   "total_pct": -7.3489984697142186,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "random 2 weeks from 19 Jun 2025",
+   "trades": 21,
+   "total_pct": -10.292941419357081,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "random 2 weeks from 23 Oct 2025",
+   "trades": 18,
+   "total_pct": -11.927729759587724,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "random 2 weeks from 02 Dec 2025",
+   "trades": 15,
+   "total_pct": -5.256210738392896,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "random 2 weeks from 03 Jan 2026",
+   "trades": 16,
+   "total_pct": -6.188757144329104,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "random 2 weeks from 24 Oct 2026",
+   "trades": 20,
+   "total_pct": -13.753858743305326,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "random 2 weeks from 11 Jun 2026",
+   "trades": 18,
+   "total_pct": -9.58609039150583,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "random 2 weeks from 18 Feb 2026",
+   "trades": 17,
+   "total_pct": -4.451532276589598,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "random 2 weeks from 19 Oct 2026",
+   "trades": 18,
+   "total_pct": -11.7507193590769,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "random 2 weeks from 23 May 2025",
+   "trades": 18,
+   "total_pct": -11.199124951680561,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "random 2 weeks from 17 Apr 2025",
+   "trades": 16,
+   "total_pct": -2.0531087900798606,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "random 2 weeks from 11 Feb 2026",
+   "trades": 16,
+   "total_pct": -8.793729604012256,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "random 2 weeks from 30 Jan 2025",
+   "trades": 16,
+   "total_pct": -11.967599386706041,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "random 2 weeks from 24 Jan 2025",
+   "trades": 17,
+   "total_pct": -10.991964653819085,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "random 2 weeks from 08 Dec 2025",
+   "trades": 18,
+   "total_pct": -13.525033622243232,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "random 2 weeks from 06 Nov 2025",
+   "trades": 17,
+   "total_pct": -12.094237196560298,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "random 2 weeks from 01 Sep 2026",
+   "trades": 18,
+   "total_pct": -10.8701330489263,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "random 2 weeks from 22 Feb 2026",
+   "trades": 14,
+   "total_pct": -3.192381647542697,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "random 2 weeks from 08 Dec 2025",
+   "trades": 18,
+   "total_pct": -13.525033622243232,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "random 2 weeks from 26 Nov 2025",
+   "trades": 18,
+   "total_pct": -8.832144702020061,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "random 2 weeks from 14 Jun 2025",
+   "trades": 18,
+   "total_pct": -8.1229321702309,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "random 2 weeks from 08 Jan 2025",
+   "trades": 17,
+   "total_pct": -6.980731536423224,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "random 2 weeks from 08 May 2025",
+   "trades": 20,
+   "total_pct": -11.456750437909069,
+   "counts": true,
+   "won": false
+  },
+  {
+   "situation": "random 2 weeks from 05 Apr 2026",
+   "trades": 15,
+   "total_pct": 2.3047826008965044,
+   "counts": true,
+   "won": true
+  },
+  {
+   "situation": "random 2 weeks from 14 May 2025",
+   "trades": 18,
+   "total_pct": -8.847148984608621,
+   "counts": true,
+   "won": false
+  }
+ ]
+}
