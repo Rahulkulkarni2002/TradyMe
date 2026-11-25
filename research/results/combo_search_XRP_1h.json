@@ -1,0 +1,45 @@
+{
+ "market": "XRP",
+ "timeframe": "1h",
+ "tried": 154,
+ "passed_A": 2,
+ "checked": [
+  {
+   "rule": "EMA 50/200 cross",
+   "filter": "no filter",
+   "mode": "buy only",
+   "years_won": 6,
+   "years": 8,
+   "pre2025_total_pct": 117820.0663225965,
+   "y2025_pct": -51.30703089245557,
+   "y2026_pct": -43.05970909740067,
+   "situations_won": 21,
+   "situations": 94,
+   "trades_since_2025": 53,
+   "B": false,
+   "C": false,
+   "D": false
+  },
+  {
+   "rule": "EMA 50/200 cross",
+   "filter": "bigger Supertrend agrees",
+   "mode": "buy only",
+   "years_won": 6,
+   "years": 8,
+   "pre2025_total_pct": 112606.17216167327,
+   "y2025_pct": -51.524837140660615,
+   "y2026_pct": -29.535862681057857,
+   "situations_won": 22,
+   "situations": 91,
+   "trades_since_2025": 49,
+   "B": false,
+   "C": false,
+   "D": false
+  }
+ ],
+ "finalists": [],
+ "buy_hold": {
+  "2025": -11.638510270685353,
+  "2026": -39.92618323925314
+ }
+}

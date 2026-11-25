@@ -1,0 +1,29 @@
+{
+ "market": "SOL",
+ "timeframe": "15m",
+ "tried": 154,
+ "passed_A": 1,
+ "checked": [
+  {
+   "rule": "EMA 50/200 cross",
+   "filter": "no filter",
+   "mode": "buy only",
+   "years_won": 3,
+   "years": 4,
+   "pre2025_total_pct": 3462.5546551660577,
+   "y2025_pct": -61.973252424281654,
+   "y2026_pct": -42.39686244724142,
+   "situations_won": 28,
+   "situations": 100,
+   "trades_since_2025": 194,
+   "B": false,
+   "C": false,
+   "D": false
+  }
+ ],
+ "finalists": [],
+ "buy_hold": {
+  "2025": -34.08166499392531,
+  "2026": -30.560012836970472
+ }
+}

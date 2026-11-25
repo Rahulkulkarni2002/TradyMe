@@ -1,0 +1,12 @@
+{
+ "market": "ETH",
+ "timeframe": "15m",
+ "tried": 154,
+ "passed_A": 0,
+ "checked": [],
+ "finalists": [],
+ "buy_hold": {
+  "2025": -10.919233742187917,
+  "2026": -28.2516447091683
+ }
+}

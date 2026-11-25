@@ -1,0 +1,29 @@
+{
+ "market": "BTC",
+ "timeframe": "15m",
+ "tried": 154,
+ "passed_A": 1,
+ "checked": [
+  {
+   "rule": "EMA 50/200 cross",
+   "filter": "no filter",
+   "mode": "buy only",
+   "years_won": 7,
+   "years": 10,
+   "pre2025_total_pct": 340.15279574565767,
+   "y2025_pct": -63.009598811435254,
+   "y2026_pct": -35.6691269534455,
+   "situations_won": 22,
+   "situations": 100,
+   "trades_since_2025": 201,
+   "B": false,
+   "C": false,
+   "D": false
+  }
+ ],
+ "finalists": [],
+ "buy_hold": {
+  "2025": -6.29508634692656,
+  "2026": -14.190284091369366
+ }
+}
