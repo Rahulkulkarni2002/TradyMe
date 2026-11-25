@@ -26,7 +26,7 @@ went after similar past patterns, and lets you practise trades with paper money 
 | 📊 **TradingView-style chart** | Indicators (EMA, SMA, Bollinger, VWAP, Supertrend, Donchian, RSI, MACD, Stochastic, ATR, volume), drawing tools, full screen, dark/light themes. |
 | 📝 **Paper trading** | BUY or SELL any time. Drag stop/target lines on the chart, run several trades at once, close with ✕. Live prices from OANDA or the forming candle. |
 | 🤖 **Auto-trader** | Optional: opens and closes paper trades by itself from the predictions, with stop/target rules. |
-| 🧪 **Backtests** | 73 strategies (trend, reversal, breakout, candle and chart patterns) tested fairly year by year, with fees. |
+| 🧪 **Backtests** | 74 strategies (trend, reversal, breakout, candle and chart patterns) tested fairly year by year, with fees. |
 | 🛡️ **Safety** | Risk per trade, optional daily target / max loss, STOP ALL button, intraday close at your day-end time. |
 
 ---
@@ -40,9 +40,16 @@ went after similar past patterns, and lets you practise trades with paper money 
 | Bitcoin, 1 hour (next ~6 h) | ~56% |
 | Crypto, 5–15 min, "next 2 candles" | 52–55% |
 
+These are **prediction scores** (did price move the predicted way by a set amount?), **not trading profit**.
+Turned into real trades with a stop, a target and costs, most set-ups did **not** make money in 2026.
+The one strategy that passed every test so far: Supertrend (10, 3) on Gold, 3-hour candles, buy only
+(made money in 10 of 12 years, 2015 → 2026).
+
 **Tested and rejected** (no gain on unseen years): daily news, dollar-index features, "follow the bigger trend"
-filter, busy-hours-only filter, look-alike direction alone.
-**Tested and kept:** Bitcoin futures data (funding, open interest), bigger-candle context for short candles.
+filter, busy-hours-only filter, look-alike direction alone, bigger-timeframe predictions as inputs, other model
+types (random forest, XGBoost, LightGBM, neural network), weekly retraining.
+**Tested and kept:** Bitcoin futures data (funding, open interest), bigger-candle context for short candles,
+one model trained on all four coins together, a 100-situation test every model and strategy must pass.
 
 ---
 
@@ -120,7 +127,7 @@ If a key leaks, delete it in the Alpaca dashboard and generate a new one.
 
 ## 🧠 How a prediction is made
 
-1. **Features:** for each candle, ~100 numbers: trend, momentum, volatility, volume, candle shapes, what 73
+1. **Features:** for each candle, ~100 numbers: trend, momentum, volatility, volume, candle shapes, what 71
    strategies are saying, bigger-candle context and (for Bitcoin) futures data. Only data available *at that
    moment* is used. Tests check that nothing peeks into the future.
 2. **Labels:** did price move up or down by a set size (based on normal volatility) within the next N candles?
@@ -143,13 +150,13 @@ server/                 ← FastAPI web server + SQLite
 engine/                 ← the trading brain
   analysis.py             pre-scan, confidence, trap check, trade plan
   analogs.py              look-alike forecast
-  strategies/             73 strategies incl. chart patterns
+  strategies/             74 strategies incl. chart patterns
   data/                   Binance, OANDA (incl. live stream), Yahoo, futures
   backtest/  risk/  execution/
 research/               ← features, labels, model training, fair experiments, saved models
 web/                    ← the website (HTML/CSS/JS, TradingView Lightweight Charts)
 pine/                   ← TradingView Pine Script version of a strategy
-tests/                  ← 73 automated tests:  python -m pytest -q
+tests/                  ← 77 automated tests:  python -m pytest -q
 ```
 
 ---
