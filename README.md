@@ -18,7 +18,7 @@ went after similar past patterns, and lets you practise trades with paper money 
 
 | Feature | What you see |
 |---|---|
-| 🧠 **Prediction models** | Machine-learning models (gradient boosting) trained on ~10 years of candles per market and candle size. Each one gives "up X% / down Y%" for the next few candles or hours. |
+| 🧠 **Prediction models** | Machine-learning models (gradient boosting) trained on up to 11 years of candles (2015 → 2025; Solana from 2020) per market and candle size. Each one gives "up X% / down Y%" for the next few candles or hours. |
 | ▲▼ **Chart arrows** | An up/down arrow on every 2nd candle, for every market and candle size. Big arrows with a % mean the model is sure. A live score ("58 right · 77 wrong") is shown on the chart. |
 | 🔮 **Look-alike forecast** | Finds the most similar moments in history and draws the range price moved in afterwards (likely band, wide band, middle path), compared against a random-walk baseline. |
 | 🎯 **Trade plan** | Stop-loss and 3 targets as prices, each with "how often this was reached before". |
@@ -31,24 +31,39 @@ went after similar past patterns, and lets you practise trades with paper money 
 
 ---
 
-## 📏 Honest results (always on data the model had not learned from)
+## 📏 Honest results (crypto: tested on 2026 only)
 
-| Model | Right | Measured on |
-|---|---|---|
-| Crypto (BTC, ETH, SOL, XRP), 5–15 min, "next 2 candles", all predictions | 51–52% | Jan 2025 → Nov 2026, fully held out |
-| Same, only when the model is ≥ 55% sure | 52–53% | Jan 2025 → Nov 2026, fully held out |
-| Bitcoin, 1 hour (next ~6 h), all predictions / when ≥ 55% sure | 52% / 53% | Jan 2025 → Nov 2026, fully held out |
-| Forex (GBP/USD, USD/JPY), 5–15 min, "next 1–5 candles", all predictions | ~52% | 2019 → 2024, year-by-year exams* |
-| Same, only when the model is ≥ 65% sure | 64–71% | 2019 → 2024, year-by-year exams* |
-| Gold, 5 min, when the model is ≥ 65% sure | ~65% | 2019 → 2024, year-by-year exams* |
+Every crypto model learns from history up to the end of 2025 and is tested on **2026 only** (January → early
+November 2026), which is never used for learning or for choosing anything. 79 models, 4 coins.
 
-\* Year-by-year exam: the model learns up to the end of one year and is tested on the next year, repeated for
-each year; the score is the average. Every tested year was unseen by the model that predicted it, but this is
-**not** the 2025 → 2026 hold-out, and the forex and gold scores have not been re-measured there yet.
-The forex and gold models are trained locally and are not in this repository.
+| Candle size · what is predicted | Right, all predictions | Right when ≥ 55% sure | Passed the 100-situation test |
+|---|---|---|---|
+| 5 min · next 1–5 candles / next ~2 h | 50.6–51.7% | 50.6–53.8% | 11 of 19 |
+| 10 min · next 1–3 candles / next ~4 h | 50.0–51.4% | 50.1–53.4% | 1 of 13 |
+| 15 min · next 1–5 candles / next ~6 h | 49.6–52.1% | 49.8–53.7% | 3 of 15 |
+| 30 min · next 1–3 candles / next ~6 h | 49.4–51.6% | 48.2–53.3% | 0 of 10 |
+| 1 hour · next 1–5 candles | 49.4–52.3% | 47.4–53.2% | 0 of 10 |
+| 1 hour · big move in the next ~6 h | 52.0–53.5% | 51.8–56.0% | 0 of 4 |
+| 3 hours · next 2 candles | 48.7–52.8% | 50.4–54.8% | 0 of 4 |
+| 3 hours · big move in the next ~6 h | 54.5–57.4% | 58.8–60.0% | 2 of 4 |
+
+Passed: 10 of 23 Bitcoin models, 3 of 22 Ethereum, 2 of 16 Solana, 2 of 18 XRP. Most short-candle models are
+within 1–3 points of a coin flip. The 3-hour "big move" models score highest, but they only count moments when a
+big move happened, and each rests on about 350 confident predictions.
+
+**History used for learning:** Bitcoin and XRP from January 2015 (11 years), Ethereum from August 2015
+(10.4 years), Solana from August 2020 (5.4 years: it did not exist earlier). Ethereum before August 2017 and XRP
+before February 2017 come from other exchanges; for 2015 to early 2016 their dollar prices are calculated from
+their Bitcoin prices (`research/extend_history.py`).
+
+**Forex and gold** models are trained locally and are not in this repository. Their earlier scores (64–71% when
+≥ 65% sure, GBP/USD and USD/JPY, 5–15 min) came from year-by-year exams on 2019 → 2024 under the previous set-up
+and have **not** been re-measured on 2026 yet.
 
 These are **prediction scores** (did price move the predicted way by a set amount?), **not trading profit**.
-Turned into real trades with a stop, a target and costs, most set-ups did **not** make money in 2026.
+Turned into real trades with a stop, a target and costs, they did **not** make money in 2026: the four 3-hour
+"big move" crypto models lost money under all 9 trading rules tried with real costs (0.27% per side), and made
+money in 22 of 36 coin-and-rule combinations with costs set to zero.
 The one strategy that passed every test so far: Supertrend (10, 3) on Gold, 3-hour candles, buy only
 (made money in 10 of 12 years, 2015 → 2026).
 

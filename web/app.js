@@ -227,7 +227,7 @@ function renderVerdict(v) {
     const up = Math.round(v.model.p_up * 100);
     html += `<div class="pred-pct"><b>${Math.max(up, 100 - up)}%</b><span>${up >= 50 ? "up" : "down"} · next ~${v.model.horizon_hours} h</span></div></div>
       <div class="pred-bar"><div style="width:${up}%"></div></div>
-      <div class="pred-foot">Right ${Math.round(v.model.exam_accuracy * 1000) / 10}% on unseen years</div>`;
+      <div class="pred-foot">Right ${Math.round(v.model.exam_accuracy * 1000) / 10}% on ${v.model.exam_period ? "its " + v.model.exam_period + " exam" : "unseen years"}</div>`;
   } else {
     html += `</div><div class="pred-foot">No prediction model for this market & candle size yet.</div>`;
   }

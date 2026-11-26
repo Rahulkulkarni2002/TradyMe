@@ -4,12 +4,13 @@
     python -m research.sure_strategy --markets BTC --timeframes 1h
 
 Rules:
-  • BUY when the model says ≥ T% up, SELL when ≥ T% down (T = 60, 65 or 70)
+  • BUY when the model says ≥ T% up, SELL when ≥ T% down (T = 55, 60 or 65)
   • stop = 1.5 × normal move (ATR) away, target = R × the stop distance (R = 1, 1.5 or 2)
   • exit at stop, target, or when the model's look-ahead time is over. Stop and target in the same candle → stop.
   • one trade at a time, real costs of that market (spread + fees, both ways)
 
-Fair test: the model never saw 2025 or 2026. T and R are CHOSEN on 2025 only; 2026 is the final test, untouched.
+Fair test: the models learn up to the end of 2025; everything here is 2026 only. No rule is chosen — all nine
+combinations (T × R) are shown, with that market's real costs and without costs.
 """
 from __future__ import annotations
 
@@ -72,36 +73,27 @@ def run(code: str, timeframe: str, cost_bps: float | None = None) -> dict | None
     H = max(1, round(b["horizon_hours"] * 3600 / tf_seconds(timeframe)))
     df, X, V, lab = prepare(code, timeframe, H, b["barrier_atr"], futures=any(c.startswith("fund_") for c in b["columns"]),
                             mtf=any(c.startswith("x4_") for c in b["columns"]))
-    keep = df.index >= HOLDOUT_START
+    keep = df.index >= HOLDOUT_START                       # 2026 only: the model has never seen it
     M = btc_lead.pooled_inputs(model_inputs(V, agreement(V), X), code, df, timeframe, b["columns"]).reindex(columns=b["columns"])
     df, p = df[keep], b["model"].predict_proba(M[keep])[:, 1]
     m = get_market(code)
     cost = (m.fee_bps + m.slippage_bps if cost_bps is None else cost_bps) / 10_000
-    y25 = df.index < pd.Timestamp("2026-01-01", tz="UTC")
     rows = []
-    for T in (0.60, 0.65, 0.70):
+    for T in (0.55, 0.60, 0.65):
         for R in (1.0, 1.5, 2.0):
-            t = simulate(df, p, T, R, H, cost)
-            if t.empty:
-                continue
-            is25 = (t["time"] < pd.Timestamp("2026-01-01", tz="UTC")).to_numpy()
-            rows.append({"T": T, "R": R, "2025": stats(t[is25]), "2026": stats(t[~is25])})
-    if not rows:
-        print(f"⏭️  {code} {timeframe}: the model is never that sure")
-        return None
-    ok = [r for r in rows if r["2025"]["trades"] >= 20]
-    best = max(ok or rows, key=lambda r: r["2025"].get("avg_pct", -9))           # chosen on 2025 ONLY
-    s25, s26 = best["2025"], best["2026"]
-    print(f"\n💰 {code} {timeframe} ({path.stem}) · best rule on 2025: model ≥{best['T']:.0%} sure, target {best['R']}× stop")
-    for name, s in (("2025 (rule chosen)", s25), ("2026 (final test) ", s26)):
+            rows.append({"T": T, "R": R, "2026": stats(simulate(df, p, T, R, H, cost)),
+                         "2026_no_costs": stats(simulate(df, p, T, R, H, 0.0))})
+    made = sum(r["2026"].get("total_pct", -1) > 0 for r in rows)
+    made0 = sum(r["2026_no_costs"].get("total_pct", -1) > 0 for r in rows)
+    print(f"\n💰 {code} {timeframe} ({path.stem}) · 2026 only · cost {cost * 100:.3f}%/side · no rule is chosen, all 9 are shown")
+    for r in rows:
+        s, z = r["2026"], r["2026_no_costs"]
         if s["trades"]:
-            print(f"   {name}: {s['trades']:>4} trades · right {s['win_rate']:.0%} · avg {s['avg_pct']:+.3f}%/trade · "
-                  f"profit factor {s['profit_factor'] or 0:.2f} · total {s['total_pct']:+.1f}% · worst drop {s['max_drop_pct']:.1f}%")
-        else:
-            print(f"   {name}: no trades")
-    verdict = "✅ made money in 2026" if s26.get("trades", 0) >= 10 and s26["total_pct"] > 0 else "❌ not good enough in 2026"
-    print("   " + verdict, flush=True)
-    out = {"market": code, "timeframe": timeframe, "model": path.stem, "best": best, "all": rows, "verdict": verdict}
+            print(f"   ≥{r['T']:.0%} sure, target {r['R']}× stop: {s['trades']:>4} trades · right {s['win_rate']:.0%} · "
+                  f"total {s['total_pct']:+.1f}% (worst drop {s['max_drop_pct']:.0f}%) · without costs {z['total_pct']:+.1f}%")
+    verdict = f"made money in {made} of 9 rules with real costs, {made0} of 9 without costs"
+    print("   → " + verdict, flush=True)
+    out = {"market": code, "timeframe": timeframe, "model": path.stem, "test_period": "2026 only", "all": rows, "verdict": verdict}
     RESULTS.mkdir(parents=True, exist_ok=True)
     (RESULTS / f"sure_strategy_{code}_{timeframe}.json").write_text(json.dumps(out, indent=1, default=float))
     return out

@@ -148,7 +148,7 @@ def verdict(market: Market, timeframe: str) -> dict:
         model = {"available": True, "p_up": p_up,
                  "horizon_hours": bundle.get("horizon_hours", HORIZON_HOURS.get((timeframe, bundle["tag"]), 2)),
                  "exam_accuracy": bundle["exam_accuracy"], "exam_auc": bundle["exam_auc"],
-                 "trained_until": bundle["trained_until"], "uses_futures": bundle.get("tag", "").endswith("f")}
+                 "trained_until": bundle["trained_until"], "exam_period": bundle.get("exam_period"), "uses_futures": bundle.get("tag", "").endswith("f")}
     else:
         model["reason"] = (f"No prediction model for {market.name} on {timeframe} candles yet — showing strategy votes only. "
                            f"Models so far: Bitcoin, Ethereum, XRP, Solana on 15 min, 30 min, 1 hour and 3 hour candles.")
