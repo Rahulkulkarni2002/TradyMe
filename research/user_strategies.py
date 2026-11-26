@@ -105,7 +105,7 @@ def zone_levels(df: pd.DataFrame, indecision: np.ndarray, atr: np.ndarray, K: in
 
 
 def setups(df: pd.DataFrame, trend_rule: str = "structure", K: int = K, levels: str = "swings",
-           ma_trend: bool = False, min_score: int = 3) -> pd.DataFrame:
+           ma_trend: bool = False, min_score: int = 3, candle: str = "indecision") -> pd.DataFrame:
     """levels: "swings" = major swing levels · "zones" = scored zones (see zone_levels) ·
     "ma" = the EMA 20 / 50 / 200 lines · "both" = swings or moving averages.
     ma_trend: also require price on the trend's side of EMA 200 (below it for a down-trend, above for an up-trend)."""
@@ -118,7 +118,16 @@ def setups(df: pd.DataFrame, trend_rule: str = "structure", K: int = K, levels: 
     trending = adx >= 20
     trend = np.where(trending & (c > ema200) & (ema50 > ema200), 1, np.where(trending & (c < ema200) & (ema50 < ema200), -1, 0))
     rng, body = h - l, np.abs(c - o)
-    indecision = (rng >= 0.5 * atr) & (body <= 0.3 * rng) & np.isfinite(atr)
+    small_body = (rng >= 0.5 * atr) & (body <= 0.3 * rng) & np.isfinite(atr)       # doji, spinning top, high-wave …
+    # REJECTION candle (Rahul's chart examples): touches the level and is pushed away hard. At resistance: a RED
+    # candle that closes in the lowest 40% of its range (a big red body from the level, or a long wick up to it).
+    # At support the mirror image: a GREEN candle that closes in the top 40% of its range.
+    big_enough = (rng >= 0.5 * atr) & np.isfinite(atr)
+    rej_dn = big_enough & (c < o) & ((c - l) <= 0.4 * rng)
+    rej_up = big_enough & (c > o) & ((h - c) <= 0.4 * rng)
+    sell_c = {"indecision": small_body, "rejection": rej_dn, "either": small_body | rej_dn}[candle]
+    buy_c = {"indecision": small_body, "rejection": rej_up, "either": small_body | rej_up}[candle]
+    indecision = sell_c | buy_c                            # every candle that can be a signal at some level
     hs, ls = pd.Series(h), pd.Series(l)
     piv_hi = (hs == hs.rolling(2 * K + 1, center=True).max()).to_numpy()      # known only K candles later
     piv_lo = (ls == ls.rolling(2 * K + 1, center=True).min()).to_numpy()
@@ -164,6 +173,7 @@ def setups(df: pd.DataFrame, trend_rule: str = "structure", K: int = K, levels: 
             res_ma |= indecision & (np.abs(h - e) <= tolv) & (c <= e)
             sup_ma |= indecision & (np.abs(l - e) <= tolv) & (c >= e)
         at_res, at_sup = (res_ma, sup_ma) if levels == "ma" else (at_res | res_ma, at_sup | sup_ma)
+    at_res, at_sup = at_res & sell_c, at_sup & buy_c       # the right kind of candle for each side
     if ma_trend:
         trend = np.where((trend == 1) & (c > ema200), 1, np.where((trend == -1) & (c < ema200), -1, 0))
     return pd.DataFrame({"at_res": at_res, "at_sup": at_sup, "trend": trend, "atr": atr}, index=df.index)
@@ -283,6 +293,31 @@ def compare_levels(markets: list[str], tf: str) -> None:
                 print(f"   {name:<28}{'confirmed' if confirm else 'at once':<11}{cells}", flush=True)
 
 
+def compare_candles(markets: list[str], tf: str) -> None:
+    """One table: which SIGNAL CANDLE works — the small-bodied indecision candle, the rejection candle, or either."""
+    ways = [("indecision (small body)", "indecision"), ("rejection (red, pushed away)", "rejection"), ("either one", "either")]
+    dfs = {}
+    for code in markets:
+        m = get_market(code)
+        dfs[code] = (features.candles(store.load_prices(code), tf), (m.fee_bps + m.slippage_bps) / 10_000)
+    for R in ((3.0, 4.0) if tf == "1h" else (2.0,)):
+        print(f"\n🕯️  Which signal candle works? · {', '.join(markets)} · {tf} · SELL at a major resistance, with the trend · target 1:{R:g}")
+        print(f"   {'signal candle':<30}{'entry':<11}" + "".join(f"{p[0] + ': trades · right · avg R':<34}" for p in PERIODS))
+        for name, kind in ways:
+            sets = {code: setups(df, "structure", K, "swings", candle=kind) for code, (df, _) in dfs.items()}
+            for confirm in (False, True):
+                allt = []
+                for code, (df, cost) in dfs.items():
+                    st = sets[code]
+                    idx = np.flatnonzero(st["at_res"].to_numpy() & (st["trend"].to_numpy() == -1))
+                    allt.append(simulate(df, idx, -1, R, cost, confirm))
+                tot = summarise(pd.concat(allt))
+                cells = "".join(
+                    f"{(str(v['trades']) + ' · ' + (f'{v['win']:.0%}' if v['trades'] else '—') + ' · ' + (f'{v['avg_r']:+.2f} ({v['avg_r_before_costs']:+.2f})' if v['trades'] else '—')):<34}"
+                    for v in tot.values())
+                print(f"   {name:<30}{'confirmed' if confirm else 'at once':<11}{cells}", flush=True)
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--markets", nargs="+", default=["BTC", "ETH", "SOL", "XRP"])
@@ -295,12 +330,18 @@ if __name__ == "__main__":
     ap.add_argument("--min-score", type=int, default=3, help="with --levels zones: how strong a zone must be (2, 3, 4)")
     ap.add_argument("--ma-trend", action="store_true", help="trend must also be on the right side of EMA 200")
     ap.add_argument("--brief", action="store_true", help="only the 'with trend' lines")
+    ap.add_argument("--compare-candles", action="store_true",
+                    help="one table: indecision candle vs rejection candle vs either, SELL with the trend at major levels")
     ap.add_argument("--compare-levels", action="store_true",
                     help="one table: SELL with the trend under every way of finding levels")
     ap.add_argument("--swing", type=int, default=K,
                     help="how big a swing must be to make a level (candles on each side); 20 = major levels, 5 = also small ones")
     a = ap.parse_args()
     mk = [m.upper() for m in a.markets if (store.PRICES / f"{m.upper()}_5m.parquet").exists()]
+    if a.compare_candles:
+        for tf in a.timeframes:
+            compare_candles(mk, tf)
+        raise SystemExit(0)
     if a.compare_levels:
         for tf in a.timeframes:
             compare_levels(mk, tf)
