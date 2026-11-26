@@ -148,6 +148,10 @@ def main() -> None:
                             "cur_verdict": c["verdict"]})
             rows.append(row)
     (RESULTS / "universal_summary.json").write_text(json.dumps(rows, indent=1, default=float))
+    keep = ("exam_2025_right", "right_all", "right_55", "n_55", "auc", "passed", "counted", "verdict")
+    joblib.dump({"model": final, "columns": all_cols, "trained_until": str(HOLDOUT_START.date()), "universal": True,
+                 "markets": codes, "scores": {r["model"]: {k: r[k] for k in keep} for r in rows}},
+                MODELS / "universal" / "UNIVERSAL.joblib", compress=3)        # the app shows these 2026 scores
     cmp_ = [r for r in rows if "cur_auc" in r]
     print(f"\n📊 2026 only · universal model vs the current separate models ({len(cmp_)} comparable)")
     for r in rows:

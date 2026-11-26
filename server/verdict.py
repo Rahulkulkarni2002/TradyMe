@@ -24,9 +24,60 @@ HORIZON_HOURS = {("15m", ""): 2, ("1h", "_h6"): 6}
 _cache: dict = {}
 
 
+def _universal_path():
+    """ONE model for every market. A copy trained on this computer (research/models/universal/, it can include
+    gold and forex) is preferred; otherwise the one that comes with the project."""
+    for p in (MODELS / "universal" / "UNIVERSAL.joblib", MODELS / "UNIVERSAL.joblib"):
+        if p.exists():
+            return p
+    return None
+
+
+@lru_cache(maxsize=4)
+def _universal_file(path: str, mtime: float) -> dict:
+    try:
+        b = joblib.load(path)
+    except Exception as e:
+        raise RuntimeError("The prediction model can't load — your Python packages are too old. "
+                           "Run:  pip install -U -r requirements.txt   then restart TradyMe.") from e
+    if "scores" not in b:                                  # older files: scores were saved next to the results
+        sp = RESULTS / "universal_summary.json"
+        b["scores"] = {r["model"]: r for r in json.loads(sp.read_text())} if sp.exists() else {}
+    from engine.markets import MARKETS
+    b["kinds"] = {MARKETS[m].kind for m in b.get("markets", []) if m in MARKETS}
+    return b
+
+
+def _universal_bundle(code: str, timeframe: str, tags: tuple):
+    p = _universal_path()
+    if p is None:
+        return None
+    from engine.data.base import tf_seconds
+    from engine.markets import MARKETS
+    from research.universal import targets
+    u = _universal_file(str(p), p.stat().st_mtime)
+    kind = MARKETS[code].kind if code in MARKETS else None
+    if kind not in u["kinds"]:
+        return None                                        # this copy never learned this kind of market
+    tg = targets(timeframe)
+    for tag in tags:
+        if tag in tg:
+            H, barrier = tg[tag]
+            sc = u["scores"].get(f"{code}_{timeframe}{tag}", {})
+            return {"model": u["model"], "columns": u["columns"], "universal": True, "tag": tag, "kind": kind,
+                    "u_horizon": H, "barrier_atr": barrier, "horizon_hours": round(H * tf_seconds(timeframe) / 3600, 1),
+                    "exam_accuracy": sc.get("right_all"), "exam_auc": sc.get("auc"),
+                    "exam_period": "2026 (never seen in training)" if sc else None,
+                    "trained_until": u.get("trained_until"), "hit_rates": {}}
+    return None
+
+
 def _load_model(code: str, timeframe: str, tags: tuple = tuple(TAGS)):
-    """The first model file that exists for these tags. Checked on every call, so a model you train while
-    TradyMe is running is picked up straight away (files are loaded once and kept until they change)."""
+    """The ONE universal model when there is one; otherwise the first separate model file for these tags.
+    Checked on every call, so a model you train while TradyMe is running is picked up straight away."""
+    u = _universal_bundle(code, timeframe, tags)
+    if u is not None:
+        return u
     for tag in tags:
         p = MODELS / f"{code}_{timeframe}{tag}.joblib"
         if p.exists():
@@ -86,6 +137,9 @@ def _with_mtf(bundle, market: Market, timeframe: str, df, X):
 
 def _pooled(bundle, market: Market, timeframe: str, df, M):
     """ONE-model-for-all-coins: add which coin this is, and Bitcoin's clues (from live Bitcoin candles)."""
+    if bundle and bundle.get("universal"):                 # ONE model: tell it the candle size, look-ahead, market kind
+        from research.universal import with_extra
+        return with_extra(M, timeframe, bundle["kind"], bundle["u_horizon"], bundle["barrier_atr"])
     if not bundle or not bundle.get("pooled"):
         return M
     from research import btc_lead
@@ -103,7 +157,12 @@ def _pooled(bundle, market: Market, timeframe: str, df, M):
 
 
 def available_models() -> list[str]:
-    return sorted(p.stem for p in MODELS.glob("*.joblib"))
+    out = sorted(p.stem for p in MODELS.glob("*.joblib") if "_" in p.stem)
+    p = _universal_path()
+    if p is not None:
+        u = _universal_file(str(p), p.stat().st_mtime)
+        out.insert(0, "UNIVERSAL (one model for " + ", ".join(u.get("markets", [])) + ")")
+    return out
 
 
 def _level(buy: int, sell: int) -> tuple[str, float]:
@@ -150,8 +209,8 @@ def verdict(market: Market, timeframe: str) -> dict:
                  "exam_accuracy": bundle["exam_accuracy"], "exam_auc": bundle["exam_auc"],
                  "trained_until": bundle["trained_until"], "exam_period": bundle.get("exam_period"), "uses_futures": bundle.get("tag", "").endswith("f")}
     else:
-        model["reason"] = (f"No prediction model for {market.name} on {timeframe} candles yet — showing strategy votes only. "
-                           f"Models so far: Bitcoin, Ethereum, XRP, Solana on 15 min, 30 min, 1 hour and 3 hour candles.")
+        model["reason"] = (f"No prediction model for {market.name} on {timeframe} candles on this computer — showing "
+                           f"strategy votes only. Train the one model for every market with:  python -m research.universal")
 
     # ── the final answer ──
     if model["available"]:
@@ -261,7 +320,7 @@ def candle_arrows(market: Market, timeframe: str, step: int = 2) -> dict:
     else — for markets without a trained model — the combined vote of all 71 strategies."""
     from engine.analysis import arrow_details, grade_arrows
     from engine.data.base import tf_seconds
-    has = lambda tag: (MODELS / f"{market.code}_{timeframe}{tag}.joblib").exists()
+    has = lambda tag: _load_model(market.code, timeframe, (tag,)) is not None
     horizon = "n2" if has("_n2") else ("long" if any(has(t) for t in TAGS) else None)
     if horizon:
         r = model_markers(market, timeframe, threshold=0.5, horizon=horizon)

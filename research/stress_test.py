@@ -118,6 +118,8 @@ def main() -> None:
     a = ap.parse_args()
     if a.all:
         for f in sorted(MODELS.glob("*.joblib")):
+            if "_" not in f.stem:                          # the universal model is tested by research/universal.py
+                continue
             code, tf, *rest = f.stem.split("_")
             tag = "_" + "_".join(rest) if rest else ""
             try:

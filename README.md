@@ -18,7 +18,7 @@ went after similar past patterns, and lets you practise trades with paper money 
 
 | Feature | What you see |
 |---|---|
-| 🧠 **Prediction models** | Machine-learning models (gradient boosting) trained on up to 11 years of candles (2015 → 2025; Solana from 2020) per market and candle size. Each one gives "up X% / down Y%" for the next few candles or hours. |
+| 🧠 **One prediction model** | A single machine-learning model (gradient boosting) for every market, candle size and look-ahead. It learns from up to 11 years of candles (2015 → 2025; Solana from 2020) and gives "up X% / down Y%" for the next few candles or hours. |
 | ▲▼ **Chart arrows** | An up/down arrow on every 2nd candle, for every market and candle size. Big arrows with a % mean the model is sure. A live score ("58 right · 77 wrong") is shown on the chart. |
 | 🔮 **Look-alike forecast** | Finds the most similar moments in history and draws the range price moved in afterwards (likely band, wide band, middle path), compared against a random-walk baseline. |
 | 🎯 **Trade plan** | Stop-loss and 3 targets as prices, each with "how often this was reached before". |
@@ -33,8 +33,12 @@ went after similar past patterns, and lets you practise trades with paper money 
 
 ## 📏 Honest results (crypto: tested on 2026 only)
 
-Every crypto model learns from history up to the end of 2025 and is tested on **2026 only** (January → early
-November 2026), which is never used for learning or for choosing anything. 79 models, 4 coins.
+The app uses **one model for every market** (`research/models/UNIVERSAL.joblib`; the copy in this repository
+learned from the four coins — train your own, including gold and forex, with `python -m research.universal`).
+It learns from history up to the end of 2025 and is tested on **2026 only** (January → early November 2026),
+which is never used for learning or for choosing anything. On crypto it scores the same as 81 separate models
+(one per coin × candle size × look-ahead, kept in `research/models/separate/`): 51.2% vs 51.2% right on all
+predictions. The table shows the separate models' 2026 results; the one model's are within a point of them.
 
 | Candle size · what is predicted | Right, all predictions | Right when ≥ 55% sure | Passed the 100-situation test |
 |---|---|---|---|
