@@ -211,3 +211,20 @@ def test_my_strategy_endpoint(client):
     assert r["available"] and "signals" in r
     for s in r["signals"]:                       # a SELL: stop above the entry, target below it, at 1:3 on 1 hour
         assert s["action"] == "SELL" and s["stop"] > s["price"] > s["target"] and s["rr"] == 3.0
+
+
+def test_my_strategy_uses_drawn_lines(client):
+    """With lines you drew, signals happen only at those lines: SELL under a line, BUY above it."""
+    import json as _json
+    c, _ = client
+    px = c.get("/api/suggest", params={"market": "BTC", "timeframe": "1h", "strategy": "supertrend_kivanc"}).json()["candles"]
+    hi, lo = max(x["high"] for x in px[-300:]), min(x["low"] for x in px[-300:])
+    lines = [[hi - (hi - lo) * 0.25], [lo + (hi - lo) * 0.25]]
+    r = c.get("/api/my-strategy", params={"market": "BTC", "timeframe": "1h", "lines": _json.dumps(lines)}).json()
+    assert r["available"] and r["your_lines"] == 2
+    for s_ in r["signals"]:
+        if s_["action"] == "SELL":
+            assert s_["stop"] > s_["price"] > s_["target"]
+        else:
+            assert s_["stop"] < s_["price"] < s_["target"]
+    assert c.get("/api/my-strategy", params={"market": "BTC", "timeframe": "1h", "lines": "not json"}).json()["available"]

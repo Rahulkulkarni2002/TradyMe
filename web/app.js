@@ -659,13 +659,21 @@ function paintStratMenu() {
 $("#strat-btn").addEventListener("click", (e) => { e.stopPropagation(); paintStratMenu(); $("#strat-menu").classList.toggle("hidden"); });
 document.addEventListener("click", (e) => { const m = $("#strat-menu"); if (!m.contains(e.target) && e.target.id !== "strat-btn") m.classList.add("hidden"); });
 
+let _drawT = null;                                         // you drew, moved or removed a line → look for signals again
+window.onDrawingsChanged = () => { clearTimeout(_drawT); _drawT = setTimeout(loadMyStrategy, 400); };
 async function loadMyStrategy() {
   const m = SETTINGS.market, tf = SETTINGS.timeframe, card = $("#mystrat-card"), body = $("#mystrat-body");
   try {
     if (!MY_STRATS.length) { MY_STRATS = await api("/api/my-strategies"); paintStratMenu(); $("#strat-menu").classList.add("hidden"); }
     const on = MY_STRATS.filter((st) => myStratOn.has(st.key));
     if (!on.length) { myStratData = {}; card.classList.add("hidden"); applyMarkers(); return; }
-    const res = await Promise.all(on.map((st) => api(`/api/my-strategy?market=${m}&timeframe=${tf}&key=${st.key}`).catch((e) => ({ available: false, reason: e.message }))));
+    let drawn = [];                                         // the levels you drew on THIS market (saved per market)
+    try {
+      drawn = JSON.parse(localStorage.getItem(`drawings:${m}`) || "[]").filter((x) => x.type === "hline" || x.type === "line")
+        .map((x) => x.type === "hline" ? [x.a.price] : [Math.round(x.a.time), x.a.price, Math.round(x.b.time), x.b.price]);
+    } catch { drawn = []; }
+    const lq = drawn.length ? `&lines=${encodeURIComponent(JSON.stringify(drawn))}` : "";
+    const res = await Promise.all(on.map((st) => api(`/api/my-strategy?market=${m}&timeframe=${tf}&key=${st.key}${lq}`).catch((e) => ({ available: false, reason: e.message }))));
     if (m !== SETTINGS.market || tf !== SETTINGS.timeframe) return;
     myStratData = {};
     const when = (t) => tzFormat(t, { weekday: "short", hour: "numeric", minute: "2-digit" });
@@ -676,6 +684,8 @@ async function loadMyStrategy() {
       if (!r.available) { html += `<div class="muted">⚠️ ${esc(r.reason || "not available")}</div></div>`; return; }
       myStratData[st.key] = r;
       const live = r.live, last = r.signals[r.signals.length - 1];
+      html += `<div class="ms-levels">${r.your_lines ? `📏 Using <b>your ${r.your_lines} drawn line${r.your_lines > 1 ? "s" : ""}</b> as the levels (sell under a line, buy above it)`
+        : `📏 Levels found automatically. <b>Draw your own lines</b> (― or ╱ in the top bar) and it uses those.`}</div>`;
       if (r.wins + r.losses) html += `<div class="muted">On this chart: ${r.wins} hit target · ${r.losses} stopped</div>`;
       if (live) {
         const up = live.action === "BUY";

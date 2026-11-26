@@ -16,7 +16,8 @@
 
   const key = () => `drawings:${SETTINGS.market}`;
   const load = () => { try { drawings = JSON.parse(localStorage.getItem(key()) || "[]"); } catch { drawings = []; } };
-  const save = () => { try { localStorage.setItem(key(), JSON.stringify(drawings)); } catch {} };
+  const save = () => { try { localStorage.setItem(key(), JSON.stringify(drawings)); } catch {}
+    if (typeof window.onDrawingsChanged === "function") window.onDrawingsChanged(); };
   const tfSec = () => TF_SEC[SETTINGS.timeframe] || 300;
   const times = () => (lastSuggestion?.candles || []).map((c) => c.time);
 
@@ -314,7 +315,10 @@
     setInterval(render, 150);                                     // follow zoom / scroll / new candles
   }
 
-  window.TradyDraw = { init, reload: () => { load(); render(); }, render, setPatterns: (p, f) => { patterns = p || []; forming = f || []; render(); },
+  // the levels you drew, for your strategies: [price] for a horizontal level, [t1, p1, t2, p2] for a line
+  const lines = () => drawings.filter((x) => x.type === "hline" || x.type === "line").map((x) => x.type === "hline"
+    ? [x.a.price] : [Math.round(x.a.time), x.a.price, Math.round(x.b.time), x.b.price]);
+  window.TradyDraw = { init, lines, reload: () => { load(); render(); }, render, setPatterns: (p, f) => { patterns = p || []; forming = f || []; render(); },
     setPlan: (p) => { plan = p || null; render(); },
     setAnalog: (a) => { analog = a || null; render(); },
     setBoxes: (b) => { boxes = b || []; render(); } };

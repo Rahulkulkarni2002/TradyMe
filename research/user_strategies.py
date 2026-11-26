@@ -361,31 +361,70 @@ if __name__ == "__main__":
     (RESULTS / f"user_indecision_sr_{a.trend}_swing{a.swing}_{a.levels}{a.min_score if a.levels == 'zones' else ''}{'_matrend' if a.ma_trend else ''}_{'-'.join(mk)}.json").write_text(json.dumps(out, indent=1, default=float))
 
 
-def live_signals(df: pd.DataFrame, timeframe: str) -> list[dict]:
-    """Strategy 1 on the candles of the live chart (the version that tested best: SELL at a major resistance in a
-    down-trend). One trade at a time, exactly like the test. `df` = closed candles only."""
+def _line_levels(df: pd.DataFrame, lines: list) -> list[np.ndarray]:
+    """Each drawn line as a price for every candle (NaN where the line does not apply yet).
+    [price] = a horizontal level. [t1, p1, t2, p2] = a line through two points, extended to the right."""
+    t = np.array([int(x.timestamp()) for x in df.index], dtype=float)
+    out = []
+    for ln in lines or []:
+        try:
+            if len(ln) == 1:
+                out.append(np.full(len(df), float(ln[0])))
+            elif len(ln) == 4:
+                t1, p1, t2, p2 = (float(v) for v in ln)
+                if t2 < t1:
+                    t1, p1, t2, p2 = t2, p2, t1, p1
+                lv = p1 + (p2 - p1) * (t - t1) / max(1.0, t2 - t1)
+                lv[t < t1] = np.nan                        # a line starts where you started drawing it
+                out.append(lv)
+        except (TypeError, ValueError):
+            continue
+    return out
+
+
+def live_signals(df: pd.DataFrame, timeframe: str, lines: list | None = None) -> list[dict]:
+    """Strategy 1 on the candles of the live chart. One trade at a time, like the test. `df` = closed candles only.
+      • lines given (the lines YOU drew on the chart): an indecision candle whose wick touches one of your lines
+        and closes back on its own side → SELL under a line, BUY above a line. Your lines decide, no trend rule.
+      • no lines: levels are found automatically (big swings) and only SELL at resistance in a down-trend is shown
+        (the version that tested best)."""
     if len(df) < 2 * K + 60:
         return []
     R = 3.0 if timeframe == "1h" else 2.0
-    s = setups(df, "structure")
     o, h, l, c = (df[k].to_numpy(float) for k in ("open", "high", "low", "close"))
-    atr = s["atr"].to_numpy()
-    n, free_from, out = len(df), 0, []
+    n = len(df)
+    side = np.zeros(n, int)                                # −1 = sell signal on this candle, +1 = buy signal
+    levels = _line_levels(df, lines) if lines else []
+    if levels:
+        atr = ta.atr(df, 14).to_numpy()
+        rng, body = h - l, np.abs(c - o)
+        indecision = (rng >= 0.5 * atr) & (body <= 0.3 * rng) & np.isfinite(atr)
+        tol = TOL * atr
+        for lv in levels:
+            with np.errstate(invalid="ignore"):
+                side[indecision & (np.abs(h - lv) <= tol) & (c <= lv) & (side == 0)] = -1     # touched from below → resistance
+                side[indecision & (np.abs(l - lv) <= tol) & (c >= lv) & (side == 0)] = 1      # touched from above → support
+    else:
+        s = setups(df, "structure")
+        atr = s["atr"].to_numpy()
+        side[s["at_res"].to_numpy() & (s["trend"].to_numpy() == -1)] = -1
+    free_from, out = 0, []
     step = int((df.index[1] - df.index[0]).total_seconds())
-    for i in np.flatnonzero(s["at_res"].to_numpy() & (s["trend"].to_numpy() == -1)):
+    for i in np.flatnonzero(side):
         if i < free_from:
             continue
+        sd = int(side[i])
         pending = i + 1 >= n                               # signal on the newest closed candle: entry = next open
         entry = float(c[i]) if pending else float(o[i + 1])
-        stop = float(h[i] + BUFFER * atr[i])
-        risk = stop - entry
+        stop = float(h[i] + BUFFER * atr[i]) if sd == -1 else float(l[i] - BUFFER * atr[i])
+        risk = (stop - entry) if sd == -1 else (entry - stop)
         if not risk > 0:
             continue
-        target = entry - R * risk
+        target = entry - R * risk if sd == -1 else entry + R * risk
         how, x = "open", n - 1
         if not pending:
-            hit_s = np.flatnonzero(h[i + 1:] >= stop)
-            hit_t = np.flatnonzero(l[i + 1:] <= target)
+            hit_s = np.flatnonzero(h[i + 1:] >= stop) if sd == -1 else np.flatnonzero(l[i + 1:] <= stop)
+            hit_t = np.flatnonzero(l[i + 1:] <= target) if sd == -1 else np.flatnonzero(h[i + 1:] >= target)
             a = hit_s[0] if len(hit_s) else 10 ** 9
             b = hit_t[0] if len(hit_t) else 10 ** 9
             if a <= b and a < 10 ** 9:
@@ -394,11 +433,12 @@ def live_signals(df: pd.DataFrame, timeframe: str) -> list[dict]:
                 how, x = "target", i + 1 + b
         exit_px = stop if how == "stop" else target if how == "target" else float(c[-1])
         t0 = int(df.index[i].timestamp())
-        out.append({"time": t0 + (0 if pending else step), "signal_time": t0, "action": "SELL", "price": entry,
-                    "stop": stop, "target": target, "rr": R, "pending": bool(pending),
-                    "confirmed": bool(not pending and c[i + 1] < l[i]),
+        out.append({"time": t0 + (0 if pending else step), "signal_time": t0, "action": "SELL" if sd == -1 else "BUY",
+                    "price": entry, "stop": stop, "target": target, "rr": R, "pending": bool(pending),
+                    "confirmed": bool(not pending and ((c[i + 1] < l[i]) if sd == -1 else (c[i + 1] > h[i]))),
                     "exit_time": int(df.index[x].timestamp()), "exit_how": how,
-                    "exit_pct": float((entry - exit_px) / entry * 100), "window_candles": int(max(1, x - i))})
+                    "exit_pct": float(-sd * (entry - exit_px) / entry * 100) if sd == 1 else float((entry - exit_px) / entry * 100),
+                    "window_candles": int(max(1, x - i))})
         free_from = n if how == "open" else x + 1
     return out
 
@@ -406,9 +446,10 @@ def live_signals(df: pd.DataFrame, timeframe: str) -> list[dict]:
 # Every strategy Rahul gives is registered here; the app's "Strategies" button lists them.
 STRATEGIES = {
     "indecision_sr": {
-        "name": "Indecision candle at resistance",
-        "rule": "Down-trend (lower highs and lower lows) + a doji / spinning-top candle touching a major resistance → SELL. "
-                "Stop above the wick, target 1:3 on 1 hour (1:2 on shorter candles).",
+        "name": "Indecision candle at support / resistance",
+        "rule": "Draw your support and resistance lines on the chart. A doji / spinning-top candle touching one of YOUR "
+                "lines → SELL under the line, BUY above it. Stop beyond the wick, target 1:3 on 1 hour (1:2 on shorter "
+                "candles). With no lines drawn, levels are found automatically and only sells in a down-trend are shown.",
         "tested": "Gold · 1 hour: made money in 2025 and 2026 (about 40 trades a year), lost slightly over 2015–2024. "
                   "Lost on crypto and on shorter candles.",
         "best_on": {"market": "GOLD", "timeframe": "1h"},

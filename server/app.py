@@ -331,7 +331,7 @@ def my_strategies():
 
 
 @app.get("/api/my-strategy")
-def my_strategy(market: str, timeframe: str, key: str = "indecision_sr"):
+def my_strategy(market: str, timeframe: str, key: str = "indecision_sr", lines: str = ""):
     """One of your strategies on the live chart: its signals with entry, stop, target and how each ended."""
     try:
         from research.user_strategies import STRATEGIES
@@ -339,9 +339,15 @@ def my_strategy(market: str, timeframe: str, key: str = "indecision_sr"):
             return {"available": False, "signals": [], "reason": f"Unknown strategy '{key}'."}
         st = STRATEGIES[key]
         df = get_candles(get_market(market), timeframe, bars=900)
-        sig = st["live"](df, timeframe)
+        drawn = []
+        if lines:                                          # the lines you drew: [[price], [t1, p1, t2, p2], …]
+            try:
+                drawn = [x for x in json.loads(lines) if isinstance(x, list) and len(x) in (1, 4)][:40]
+            except ValueError:
+                drawn = []
+        sig = st["live"](df, timeframe, drawn) if drawn else st["live"](df, timeframe)
         done = [x for x in sig if x["exit_how"] != "open"]
-        return {"available": True, "key": key, "name": st["name"], "signals": sig,
+        return {"available": True, "key": key, "name": st["name"], "signals": sig, "your_lines": len(drawn),
                 "live": next((x for x in reversed(sig) if x["exit_how"] == "open"), None),
                 "wins": sum(x["exit_how"] == "target" for x in done), "losses": sum(x["exit_how"] == "stop" for x in done),
                 "note": st["tested"]}
