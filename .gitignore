@@ -10,3 +10,9 @@ reports/
 research/models/pooled/
 research/models/replaced/
 research/results/*_pooled_stress.json
+# trained / measured on each computer separately (the Mac has gold and forex, the cloud does not)
+research/models/universal/
+research/models/per_market/
+research/results/universal_summary.json
+research/results/per_market_summary.json
+research/results/universal_trade_2026.json
