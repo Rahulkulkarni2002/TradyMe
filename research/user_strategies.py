@@ -49,7 +49,13 @@ K, LOOKBACK, TOL, BUFFER, MAX_BARS = 20, 600, 0.3, 0.1, 300
 PERIODS = [("2015–2024", None, "2025-01-01"), ("2025", "2025-01-01", "2026-01-01"), ("2026", "2026-01-01", None)]
 
 
-def setups(df: pd.DataFrame, trend_rule: str = "structure", K: int = K) -> pd.DataFrame:
+MA_LEVELS = (20, 50, 200)        # moving averages that can act as a moving support / resistance line
+
+
+def setups(df: pd.DataFrame, trend_rule: str = "structure", K: int = K, levels: str = "swings",
+           ma_trend: bool = False) -> pd.DataFrame:
+    """levels: "swings" = major swing levels · "ma" = the EMA 20 / 50 / 200 lines · "both" = either one.
+    ma_trend: also require price on the trend's side of EMA 200 (below it for a down-trend, above for an up-trend)."""
     """For every candle: is it an indecision candle at a major resistance (+1 side = sell) or support?"""
     o, h, l, c = (df[k].to_numpy(float) for k in ("open", "high", "low", "close"))
     n = len(df)
@@ -95,6 +101,16 @@ def setups(df: pd.DataFrame, trend_rule: str = "structure", K: int = K) -> pd.Da
             at_sup[i] = True
     if trend_rule == "structure":
         trend = structure
+    if levels in ("ma", "both"):                          # the candle's wick touches a moving average and closes on the right side
+        tolv = TOL * atr
+        res_ma, sup_ma = np.zeros(n, bool), np.zeros(n, bool)
+        for span in MA_LEVELS:
+            e = ta.ema(df["close"], span).to_numpy()
+            res_ma |= indecision & (np.abs(h - e) <= tolv) & (c <= e)
+            sup_ma |= indecision & (np.abs(l - e) <= tolv) & (c >= e)
+        at_res, at_sup = (res_ma, sup_ma) if levels == "ma" else (at_res | res_ma, at_sup | sup_ma)
+    if ma_trend:
+        trend = np.where((trend == 1) & (c > ema200), 1, np.where((trend == -1) & (c < ema200), -1, 0))
     return pd.DataFrame({"at_res": at_res, "at_sup": at_sup, "trend": trend, "atr": atr}, index=df.index)
 
 
@@ -150,17 +166,19 @@ def summarise(t: pd.DataFrame) -> dict:
     return out
 
 
-def run(markets: list[str], tf: str, R: float, trend_rule: str = "structure", swing: int = K) -> list[dict]:
+def run(markets: list[str], tf: str, R: float, trend_rule: str = "structure", swing: int = K, levels: str = "swings",
+        ma_trend: bool = False, brief: bool = False) -> list[dict]:
     data = {}
     for code in markets:
         df = features.candles(store.load_prices(code), tf)
         m = get_market(code)
-        data[code] = (df, setups(df, trend_rule, swing), (m.fee_bps + m.slippage_bps) / 10_000)
+        data[code] = (df, setups(df, trend_rule, swing, levels, ma_trend), (m.fee_bps + m.slippage_bps) / 10_000)
     rows = []
     rule = "trend = staircase of swing highs and lows" if trend_rule == "structure" else "trend = ADX ≥ 20 + EMA 50/200"
-    print(f"\n🕯️  Indecision candle at support / resistance · {tf} · target 1:{R:g} · {rule} · swings of {swing} candles · {', '.join(markets)}", flush=True)
+    lv = {"swings": "major swing levels", "ma": "EMA 20 / 50 / 200", "both": "swing levels or EMA 20 / 50 / 200"}[levels]
+    print(f"\n🕯️  Indecision candle at support / resistance · {tf} · target 1:{R:g} · {rule} · swings of {swing} candles · levels: {lv}{' · trend also needs the EMA 200 side' if ma_trend else ''} · {', '.join(markets)}", flush=True)
     print(f"   {'trend':<14}{'entry':<10}{'side':<6}" + "".join(f"{p[0] + ': trades · right · avg R (before costs)':<44}" for p in PERIODS))
-    for trend_mode in ("with trend", "against trend", "any trending"):
+    for trend_mode in (("with trend",) if brief else ("with trend", "against trend", "any trending")):
         for confirm in (False, True):
             for side, side_name in ((-1, "SELL"), (1, "BUY")):
                 per_market, allt = {}, []
@@ -187,6 +205,10 @@ if __name__ == "__main__":
     ap.add_argument("--timeframes", nargs="+", default=["15m", "1h", "30m", "10m", "5m"])
     ap.add_argument("--trend", default="structure", choices=["structure", "adx"],
                     help="structure = higher highs & higher lows / lower highs & lower lows (Rahul's rule); adx = ADX ≥ 20 + EMAs")
+    ap.add_argument("--levels", default="swings", choices=["swings", "ma", "both"],
+                    help="where a signal may happen: major swing levels, the EMA 20/50/200 lines, or either")
+    ap.add_argument("--ma-trend", action="store_true", help="trend must also be on the right side of EMA 200")
+    ap.add_argument("--brief", action="store_true", help="only the 'with trend' lines")
     ap.add_argument("--swing", type=int, default=K,
                     help="how big a swing must be to make a level (candles on each side); 20 = major levels, 5 = also small ones")
     a = ap.parse_args()
@@ -194,9 +216,9 @@ if __name__ == "__main__":
     out = []
     for tf in a.timeframes:
         for R in ((3.0, 4.0) if tf == "1h" else (2.0,)):
-            out += run(mk, tf, R, a.trend, a.swing)
+            out += run(mk, tf, R, a.trend, a.swing, a.levels, a.ma_trend, a.brief)
     RESULTS.mkdir(parents=True, exist_ok=True)
-    (RESULTS / f"user_indecision_sr_{a.trend}_swing{a.swing}_{'-'.join(mk)}.json").write_text(json.dumps(out, indent=1, default=float))
+    (RESULTS / f"user_indecision_sr_{a.trend}_swing{a.swing}_{a.levels}{'_matrend' if a.ma_trend else ''}_{'-'.join(mk)}.json").write_text(json.dumps(out, indent=1, default=float))
 
 
 def live_signals(df: pd.DataFrame, timeframe: str) -> list[dict]:
