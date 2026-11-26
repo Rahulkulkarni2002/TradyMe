@@ -36,7 +36,7 @@ from . import features, labels, store
 
 warnings.filterwarnings("ignore")
 RESULTS = store.ROOT / "research" / "results"
-HOLDOUT_START = pd.Timestamp("2025-01-01", tz="UTC")
+HOLDOUT_START = pd.Timestamp("2026-01-01", tz="UTC")     # 2026 is the ONLY final test; models learn up to end of 2025
 HORIZON = {"5m": 24, "15m": 8, "30m": 4, "1h": 3}          # ≈ the next 2 hours (3 h for 1h candles)
 FEES = {"no fees": 0.0, "low-fee exchange (0.1%/side)": 0.002, "Alpaca (0.25%/side)": 0.005}
 THRESHOLD = 0.55
@@ -208,7 +208,7 @@ def run(code: str, timeframe: str, years: list[int] | None = None, skip: set[str
     Xi = add_interactions(X)
     H = HORIZON[timeframe]
     first_year = X.index[0].year
-    years = years or [y for y in range(max(first_year + 2, 2019), 2025)]
+    years = years or [y for y in range(max(first_year + 2, 2019), HOLDOUT_START.year)]
     zoo = {k: v for k, v in model_zoo().items() if k not in skip}
     rows, fold_preds = [], {}
     print(f"🏆 {code} {timeframe}: {len(X):,} candles, {X.shape[1]} features (+{Xi.shape[1] - X.shape[1]} interactions), "

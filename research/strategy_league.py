@@ -135,7 +135,7 @@ def run(code: str, timeframe: str, horizon: int | None = None, barrier: float = 
     # ── Part 3: combined model, walk-forward ──
     M = model_inputs(V, A, X)
     exams = []
-    years = [y for y in range(max(df.index[0].year + 2, 2019), 2025)]
+    years = [y for y in range(max(df.index[0].year + 2, 2019), HOLDOUT_START.year)]
     if futures:                       # futures data starts late 2020 → exam only years with ≥1 year of it to learn from
         years = [y for y in years if y >= 2022]
     for year in years:

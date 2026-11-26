@@ -4,7 +4,8 @@
     python train_models.py --markets GOLD  (just gold)
     python train_models.py --timeframes 1h 3h
 
-Each model is tested fairly (year by year, on years it did not learn from), then on 100 different situations
+Each model learns up to the end of 2025 and is tested fairly: year by year on years it did not learn from, then
+on 2026 only (the final test) in 100 different situations
 (months, weekdays, sessions, calm/wild and rising/falling markets, random weeks). Only a model that PASSES is
 saved to research/models/ — a failed one goes to research/models/rejected/ and the app does not use it.
 Restart TradyMe afterwards and the app uses them automatically. Safe to stop with Ctrl+C and run again."""
@@ -31,6 +32,7 @@ def main() -> int:
     ap.add_argument("--timeframes", nargs="+", default=["15m", "1h", "3h", "30m", "5m", "10m"], choices=list(PLAN))
     ap.add_argument("--no-short", action="store_true", help="skip the next-1/2/3/5-candle models")
     ap.add_argument("--no-stress", action="store_true", help="skip the 100-situation test")
+    ap.add_argument("--retrain", action="store_true", help="train again even if a model file already exists")
     a = ap.parse_args()
     from research.strategy_league import MODELS, run
     from research import stress_test
@@ -49,7 +51,8 @@ def main() -> int:
         if not a.no_short:
             jobs += [(tf, h, b, tag) for h, b, tag in SHORT for tf in SHORT_TF if tf in a.timeframes]
         for tf, h, b, tag in jobs:
-            if (MODELS / f"{code}_{tf}{tag}.joblib").exists() or (MODELS / "rejected" / f"{code}_{tf}{tag}.joblib").exists():
+            if not a.retrain and ((MODELS / f"{code}_{tf}{tag}.joblib").exists()
+                                  or (MODELS / "rejected" / f"{code}_{tf}{tag}.joblib").exists()):
                 print(f"   ✅ {code} {tf}{tag}: already trained — skipping")
                 continue
             print(f"\n🏋️  {code} {tf}{tag} (next {h} candles, move {b}× normal size)…", flush=True)
