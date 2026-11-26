@@ -41,6 +41,18 @@
   const y = (p) => candleSeries.priceToCoordinate(p);
   const toPoint = (px, py) => ({ time: timeOfLogical(chart.timeScale().coordinateToLogical(px)), price: candleSeries.coordinateToPrice(py) });
 
+  let dragging = null;                                     // { d: drawing, key: "a" | "b" | "move" } while an end is dragged
+  document.addEventListener("pointermove", (e) => {
+    if (!dragging || !svg) return;
+    const r = svg.getBoundingClientRect();
+    const p = toPoint(e.clientX - r.left, e.clientY - r.top);
+    if (p.price == null) return;
+    if (dragging.key === "move") dragging.d.a = { ...dragging.d.a, price: p.price };      // a level only moves up / down
+    else if (p.time != null) dragging.d[dragging.key] = p;
+    render();
+  });
+  document.addEventListener("pointerup", () => { if (dragging) { dragging = null; save(); render(); } });
+
   function el(name, attrs) { const e = document.createElementNS(NS, name); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; }
 
   function render() {
@@ -116,6 +128,14 @@
       });
       svg.appendChild(g);
     };
+    // a round handle on each end: drag it to stretch or move that end
+    const handle = (cx, cy, d, key) => {
+      const g = el("circle", { cx, cy, r: 6.5, fill: "#ffffff", stroke: color, "stroke-width": 2, class: "draw-handle" });
+      g.style.pointerEvents = "auto"; g.style.cursor = key === "move" ? "ns-resize" : "grab";
+      const tip = el("title", {}); tip.textContent = key === "move" ? "Drag to move this level" : "Drag to stretch this end"; g.appendChild(tip);
+      g.addEventListener("pointerdown", (e) => { e.stopPropagation(); e.preventDefault(); dragging = { d, key }; });
+      svg.appendChild(g);
+    };
     const inView = (v, max) => Math.max(12, Math.min(max - 12, v));
     for (const d of [...drawings, ...(draft ? [draft] : [])]) {
       const x1 = x(d.a.time), y1 = y(d.a.price);
@@ -124,7 +144,7 @@
       if (d.type === "hline") {
         if (y1 == null) continue;
         svg.appendChild(el("line", { x1: 0, x2: W, y1, y2: y1, ...style, "stroke-dasharray": "6 4" }));
-        if (mine) closeBtn(Math.max(20, W - 120), y1, d);    // just left of the price scale
+        if (mine) { closeBtn(Math.max(20, W - 120), y1, d); handle(Math.max(20, W - 150), y1, d, "move"); }   // left of the price scale
         continue;
       }
       if (x1 == null || y1 == null) continue;
@@ -137,9 +157,10 @@
         ry: Math.abs(y2 - y1) / 2, ...style, fill: color, "fill-opacity": 0.08 }));
       if (!mine) continue;
       const H = svg.clientHeight || 400;
-      if (d.type === "line") { const rightEnd = x2 >= x1; closeBtn(inView(rightEnd ? x2 : x1, W - 96), inView(rightEnd ? y2 : y1, H), d); }
-      else if (d.type === "rect") closeBtn(inView(Math.max(x1, x2), W - 96), inView(Math.min(y1, y2), H), d);
+      if (d.type === "line") closeBtn(inView((x1 + x2) / 2, W - 96), inView((y1 + y2) / 2, H), d);     // ✕ in the middle
+      else if (d.type === "rect") closeBtn(inView((x1 + x2) / 2, W - 96), inView(Math.min(y1, y2), H), d);
       else if (d.type === "circle") closeBtn(inView((x1 + x2) / 2, W - 96), inView(Math.min(y1, y2), H), d);
+      handle(x1, y1, d, "a"); handle(x2, y2, d, "b");       // both ends can be dragged
     }
   }
 

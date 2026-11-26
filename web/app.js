@@ -706,6 +706,21 @@ $("#box-toggle").addEventListener("click", () => {
   $("#box-toggle").classList.toggle("on", showBoxes); applyMarkers();
 });
 let showPlan = (() => { try { return localStorage.getItem("showPlan") !== "0"; } catch { return true; } })();
+// Empty space on the right for the forecast. Changing it normally snaps the chart back to the newest candle,
+// so the view you scrolled to is put back afterwards.
+function atNewestCandle() {                                // false once you have scrolled back into the past
+  const r = chart?.timeScale().getVisibleLogicalRange();
+  const last = (lastSuggestion?.candles?.length || 1) - 1;
+  return !r || r.to >= last - 1;
+}
+function setRoom(room) {
+  if (!chart) return;
+  const ts = chart.timeScale();
+  if ((ts.options().rightOffset || 0) === room) return;
+  const r = ts.getVisibleLogicalRange();
+  ts.applyOptions({ rightOffset: room });
+  if (r && chart._market) ts.setVisibleLogicalRange(r);
+}
 function drawPlan() {
   if (!candleSeries) return;
   (candleSeries._plan || []).forEach((l) => candleSeries.removePriceLine(l));
@@ -717,14 +732,14 @@ function drawPlan() {
   if (!p || !showPlan) {
     box.classList.add("hidden");
     if (window.TradyDraw) window.TradyDraw.setPlan(null);
-    if (!showAnalog) chart?.timeScale().applyOptions({ rightOffset: 5 });     // keep room if the 🔮 forecast is on
+    if (!showAnalog) setRoom(5);     // keep room if the 🔮 forecast is on
     return;
   }
   const c = chartColors(), mk = SETTINGS.market, buy = p.action === "BUY";
   if (window.TradyDraw) window.TradyDraw.setPlan(p);           // zones, TP boxes and forecast cone (draw.js)
   const room = Math.min(80, p.window_candles + 12);
-  chart.timeScale().applyOptions({ rightOffset: room });                // room for the forecast
-  if (!drawPlan._scrolled) { chart.timeScale().scrollToPosition(room, false); drawPlan._scrolled = true; }
+  setRoom(room);                                                        // room for the forecast
+  if (!drawPlan._scrolled) { if (atNewestCandle()) chart.timeScale().scrollToPosition(room, false); drawPlan._scrolled = true; }
   const tooSmall = p.targets[0] && Math.abs(p.targets[0].move_pct) < p.fees_pct;
   box.innerHTML = `<div class="plan-head ${buy ? "pnl-pos" : "pnl-neg"}">${buy ? "▲ BUY" : "▼ SELL"} plan · model ${p.p}% sure
       ${p.confident ? "" : `<span class="muted"> — not sure enough (needs ≥ ${Math.round(modelMarkers.threshold * 100)}%), lines are faded: just a guide</span>`}</div>
@@ -753,7 +768,7 @@ async function loadAnalog() {
   const box = $("#analog-box");
   if (!showAnalog) {
     analogData = null; box.classList.add("hidden"); window.TradyDraw?.setAnalog(null);
-    if (!(showPlan && modelMarkers?.plan)) chart?.timeScale().applyOptions({ rightOffset: 5 });
+    if (!(showPlan && modelMarkers?.plan)) setRoom(5);
     return;
   }
   const m = SETTINGS.market, tf = SETTINGS.timeframe;
@@ -765,8 +780,8 @@ async function loadAnalog() {
     analogData = a;
     window.TradyDraw?.setAnalog(a);
     const room = Math.max(chart.timeScale().options().rightOffset || 0, a.horizon + 6);
-    chart.timeScale().applyOptions({ rightOffset: room });
-    if (!loadAnalog._scrolled) { chart.timeScale().scrollToPosition(room, false); loadAnalog._scrolled = true; }   // make room once
+    setRoom(room);
+    if (!loadAnalog._scrolled) { if (atNewestCandle()) chart.timeScale().scrollToPosition(room, false); loadAnalog._scrolled = true; }   // make room once
     const b = a.buckets, sk = a.skill || {};
     const skill = sk.pending ? `<span class="muted">checking how reliable this is… (refresh in a minute)</span>`
       : sk.tests ? `Tested on ${sk.tests} past moments: direction right <b>${sk.direction_right_pct}%</b> (coin flip = 50%) · price stayed inside the dark band <b>${sk.inside_25_75_pct}%</b> (should be ~50%)`
@@ -1070,9 +1085,12 @@ function renderChart(s) {
   }
   const dec = market(s.market).decimals;
   candleSeries.applyOptions({ priceFormat: { type: "price", precision: dec, minMove: 1 / 10 ** dec } });
+  const sameChart = chart._market === s.market + s.timeframe;
+  const keep = sameChart ? chart.timeScale().getVisibleLogicalRange() : null;     // the view you scrolled to
   candleSeries.setData(s.candles);
   chart._closedLast = s.candles.length ? s.candles[s.candles.length - 1].time : 0;
   if (liveCandle && liveCandle.time > chart._closedLast) candleSeries.update(liveCandle);
+  if (keep && !atNewestCandle()) chart.timeScale().setVisibleLogicalRange(keep);  // a refresh must not move it
   const last = s.candles.length ? s.candles[s.candles.length - 1].time : null;
   const tzName = SETTINGS?.timezone || "your time zone";
   $("#chart-note").textContent = !last ? "" : s.market_closed
