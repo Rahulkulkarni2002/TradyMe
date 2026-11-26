@@ -10,7 +10,7 @@ HISTORY = ROOT / "data" / "history"
 RAW = HISTORY / "raw"            # one small file per month → downloads can resume
 PRICES = HISTORY / "prices"      # one combined file per market
 NEWS = HISTORY / "news"
-USER_AGENT = "TradyMe/0.1 (+https://github.com/Rahulkulkarni2002/TradyMe)"
+USER_AGENT = "TradyMe/0.1"
 COLS = ["open", "high", "low", "close", "volume"]
 
 
