@@ -3,719 +3,719 @@
  "sure": 0.55,
  "need_pct": 80.0,
  "situations": 100,
- "counted": 100,
- "passed": 66,
- "pass_pct": 66.0,
- "overall_right": 0.5238,
- "sure_arrows": 5842,
+ "counted": 99,
+ "passed": 63,
+ "pass_pct": 63.6,
+ "overall_right": 0.5268,
+ "sure_arrows": 2128,
  "worst": {
-  "situation": "random 2 weeks from 24 Jan 2025",
-  "arrows": 113,
-  "right": 0.3185840707964602,
+  "situation": "random 2 weeks from 03 Jun 2026",
+  "arrows": 67,
+  "right": 0.3880597014925373,
   "counts": true,
   "beats_coin": false
  },
  "verdict": "FAIL",
  "rows": [
   {
-   "situation": "month 2025-01",
-   "arrows": 277,
-   "right": 0.47653429602888087,
-   "counts": true,
-   "beats_coin": false
-  },
-  {
-   "situation": "month 2025-02",
-   "arrows": 261,
-   "right": 0.5287356321839081,
-   "counts": true,
-   "beats_coin": true
-  },
-  {
-   "situation": "month 2025-03",
-   "arrows": 273,
-   "right": 0.4981684981684982,
-   "counts": true,
-   "beats_coin": false
-  },
-  {
-   "situation": "month 2025-04",
-   "arrows": 242,
-   "right": 0.5330578512396694,
-   "counts": true,
-   "beats_coin": true
-  },
-  {
-   "situation": "month 2025-05",
-   "arrows": 282,
-   "right": 0.4858156028368794,
-   "counts": true,
-   "beats_coin": false
-  },
-  {
-   "situation": "month 2025-06",
-   "arrows": 285,
-   "right": 0.49122807017543857,
-   "counts": true,
-   "beats_coin": false
-  },
-  {
-   "situation": "month 2025-07",
-   "arrows": 294,
-   "right": 0.564625850340136,
-   "counts": true,
-   "beats_coin": true
-  },
-  {
-   "situation": "month 2025-08",
-   "arrows": 208,
-   "right": 0.6153846153846154,
-   "counts": true,
-   "beats_coin": true
-  },
-  {
-   "situation": "month 2025-09",
-   "arrows": 276,
-   "right": 0.4601449275362319,
-   "counts": true,
-   "beats_coin": false
-  },
-  {
-   "situation": "month 2025-10",
-   "arrows": 245,
-   "right": 0.5673469387755102,
-   "counts": true,
-   "beats_coin": true
-  },
-  {
-   "situation": "month 2025-11",
-   "arrows": 300,
-   "right": 0.5333333333333333,
-   "counts": true,
-   "beats_coin": true
-  },
-  {
-   "situation": "month 2025-12",
-   "arrows": 329,
-   "right": 0.5714285714285714,
-   "counts": true,
-   "beats_coin": true
-  },
-  {
    "situation": "month 2026-01",
-   "arrows": 304,
-   "right": 0.5394736842105263,
+   "arrows": 205,
+   "right": 0.4682926829268293,
    "counts": true,
-   "beats_coin": true
+   "beats_coin": false
   },
   {
    "situation": "month 2026-02",
-   "arrows": 195,
-   "right": 0.48205128205128206,
+   "arrows": 163,
+   "right": 0.44785276073619634,
    "counts": true,
    "beats_coin": false
   },
   {
    "situation": "month 2026-03",
-   "arrows": 267,
-   "right": 0.5543071161048689,
+   "arrows": 230,
+   "right": 0.6260869565217392,
    "counts": true,
    "beats_coin": true
   },
   {
    "situation": "month 2026-04",
-   "arrows": 295,
-   "right": 0.5932203389830508,
+   "arrows": 292,
+   "right": 0.5376712328767124,
    "counts": true,
    "beats_coin": true
   },
   {
    "situation": "month 2026-05",
-   "arrows": 262,
-   "right": 0.583969465648855,
+   "arrows": 245,
+   "right": 0.5918367346938775,
    "counts": true,
    "beats_coin": true
   },
   {
    "situation": "month 2026-06",
-   "arrows": 185,
-   "right": 0.4810810810810811,
+   "arrows": 174,
+   "right": 0.5402298850574713,
    "counts": true,
-   "beats_coin": false
+   "beats_coin": true
   },
   {
    "situation": "month 2026-07",
-   "arrows": 209,
-   "right": 0.5741626794258373,
+   "arrows": 202,
+   "right": 0.5148514851485149,
    "counts": true,
    "beats_coin": true
   },
   {
    "situation": "month 2026-08",
-   "arrows": 239,
-   "right": 0.4769874476987448,
+   "arrows": 202,
+   "right": 0.4900990099009901,
    "counts": true,
    "beats_coin": false
   },
   {
    "situation": "month 2026-09",
-   "arrows": 292,
-   "right": 0.4143835616438356,
+   "arrows": 176,
+   "right": 0.48863636363636365,
    "counts": true,
    "beats_coin": false
   },
   {
    "situation": "month 2026-10",
-   "arrows": 248,
-   "right": 0.49193548387096775,
+   "arrows": 183,
+   "right": 0.4918032786885246,
    "counts": true,
    "beats_coin": false
   },
   {
    "situation": "month 2026-11",
-   "arrows": 74,
-   "right": 0.5405405405405406,
+   "arrows": 56,
+   "right": 0.5892857142857143,
    "counts": true,
    "beats_coin": true
   },
   {
    "situation": "weekday Mon",
-   "arrows": 1002,
-   "right": 0.5129740518962076,
+   "arrows": 374,
+   "right": 0.5026737967914439,
    "counts": true,
    "beats_coin": true
   },
   {
    "situation": "weekday Tue",
-   "arrows": 873,
-   "right": 0.5108820160366552,
+   "arrows": 315,
+   "right": 0.4984126984126984,
    "counts": true,
-   "beats_coin": true
+   "beats_coin": false
   },
   {
    "situation": "weekday Wed",
-   "arrows": 850,
-   "right": 0.5423529411764706,
+   "arrows": 286,
+   "right": 0.5314685314685315,
    "counts": true,
    "beats_coin": true
   },
   {
    "situation": "weekday Thu",
-   "arrows": 847,
-   "right": 0.5548996458087367,
+   "arrows": 309,
+   "right": 0.4919093851132686,
    "counts": true,
-   "beats_coin": true
+   "beats_coin": false
   },
   {
    "situation": "weekday Fri",
-   "arrows": 814,
-   "right": 0.5073710073710074,
+   "arrows": 272,
+   "right": 0.5955882352941176,
    "counts": true,
    "beats_coin": true
   },
   {
    "situation": "weekday Sat",
-   "arrows": 414,
-   "right": 0.5700483091787439,
+   "arrows": 177,
+   "right": 0.5819209039548022,
    "counts": true,
    "beats_coin": true
   },
   {
    "situation": "weekday Sun",
-   "arrows": 1042,
-   "right": 0.4990403071017274,
+   "arrows": 395,
+   "right": 0.5240506329113924,
    "counts": true,
-   "beats_coin": false
+   "beats_coin": true
   },
   {
    "situation": "session Asia",
-   "arrows": 1596,
-   "right": 0.518796992481203,
+   "arrows": 641,
+   "right": 0.5070202808112324,
    "counts": true,
    "beats_coin": true
   },
   {
    "situation": "session London",
-   "arrows": 1718,
-   "right": 0.529685681024447,
+   "arrows": 581,
+   "right": 0.5507745266781411,
    "counts": true,
    "beats_coin": true
   },
   {
    "situation": "session London+NY",
-   "arrows": 1356,
-   "right": 0.5029498525073747,
+   "arrows": 481,
+   "right": 0.5322245322245323,
    "counts": true,
    "beats_coin": true
   },
   {
    "situation": "session New York",
-   "arrows": 1032,
-   "right": 0.5416666666666666,
+   "arrows": 367,
+   "right": 0.5149863760217984,
    "counts": true,
    "beats_coin": true
   },
   {
    "situation": "session late",
-   "arrows": 140,
-   "right": 0.5785714285714286,
+   "arrows": 58,
+   "right": 0.5344827586206896,
    "counts": true,
    "beats_coin": true
   },
   {
    "situation": "hours 00-02 UTC",
-   "arrows": 464,
-   "right": 0.5064655172413793,
+   "arrows": 204,
+   "right": 0.4166666666666667,
    "counts": true,
-   "beats_coin": true
+   "beats_coin": false
   },
   {
    "situation": "hours 02-04 UTC",
-   "arrows": 441,
-   "right": 0.5396825396825397,
+   "arrows": 182,
+   "right": 0.5274725274725275,
    "counts": true,
    "beats_coin": true
   },
   {
    "situation": "hours 04-06 UTC",
-   "arrows": 452,
-   "right": 0.5132743362831859,
+   "arrows": 163,
+   "right": 0.6012269938650306,
    "counts": true,
    "beats_coin": true
   },
   {
    "situation": "hours 06-08 UTC",
-   "arrows": 528,
-   "right": 0.5359848484848485,
+   "arrows": 187,
+   "right": 0.5401069518716578,
    "counts": true,
    "beats_coin": true
   },
   {
    "situation": "hours 08-10 UTC",
-   "arrows": 664,
-   "right": 0.5316265060240963,
+   "arrows": 224,
+   "right": 0.5178571428571429,
    "counts": true,
    "beats_coin": true
   },
   {
    "situation": "hours 10-12 UTC",
-   "arrows": 765,
-   "right": 0.5189542483660131,
+   "arrows": 262,
+   "right": 0.5687022900763359,
    "counts": true,
    "beats_coin": true
   },
   {
    "situation": "hours 12-14 UTC",
-   "arrows": 751,
-   "right": 0.49001331557922767,
+   "arrows": 266,
+   "right": 0.5451127819548872,
    "counts": true,
-   "beats_coin": false
+   "beats_coin": true
   },
   {
    "situation": "hours 14-16 UTC",
-   "arrows": 605,
-   "right": 0.5190082644628099,
+   "arrows": 215,
+   "right": 0.5162790697674419,
    "counts": true,
    "beats_coin": true
   },
   {
    "situation": "hours 16-18 UTC",
-   "arrows": 511,
-   "right": 0.5538160469667319,
+   "arrows": 185,
+   "right": 0.5621621621621622,
    "counts": true,
    "beats_coin": true
   },
   {
    "situation": "hours 18-20 UTC",
-   "arrows": 391,
-   "right": 0.5319693094629157,
+   "arrows": 126,
+   "right": 0.46825396825396826,
    "counts": true,
-   "beats_coin": true
+   "beats_coin": false
   },
   {
    "situation": "hours 20-22 UTC",
-   "arrows": 229,
-   "right": 0.5327510917030568,
+   "arrows": 97,
+   "right": 0.5154639175257731,
    "counts": true,
    "beats_coin": true
   },
   {
    "situation": "hours 22-24 UTC",
-   "arrows": 41,
-   "right": 0.6585365853658537,
-   "counts": true,
-   "beats_coin": true
+   "arrows": 17,
+   "right": 0.4117647058823529,
+   "counts": false,
+   "beats_coin": false
   },
   {
    "situation": "calm market",
-   "arrows": 1875,
-   "right": 0.52,
+   "arrows": 711,
+   "right": 0.5443037974683544,
    "counts": true,
    "beats_coin": true
   },
   {
    "situation": "normal market",
-   "arrows": 1999,
-   "right": 0.5237618809404703,
+   "arrows": 711,
+   "right": 0.5175808720112518,
    "counts": true,
    "beats_coin": true
   },
   {
    "situation": "wild market",
-   "arrows": 1968,
-   "right": 0.5274390243902439,
+   "arrows": 706,
+   "right": 0.5184135977337111,
    "counts": true,
    "beats_coin": true
   },
   {
    "situation": "falling market",
-   "arrows": 1909,
-   "right": 0.5243583027763227,
+   "arrows": 728,
+   "right": 0.5260989010989011,
    "counts": true,
    "beats_coin": true
   },
   {
    "situation": "flat market",
-   "arrows": 1948,
-   "right": 0.5159137577002053,
+   "arrows": 677,
+   "right": 0.534711964549483,
    "counts": true,
    "beats_coin": true
   },
   {
    "situation": "rising market",
-   "arrows": 1985,
-   "right": 0.5309823677581864,
+   "arrows": 723,
+   "right": 0.5200553250345782,
    "counts": true,
    "beats_coin": true
   },
   {
    "situation": "quiet volume",
-   "arrows": 2672,
-   "right": 0.5392964071856288,
+   "arrows": 955,
+   "right": 0.5528795811518324,
    "counts": true,
    "beats_coin": true
   },
   {
    "situation": "busy volume",
-   "arrows": 3170,
-   "right": 0.5107255520504732,
+   "arrows": 1173,
+   "right": 0.505541346973572,
    "counts": true,
    "beats_coin": true
   },
   {
    "situation": "falling + calm",
-   "arrows": 461,
-   "right": 0.45336225596529284,
+   "arrows": 201,
+   "right": 0.47761194029850745,
    "counts": true,
    "beats_coin": false
   },
   {
    "situation": "falling + normal",
-   "arrows": 635,
-   "right": 0.5637795275590551,
+   "arrows": 257,
+   "right": 0.5914396887159533,
    "counts": true,
    "beats_coin": true
   },
   {
    "situation": "falling + wild",
-   "arrows": 813,
-   "right": 0.5338253382533825,
+   "arrows": 270,
+   "right": 0.5,
    "counts": true,
-   "beats_coin": true
+   "beats_coin": false
   },
   {
    "situation": "flat + calm",
-   "arrows": 695,
-   "right": 0.5266187050359712,
+   "arrows": 257,
+   "right": 0.5797665369649806,
    "counts": true,
    "beats_coin": true
   },
   {
    "situation": "flat + normal",
-   "arrows": 665,
-   "right": 0.5052631578947369,
+   "arrows": 228,
+   "right": 0.4956140350877193,
    "counts": true,
-   "beats_coin": true
+   "beats_coin": false
   },
   {
    "situation": "flat + wild",
-   "arrows": 588,
-   "right": 0.5153061224489796,
+   "arrows": 192,
+   "right": 0.5208333333333334,
    "counts": true,
    "beats_coin": true
   },
   {
    "situation": "rising + calm",
-   "arrows": 719,
-   "right": 0.5563282336578581,
+   "arrows": 253,
+   "right": 0.5612648221343873,
    "counts": true,
    "beats_coin": true
   },
   {
    "situation": "rising + normal",
-   "arrows": 699,
-   "right": 0.5050071530758226,
+   "arrows": 226,
+   "right": 0.4557522123893805,
    "counts": true,
-   "beats_coin": true
+   "beats_coin": false
   },
   {
    "situation": "rising + wild",
-   "arrows": 567,
-   "right": 0.5308641975308642,
+   "arrows": 244,
+   "right": 0.5368852459016393,
    "counts": true,
    "beats_coin": true
   },
   {
-   "situation": "random 2 weeks from 19 Feb 2026",
-   "arrows": 109,
-   "right": 0.45871559633027525,
+   "situation": "random 2 weeks from 06 Jul 2026",
+   "arrows": 82,
+   "right": 0.43902439024390244,
    "counts": true,
    "beats_coin": false
   },
   {
-   "situation": "random 2 weeks from 19 Aug 2026",
-   "arrows": 148,
-   "right": 0.5675675675675675,
+   "situation": "random 2 weeks from 25 Sep 2026",
+   "arrows": 84,
+   "right": 0.5952380952380952,
    "counts": true,
    "beats_coin": true
   },
   {
-   "situation": "random 2 weeks from 30 May 2026",
-   "arrows": 88,
-   "right": 0.4318181818181818,
-   "counts": true,
-   "beats_coin": false
-  },
-  {
-   "situation": "random 2 weeks from 30 May 2025",
-   "arrows": 123,
-   "right": 0.4878048780487805,
-   "counts": true,
-   "beats_coin": false
-  },
-  {
-   "situation": "random 2 weeks from 19 Jul 2025",
-   "arrows": 114,
-   "right": 0.5789473684210527,
+   "situation": "random 2 weeks from 20 Aug 2026",
+   "arrows": 103,
+   "right": 0.5825242718446602,
    "counts": true,
    "beats_coin": true
   },
   {
-   "situation": "random 2 weeks from 03 Aug 2026",
-   "arrows": 91,
-   "right": 0.4175824175824176,
-   "counts": true,
-   "beats_coin": false
-  },
-  {
-   "situation": "random 2 weeks from 04 Jan 2025",
-   "arrows": 141,
-   "right": 0.5673758865248227,
-   "counts": true,
-   "beats_coin": true
-  },
-  {
-   "situation": "random 2 weeks from 30 Jun 2026",
-   "arrows": 95,
-   "right": 0.5894736842105263,
-   "counts": true,
-   "beats_coin": true
-  },
-  {
-   "situation": "random 2 weeks from 14 Jun 2026",
-   "arrows": 83,
-   "right": 0.46987951807228917,
-   "counts": true,
-   "beats_coin": false
-  },
-  {
-   "situation": "random 2 weeks from 07 Nov 2025",
-   "arrows": 152,
-   "right": 0.5460526315789473,
-   "counts": true,
-   "beats_coin": true
-  },
-  {
-   "situation": "random 2 weeks from 21 Jul 2025",
-   "arrows": 105,
+   "situation": "random 2 weeks from 09 Mar 2026",
+   "arrows": 110,
    "right": 0.6,
    "counts": true,
    "beats_coin": true
   },
   {
-   "situation": "random 2 weeks from 05 Jul 2025",
-   "arrows": 146,
-   "right": 0.5684931506849316,
+   "situation": "random 2 weeks from 31 Mar 2026",
+   "arrows": 123,
+   "right": 0.5365853658536586,
    "counts": true,
    "beats_coin": true
   },
   {
-   "situation": "random 2 weeks from 19 Jun 2025",
-   "arrows": 137,
-   "right": 0.5693430656934306,
+   "situation": "random 2 weeks from 18 Sep 2026",
+   "arrows": 90,
+   "right": 0.4888888888888889,
    "counts": true,
-   "beats_coin": true
-  },
-  {
-   "situation": "random 2 weeks from 23 Oct 2025",
-   "arrows": 109,
-   "right": 0.6513761467889908,
-   "counts": true,
-   "beats_coin": true
-  },
-  {
-   "situation": "random 2 weeks from 01 Dec 2025",
-   "arrows": 145,
-   "right": 0.6689655172413793,
-   "counts": true,
-   "beats_coin": true
+   "beats_coin": false
   },
   {
    "situation": "random 2 weeks from 03 Jan 2026",
-   "arrows": 117,
-   "right": 0.4700854700854701,
+   "arrows": 89,
+   "right": 0.4157303370786517,
+   "counts": true,
+   "beats_coin": false
+  },
+  {
+   "situation": "random 2 weeks from 03 Sep 2026",
+   "arrows": 75,
+   "right": 0.41333333333333333,
+   "counts": true,
+   "beats_coin": false
+  },
+  {
+   "situation": "random 2 weeks from 27 Aug 2026",
+   "arrows": 76,
+   "right": 0.5526315789473685,
+   "counts": true,
+   "beats_coin": true
+  },
+  {
+   "situation": "random 2 weeks from 20 May 2026",
+   "arrows": 110,
+   "right": 0.6454545454545455,
+   "counts": true,
+   "beats_coin": true
+  },
+  {
+   "situation": "random 2 weeks from 01 Apr 2026",
+   "arrows": 120,
+   "right": 0.575,
+   "counts": true,
+   "beats_coin": true
+  },
+  {
+   "situation": "random 2 weeks from 25 Mar 2026",
+   "arrows": 114,
+   "right": 0.5964912280701754,
+   "counts": true,
+   "beats_coin": true
+  },
+  {
+   "situation": "random 2 weeks from 18 Mar 2026",
+   "arrows": 118,
+   "right": 0.6101694915254238,
+   "counts": true,
+   "beats_coin": true
+  },
+  {
+   "situation": "random 2 weeks from 14 May 2026",
+   "arrows": 97,
+   "right": 0.5360824742268041,
+   "counts": true,
+   "beats_coin": true
+  },
+  {
+   "situation": "random 2 weeks from 31 May 2026",
+   "arrows": 88,
+   "right": 0.5227272727272727,
+   "counts": true,
+   "beats_coin": true
+  },
+  {
+   "situation": "random 2 weeks from 15 Jun 2026",
+   "arrows": 77,
+   "right": 0.5454545454545454,
+   "counts": true,
+   "beats_coin": true
+  },
+  {
+   "situation": "random 2 weeks from 25 Oct 2026",
+   "arrows": 77,
+   "right": 0.4675324675324675,
+   "counts": true,
+   "beats_coin": false
+  },
+  {
+   "situation": "random 2 weeks from 25 Aug 2026",
+   "arrows": 72,
+   "right": 0.5694444444444444,
+   "counts": true,
+   "beats_coin": true
+  },
+  {
+   "situation": "random 2 weeks from 05 Jul 2026",
+   "arrows": 83,
+   "right": 0.4457831325301205,
    "counts": true,
    "beats_coin": false
   },
   {
    "situation": "random 2 weeks from 23 Oct 2026",
-   "arrows": 121,
-   "right": 0.4793388429752066,
+   "arrows": 91,
+   "right": 0.4725274725274725,
    "counts": true,
    "beats_coin": false
   },
   {
-   "situation": "random 2 weeks from 11 Jun 2026",
-   "arrows": 86,
-   "right": 0.43023255813953487,
+   "situation": "random 2 weeks from 06 Mar 2026",
+   "arrows": 96,
+   "right": 0.6458333333333334,
    "counts": true,
-   "beats_coin": false
+   "beats_coin": true
   },
   {
    "situation": "random 2 weeks from 18 Feb 2026",
-   "arrows": 111,
-   "right": 0.3783783783783784,
+   "arrows": 104,
+   "right": 0.41346153846153844,
    "counts": true,
    "beats_coin": false
   },
   {
-   "situation": "random 2 weeks from 19 Oct 2026",
-   "arrows": 115,
-   "right": 0.43478260869565216,
+   "situation": "random 2 weeks from 03 Jul 2026",
+   "arrows": 80,
+   "right": 0.4625,
    "counts": true,
    "beats_coin": false
   },
   {
-   "situation": "random 2 weeks from 24 May 2025",
-   "arrows": 121,
-   "right": 0.4049586776859504,
+   "situation": "random 2 weeks from 14 Jan 2026",
+   "arrows": 91,
+   "right": 0.43956043956043955,
    "counts": true,
    "beats_coin": false
   },
   {
-   "situation": "random 2 weeks from 17 Apr 2025",
-   "arrows": 128,
-   "right": 0.625,
+   "situation": "random 2 weeks from 12 Jan 2026",
+   "arrows": 99,
+   "right": 0.4444444444444444,
+   "counts": true,
+   "beats_coin": false
+  },
+  {
+   "situation": "random 2 weeks from 03 Jun 2026",
+   "arrows": 67,
+   "right": 0.3880597014925373,
+   "counts": true,
+   "beats_coin": false
+  },
+  {
+   "situation": "random 2 weeks from 20 May 2026",
+   "arrows": 108,
+   "right": 0.6574074074074074,
    "counts": true,
    "beats_coin": true
   },
   {
-   "situation": "random 2 weeks from 11 Feb 2026",
-   "arrows": 94,
-   "right": 0.3404255319148936,
-   "counts": true,
-   "beats_coin": false
-  },
-  {
-   "situation": "random 2 weeks from 30 Jan 2025",
-   "arrows": 122,
-   "right": 0.4344262295081967,
-   "counts": true,
-   "beats_coin": false
-  },
-  {
-   "situation": "random 2 weeks from 24 Jan 2025",
-   "arrows": 113,
-   "right": 0.3185840707964602,
-   "counts": true,
-   "beats_coin": false
-  },
-  {
-   "situation": "random 2 weeks from 08 Dec 2025",
-   "arrows": 139,
-   "right": 0.4676258992805755,
-   "counts": true,
-   "beats_coin": false
-  },
-  {
-   "situation": "random 2 weeks from 06 Nov 2025",
-   "arrows": 156,
-   "right": 0.5705128205128205,
+   "situation": "random 2 weeks from 01 Oct 2026",
+   "arrows": 76,
+   "right": 0.5789473684210527,
    "counts": true,
    "beats_coin": true
   },
   {
-   "situation": "random 2 weeks from 01 Sep 2026",
-   "arrows": 151,
-   "right": 0.45695364238410596,
+   "situation": "random 2 weeks from 08 Jul 2026",
+   "arrows": 81,
+   "right": 0.4444444444444444,
    "counts": true,
    "beats_coin": false
   },
   {
-   "situation": "random 2 weeks from 22 Feb 2026",
-   "arrows": 110,
-   "right": 0.4818181818181818,
+   "situation": "random 2 weeks from 03 Jun 2026",
+   "arrows": 67,
+   "right": 0.3880597014925373,
    "counts": true,
    "beats_coin": false
   },
   {
-   "situation": "random 2 weeks from 08 Dec 2025",
-   "arrows": 142,
-   "right": 0.45774647887323944,
-   "counts": true,
-   "beats_coin": false
-  },
-  {
-   "situation": "random 2 weeks from 26 Nov 2025",
-   "arrows": 156,
-   "right": 0.6346153846153846,
+   "situation": "random 2 weeks from 29 May 2026",
+   "arrows": 91,
+   "right": 0.5274725274725275,
    "counts": true,
    "beats_coin": true
   },
   {
-   "situation": "random 2 weeks from 14 Jun 2025",
-   "arrows": 134,
-   "right": 0.4925373134328358,
-   "counts": true,
-   "beats_coin": false
-  },
-  {
-   "situation": "random 2 weeks from 09 Jan 2025",
-   "arrows": 123,
-   "right": 0.4959349593495935,
-   "counts": true,
-   "beats_coin": false
-  },
-  {
-   "situation": "random 2 weeks from 08 May 2025",
-   "arrows": 129,
-   "right": 0.5503875968992248,
+   "situation": "random 2 weeks from 16 Mar 2026",
+   "arrows": 106,
+   "right": 0.7075471698113207,
    "counts": true,
    "beats_coin": true
   },
   {
-   "situation": "random 2 weeks from 05 Apr 2026",
-   "arrows": 143,
-   "right": 0.6503496503496503,
+   "situation": "random 2 weeks from 04 Jan 2026",
+   "arrows": 90,
+   "right": 0.4111111111111111,
+   "counts": true,
+   "beats_coin": false
+  },
+  {
+   "situation": "random 2 weeks from 27 Feb 2026",
+   "arrows": 102,
+   "right": 0.5784313725490197,
    "counts": true,
    "beats_coin": true
   },
   {
-   "situation": "random 2 weeks from 14 May 2025",
-   "arrows": 130,
-   "right": 0.4153846153846154,
+   "situation": "random 2 weeks from 26 Jul 2026",
+   "arrows": 97,
+   "right": 0.4639175257731959,
    "counts": true,
    "beats_coin": false
+  },
+  {
+   "situation": "random 2 weeks from 02 Mar 2026",
+   "arrows": 99,
+   "right": 0.5757575757575758,
+   "counts": true,
+   "beats_coin": true
+  },
+  {
+   "situation": "random 2 weeks from 21 Apr 2026",
+   "arrows": 137,
+   "right": 0.583941605839416,
+   "counts": true,
+   "beats_coin": true
+  },
+  {
+   "situation": "random 2 weeks from 02 Jan 2026",
+   "arrows": 87,
+   "right": 0.42528735632183906,
+   "counts": true,
+   "beats_coin": false
+  },
+  {
+   "situation": "random 2 weeks from 05 Sep 2026",
+   "arrows": 85,
+   "right": 0.4823529411764706,
+   "counts": true,
+   "beats_coin": false
+  },
+  {
+   "situation": "random 2 weeks from 16 Feb 2026",
+   "arrows": 103,
+   "right": 0.44660194174757284,
+   "counts": true,
+   "beats_coin": false
+  },
+  {
+   "situation": "random 2 weeks from 22 Mar 2026",
+   "arrows": 108,
+   "right": 0.6296296296296297,
+   "counts": true,
+   "beats_coin": true
+  },
+  {
+   "situation": "random 2 weeks from 20 Sep 2026",
+   "arrows": 87,
+   "right": 0.5287356321839081,
+   "counts": true,
+   "beats_coin": true
+  },
+  {
+   "situation": "random 2 weeks from 02 Jun 2026",
+   "arrows": 75,
+   "right": 0.44,
+   "counts": true,
+   "beats_coin": false
+  },
+  {
+   "situation": "random 2 weeks from 11 Sep 2026",
+   "arrows": 95,
+   "right": 0.42105263157894735,
+   "counts": true,
+   "beats_coin": false
+  },
+  {
+   "situation": "random 2 weeks from 11 Jul 2026",
+   "arrows": 89,
+   "right": 0.43820224719101125,
+   "counts": true,
+   "beats_coin": false
+  },
+  {
+   "situation": "random 2 weeks from 10 Aug 2026",
+   "arrows": 95,
+   "right": 0.4421052631578947,
+   "counts": true,
+   "beats_coin": false
+  },
+  {
+   "situation": "random 2 weeks from 28 Jan 2026",
+   "arrows": 69,
+   "right": 0.5652173913043478,
+   "counts": true,
+   "beats_coin": true
+  },
+  {
+   "situation": "random 2 weeks from 11 Jun 2026",
+   "arrows": 79,
+   "right": 0.5189873417721519,
+   "counts": true,
+   "beats_coin": true
   }
  ]
 }
