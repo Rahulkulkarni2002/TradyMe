@@ -27,7 +27,7 @@ def test_suggest_shape(client):
     s = c.get("/api/suggest", params={"market": "BTC", "timeframe": "15m", "strategy": "ema_rsi"}).json()
     assert s["action"] in ("BUY", "SELL", "WAIT")
     assert s["buyers_pct"] + s["sellers_pct"] == 100
-    assert len(s["candles"]) == 300 and s["prescan"]["points"]
+    assert 300 <= len(s["candles"]) <= 2000 and s["prescan"]["points"]      # long history for scrolling back
 
 
 def test_paper_trade_cycle(client):

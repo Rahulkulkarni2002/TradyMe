@@ -593,6 +593,10 @@ function makeChart(el, height) {
         : tzFormat(t, { hour: "numeric", minute: "2-digit" }),
     },
     rightPriceScale: { borderColor: c.line, minimumWidth: 92 },   // same width everywhere → indicator panels line up
+    // smooth to move around: drag or two-finger swipe to slide, wheel / pinch to zoom, and it keeps gliding a little
+    handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
+    handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: { time: true, price: true }, axisDoubleClickReset: true },
+    kineticScroll: { mouse: true, touch: true },
   });
 }
 // ───────────────────────── preview arrow on the forming candle (not final) ─────────────────────────
@@ -972,19 +976,31 @@ function showToday() {
   const sinceMidnight = (get("hour") * 60 + get("minute")) * 60;
   const todayStart = Math.floor(Date.now() / 1000) - sinceMidnight;
   const last = candles.length - 1;
-  let first = candles.findIndex((c) => c.time >= todayStart);
-  if (first < 0) first = last;
-  const MIN_BARS = 40, MAX_BARS = 90;                        // big, readable candles: today's most recent ~90
-  if (last - first < MIN_BARS) first = Math.max(0, last - MIN_BARS);   // early in the day: a bit of yesterday too
-  if (last - first > MAX_BARS) first = last - MAX_BARS;
   const room = Math.max(4, chart.timeScale().options().rightOffset || 0);   // keep space for a forecast on the right
+  // how many candles to show: the zoom you last chose (remembered), otherwise about 150
+  let bars = 150;
+  try { const v = +localStorage.getItem("chartBars"); if (v >= 20 && v <= 3000) bars = v; } catch {}
+  const first = Math.max(0, last - bars);
+  showToday._setting = true;
   chart.timeScale().setVisibleLogicalRange({ from: first - 1, to: last + room });
+  setTimeout(() => { showToday._setting = false; }, 300);
+}
+let userMovedAt = 0;                                       // only YOUR zooming counts, not the chart adjusting itself
+function userMoved() { userMovedAt = Date.now(); }
+function rememberZoom() {                                   // called when YOU zoom or scroll: keep that zoom next time
+  if (!chart || showToday._setting || Date.now() - userMovedAt > 2500) return;
+  const r = chart.timeScale().getVisibleLogicalRange();
+  if (!r) return;
+  const last = (lastSuggestion?.candles?.length || 1) - 1;
+  const shown = Math.min(r.to, last) - Math.max(0, r.from);       // real candles in view (not the empty space on the right)
+  try { localStorage.setItem("chartBars", String(Math.round(Math.max(20, Math.min(3000, shown))))); } catch {}
 }
 function zoom(factor) {
   if (!chart) return;
+  userMoved();
   const r = chart.timeScale().getVisibleLogicalRange();
   if (!r) return;
-  const right = r.to, width = Math.max(10, Math.min(2000, (r.to - r.from) * factor));
+  const right = r.to, width = Math.max(10, Math.min(3000, (r.to - r.from) * factor));
   chart.timeScale().setVisibleLogicalRange({ from: right - width, to: right });   // keep the newest candles in view
 }
 $("#zoom-in").addEventListener("click", () => zoom(0.6));
@@ -995,6 +1011,24 @@ $("#chart-theme").addEventListener("change", (e) => {
 });
 $("#zoom-out").addEventListener("click", () => zoom(1.6));
 $("#zoom-today").addEventListener("click", showToday);
+function slide(part) {                                    // move the view left (−) or right (+) by part of a screen
+  if (!chart) return;
+  userMoved();
+  const r = chart.timeScale().getVisibleLogicalRange();
+  if (!r) return;
+  const d = (r.to - r.from) * part;
+  chart.timeScale().setVisibleLogicalRange({ from: r.from + d, to: r.to + d });
+}
+$("#slide-back").addEventListener("click", () => slide(-0.6));
+$("#slide-fwd").addEventListener("click", () => slide(0.6));
+document.addEventListener("keydown", (e) => {            // ← → slide, + − zoom (not while typing in a box)
+  if (/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || "") || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (document.body.dataset.tab !== "trade") return;
+  if (e.key === "ArrowLeft") { slide(-0.25); e.preventDefault(); }
+  else if (e.key === "ArrowRight") { slide(0.25); e.preventDefault(); }
+  else if (e.key === "+" || e.key === "=") zoom(0.7);
+  else if (e.key === "-" || e.key === "_") zoom(1.4);
+});
 
 // ───────────────────────── big chart: fills the screen (minus indicator panels) ─────────────────────────
 function sizeChart() {
@@ -1030,6 +1064,9 @@ function renderChart(s) {
     if (window.TradyDraw) window.TradyDraw.init();
     if (window.TradyInd) window.TradyInd.init();
     chart.subscribeClick(showArrowPopup);
+    ["wheel", "pointerdown", "touchstart"].forEach((ev) => $("#chart").addEventListener(ev, userMoved, { passive: true, capture: true }));
+    let zt = null;                                          // remember the zoom after you scroll / pinch / use − and +
+    chart.timeScale().subscribeVisibleLogicalRangeChange(() => { clearTimeout(zt); zt = setTimeout(rememberZoom, 700); });
   }
   const dec = market(s.market).decimals;
   candleSeries.applyOptions({ priceFormat: { type: "price", precision: dec, minMove: 1 / 10 ** dec } });

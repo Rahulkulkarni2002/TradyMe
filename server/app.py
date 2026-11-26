@@ -234,9 +234,16 @@ def suggest(market: str, timeframe: str, strategy: str):
             if sig.is_trade:
                 markers.append({"time": int(data.index[i].timestamp()), "action": sig.action.value})
         tail = data.iloc[-300:]
-        sug["candles"] = [{"time": int(t.timestamp()), "open": r.open, "high": r.high, "low": r.low, "close": r.close,
-                           "volume": float(r.volume) if "volume" in tail and r.volume == r.volume else 0.0}
-                          for t, r in tail.iterrows()]
+        try:                                              # the chart gets a long history, so you can scroll far back
+            hist = get_candles(m, timeframe, bars=2000)
+            if len(hist) < len(tail) or hist.index[-1] != tail.index[-1]:
+                hist = tail
+        except requests.RequestException:
+            hist = tail
+        vol = hist["volume"].fillna(0.0) if "volume" in hist else pd.Series(0.0, index=hist.index)
+        sug["candles"] = [{"time": int(t.timestamp()), "open": float(o), "high": float(h), "low": float(l), "close": float(c),
+                           "volume": float(v)}
+                          for t, o, h, l, c, v in zip(hist.index, hist["open"], hist["high"], hist["low"], hist["close"], vol)]
         from engine.data.base import tf_seconds
         H = max(1, round(2 * 3600 / tf_seconds(timeframe)))          # did it move 1.5 ATR its way within ~2 h?
         sug["marker_score"] = analysis.grade_arrows(df, markers, H, 1.5)
