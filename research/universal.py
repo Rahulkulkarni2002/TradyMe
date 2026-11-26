@@ -1,7 +1,7 @@
 """ONE model for every market, every candle size and every look-ahead.
 
     python -m research.universal                 (uses every market whose history is downloaded on this computer)
-    python -m research.universal --rows 60000    (more learning examples per market × candle size × look-ahead)
+    python -m research.universal --rows 8000     (less memory; the default 15000 needs about 8 GB with 8 markets)
 
 How one model can serve everything:
   • every input is already scaled by that market's own normal move (ATR), so Bitcoin, gold and EUR/USD look alike
@@ -105,7 +105,8 @@ def collect(codes: list[str], rows: int, seed: int = 7):
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--rows", type=int, default=40000, help="learning examples per market × candle size × look-ahead")
+    ap.add_argument("--rows", type=int, default=15000,
+                    help="learning examples per market × candle size × look-ahead (more needs much more memory)")
     ap.add_argument("--markets", nargs="+")
     a = ap.parse_args()
     codes = [c for c in (a.markets or MARKETS) if (store.PRICES / f"{c.upper()}_5m.parquet").exists()]
@@ -113,8 +114,10 @@ def main() -> None:
     Xtr, ytr, ttr, hold = collect(codes, a.rows)
     all_cols = list(Xtr.columns)
     print(f"🏋️  learning from {len(Xtr):,} examples, {len(all_cols)} inputs…", flush=True)
-    pre25 = ttr < T25 - GAP
-    exam_model = new_model().fit(Xtr[pre25], ytr[pre25])
+    pre25 = np.asarray(ttr < T25 - GAP)
+    X_exam = Xtr[pre25]
+    exam_model = new_model().fit(X_exam, ytr[pre25])
+    del X_exam                                             # free memory before the second fit
     final = new_model().fit(Xtr, ytr)
     del Xtr
     (MODELS / "universal").mkdir(parents=True, exist_ok=True)

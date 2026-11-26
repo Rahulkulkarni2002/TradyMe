@@ -97,7 +97,7 @@ def run(code: str, rows: int) -> dict:
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--markets", nargs="+")
-    ap.add_argument("--rows", type=int, default=60000)
+    ap.add_argument("--rows", type=int, default=40000)
     a = ap.parse_args()
     codes = [c.upper() for c in (a.markets or MARKETS) if (store.PRICES / f"{c.upper()}_5m.parquet").exists()]
     out_p = RESULTS / "per_market_summary.json"
