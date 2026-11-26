@@ -31,14 +31,21 @@ went after similar past patterns, and lets you practise trades with paper money 
 
 ---
 
-## 📏 Honest results (tested on 2025 → now, never seen in training)
+## 📏 Honest results (always on data the model had not learned from)
 
-| Model | Right |
-|---|---|
-| Forex, 5–15 min, when the model is ≥ 65% sure | 65–70% |
-| Gold, 5 min, when the model is ≥ 65% sure | 63–71% |
-| Bitcoin, 1 hour (next ~6 h) | ~56% |
-| Crypto, 5–15 min, "next 2 candles" | 52–55% |
+| Model | Right | Measured on |
+|---|---|---|
+| Crypto (BTC, ETH, SOL, XRP), 5–15 min, "next 2 candles", all predictions | 51–52% | Jan 2025 → Nov 2026, fully held out |
+| Same, only when the model is ≥ 55% sure | 52–53% | Jan 2025 → Nov 2026, fully held out |
+| Bitcoin, 1 hour (next ~6 h), all predictions / when ≥ 55% sure | 52% / 53% | Jan 2025 → Nov 2026, fully held out |
+| Forex (GBP/USD, USD/JPY), 5–15 min, "next 1–5 candles", all predictions | ~52% | 2019 → 2024, year-by-year exams* |
+| Same, only when the model is ≥ 65% sure | 64–71% | 2019 → 2024, year-by-year exams* |
+| Gold, 5 min, when the model is ≥ 65% sure | ~65% | 2019 → 2024, year-by-year exams* |
+
+\* Year-by-year exam: the model learns up to the end of one year and is tested on the next year, repeated for
+each year; the score is the average. Every tested year was unseen by the model that predicted it, but this is
+**not** the 2025 → 2026 hold-out, and the forex and gold scores have not been re-measured there yet.
+The forex and gold models are trained locally and are not in this repository.
 
 These are **prediction scores** (did price move the predicted way by a set amount?), **not trading profit**.
 Turned into real trades with a stop, a target and costs, most set-ups did **not** make money in 2026.
