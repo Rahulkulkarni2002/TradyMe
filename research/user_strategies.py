@@ -125,8 +125,14 @@ def setups(df: pd.DataFrame, trend_rule: str = "structure", K: int = K, levels: 
     big_enough = (rng >= 0.5 * atr) & np.isfinite(atr)
     rej_dn = big_enough & (c < o) & ((c - l) <= 0.4 * rng)
     rej_up = big_enough & (c > o) & ((h - c) <= 0.4 * rng)
-    sell_c = {"indecision": small_body, "rejection": rej_dn, "either": small_body | rej_dn}[candle]
-    buy_c = {"indecision": small_body, "rejection": rej_up, "either": small_body | rej_up}[candle]
+    # "after green": the candle BEFORE the indecision candle pushed price up into the level (for a sell);
+    # the mirror image for a buy: the candle before was red.
+    prev_green = np.r_[False, c[:-1] > o[:-1]]
+    prev_red = np.r_[False, c[:-1] < o[:-1]]
+    sell_c = {"indecision": small_body, "after_green": small_body & prev_green, "rejection": rej_dn,
+              "either": small_body | rej_dn}[candle]
+    buy_c = {"indecision": small_body, "after_green": small_body & prev_red, "rejection": rej_up,
+             "either": small_body | rej_up}[candle]
     indecision = sell_c | buy_c                            # every candle that can be a signal at some level
     hs, ls = pd.Series(h), pd.Series(l)
     piv_hi = (hs == hs.rolling(2 * K + 1, center=True).max()).to_numpy()      # known only K candles later
@@ -295,14 +301,15 @@ def compare_levels(markets: list[str], tf: str) -> None:
 
 def compare_candles(markets: list[str], tf: str) -> None:
     """One table: which SIGNAL CANDLE works — the small-bodied indecision candle, the rejection candle, or either."""
-    ways = [("indecision (small body)", "indecision"), ("rejection (red, pushed away)", "rejection"), ("either one", "either")]
+    ways = [("indecision (small body)", "indecision"), ("indecision after a green candle", "after_green"),
+            ("rejection (red, pushed away)", "rejection")]
     dfs = {}
     for code in markets:
         m = get_market(code)
         dfs[code] = (features.candles(store.load_prices(code), tf), (m.fee_bps + m.slippage_bps) / 10_000)
     for R in ((3.0, 4.0) if tf == "1h" else (2.0,)):
         print(f"\n🕯️  Which signal candle works? · {', '.join(markets)} · {tf} · SELL at a major resistance, with the trend · target 1:{R:g}")
-        print(f"   {'signal candle':<30}{'entry':<11}" + "".join(f"{p[0] + ': trades · right · avg R':<34}" for p in PERIODS))
+        print(f"   {'signal candle':<33}{'entry':<11}" + "".join(f"{p[0] + ': trades · right · avg R':<34}" for p in PERIODS))
         for name, kind in ways:
             sets = {code: setups(df, "structure", K, "swings", candle=kind) for code, (df, _) in dfs.items()}
             for confirm in (False, True):
@@ -315,7 +322,7 @@ def compare_candles(markets: list[str], tf: str) -> None:
                 cells = "".join(
                     f"{(str(v['trades']) + ' · ' + (f'{v['win']:.0%}' if v['trades'] else '—') + ' · ' + (f'{v['avg_r']:+.2f} ({v['avg_r_before_costs']:+.2f})' if v['trades'] else '—')):<34}"
                     for v in tot.values())
-                print(f"   {name:<30}{'confirmed' if confirm else 'at once':<11}{cells}", flush=True)
+                print(f"   {name:<33}{'confirmed' if confirm else 'at once':<11}{cells}", flush=True)
 
 
 if __name__ == "__main__":
