@@ -4,7 +4,9 @@
     python -m research.user_strategies --markets GOLD EURUSD GBPUSD USDJPY        (on your Mac)
 
 STRATEGY 1 · "Indecision candle at support / resistance"
-  1. Trending market only (ADX ≥ 20, and EMA 50 on one side of EMA 200).
+  1. Trending market only, not sideways. Trend = the staircase of the last two swing highs and swing lows:
+     lower highs AND lower lows = down-trend, higher highs AND higher lows = up-trend, anything else = sideways.
+     (--trend adx uses the earlier rule instead: ADX ≥ 20 and EMA 50 on one side of EMA 200.)
   2. Major levels: swing highs = resistance, swing lows = support; a level is "major" when price turned there
      at least twice in the last 300 candles. A swing is only known 5 candles after it happened (no peeking).
   3. Signal candle = indecision candle (doji, spinning top, high-wave, dragonfly, gravestone): body ≤ 30% of the
@@ -43,7 +45,7 @@ K, LOOKBACK, TOL, BUFFER, MAX_BARS = 5, 300, 0.3, 0.1, 300
 PERIODS = [("2015–2024", None, "2025-01-01"), ("2025", "2025-01-01", "2026-01-01"), ("2026", "2026-01-01", None)]
 
 
-def setups(df: pd.DataFrame) -> pd.DataFrame:
+def setups(df: pd.DataFrame, trend_rule: str = "structure") -> pd.DataFrame:
     """For every candle: is it an indecision candle at a major resistance (+1 side = sell) or support?"""
     o, h, l, c = (df[k].to_numpy(float) for k in ("open", "high", "low", "close"))
     n = len(df)
@@ -58,14 +60,22 @@ def setups(df: pd.DataFrame) -> pd.DataFrame:
     piv_hi = (hs == hs.rolling(2 * K + 1, center=True).max()).to_numpy()      # known only K candles later
     piv_lo = (ls == ls.rolling(2 * K + 1, center=True).min()).to_numpy()
     at_res, at_sup = np.zeros(n, bool), np.zeros(n, bool)
+    structure = np.zeros(n, int)                          # +1 higher highs & higher lows, −1 lower highs & lower lows
     highs: list[tuple[int, float]] = []
     lows: list[tuple[int, float]] = []
+    last_hi: list[float] = []
+    last_lo: list[float] = []
     for i in range(2 * K, n):
         j = i - K                                         # the swing at j is confirmed now
         if piv_hi[j]:
-            highs.append((j, h[j]))
+            highs.append((j, h[j])); last_hi = (last_hi + [h[j]])[-2:]
         if piv_lo[j]:
-            lows.append((j, l[j]))
+            lows.append((j, l[j])); last_lo = (last_lo + [l[j]])[-2:]
+        if len(last_hi) == 2 and len(last_lo) == 2:
+            if last_hi[1] > last_hi[0] and last_lo[1] > last_lo[0]:
+                structure[i] = 1
+            elif last_hi[1] < last_hi[0] and last_lo[1] < last_lo[0]:
+                structure[i] = -1                         # anything else = sideways
         if not indecision[i]:
             continue
         while highs and highs[0][0] < i - LOOKBACK:
@@ -79,6 +89,8 @@ def setups(df: pd.DataFrame) -> pd.DataFrame:
         near = [p for _, p in lows if abs(l[i] - p) <= tol]
         if len(near) >= 2 and c[i] >= min(near):
             at_sup[i] = True
+    if trend_rule == "structure":
+        trend = structure
     return pd.DataFrame({"at_res": at_res, "at_sup": at_sup, "trend": trend, "atr": atr}, index=df.index)
 
 
@@ -134,14 +146,15 @@ def summarise(t: pd.DataFrame) -> dict:
     return out
 
 
-def run(markets: list[str], tf: str, R: float) -> list[dict]:
+def run(markets: list[str], tf: str, R: float, trend_rule: str = "structure") -> list[dict]:
     data = {}
     for code in markets:
         df = features.candles(store.load_prices(code), tf)
         m = get_market(code)
-        data[code] = (df, setups(df), (m.fee_bps + m.slippage_bps) / 10_000)
+        data[code] = (df, setups(df, trend_rule), (m.fee_bps + m.slippage_bps) / 10_000)
     rows = []
-    print(f"\n🕯️  Indecision candle at support / resistance · {tf} · target 1:{R:g} · {', '.join(markets)}", flush=True)
+    rule = "trend = staircase of swing highs and lows" if trend_rule == "structure" else "trend = ADX ≥ 20 + EMA 50/200"
+    print(f"\n🕯️  Indecision candle at support / resistance · {tf} · target 1:{R:g} · {rule} · {', '.join(markets)}", flush=True)
     print(f"   {'trend':<14}{'entry':<10}{'side':<6}" + "".join(f"{p[0] + ': trades · right · avg R (before costs)':<44}" for p in PERIODS))
     for trend_mode in ("with trend", "against trend", "any trending"):
         for confirm in (False, True):
@@ -168,11 +181,13 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--markets", nargs="+", default=["BTC", "ETH", "SOL", "XRP"])
     ap.add_argument("--timeframes", nargs="+", default=["15m", "1h", "30m", "10m", "5m"])
+    ap.add_argument("--trend", default="structure", choices=["structure", "adx"],
+                    help="structure = higher highs & higher lows / lower highs & lower lows (Rahul's rule); adx = ADX ≥ 20 + EMAs")
     a = ap.parse_args()
     mk = [m.upper() for m in a.markets if (store.PRICES / f"{m.upper()}_5m.parquet").exists()]
     out = []
     for tf in a.timeframes:
         for R in ((3.0, 4.0) if tf == "1h" else (2.0,)):
-            out += run(mk, tf, R)
+            out += run(mk, tf, R, a.trend)
     RESULTS.mkdir(parents=True, exist_ok=True)
-    (RESULTS / f"user_indecision_sr_{'-'.join(mk)}.json").write_text(json.dumps(out, indent=1, default=float))
+    (RESULTS / f"user_indecision_sr_{a.trend}_{'-'.join(mk)}.json").write_text(json.dumps(out, indent=1, default=float))
