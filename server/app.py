@@ -316,6 +316,31 @@ def live_candle(market: str, timeframe: str):
         raise HTTPException(404, str(e))
 
 
+MY_STRATEGY_NOTE = ("Tested with real costs: on Gold, 1-hour candles, selling with the trend made money in 2025 and 2026 "
+                    "(about 40 trades a year) and lost slightly over 2015–2024. It lost on crypto and on shorter candles. "
+                    "Practise with paper money first.")
+
+
+@app.get("/api/my-strategy")
+def my_strategy(market: str, timeframe: str):
+    """Rahul's strategy 1: an indecision candle at a major resistance in a down-trend → SELL,
+    stop above the wick, target 1:3 on 1-hour candles (1:2 on shorter ones)."""
+    try:
+        from research.user_strategies import live_signals
+        df = get_candles(get_market(market), timeframe, bars=900)
+        sig = live_signals(df, timeframe)
+        done = [x for x in sig if x["exit_how"] != "open"]
+        return {"available": True, "name": "Indecision candle at resistance (your strategy)", "signals": sig,
+                "live": next((x for x in reversed(sig) if x["exit_how"] == "open"), None),
+                "wins": sum(x["exit_how"] == "target" for x in done), "losses": sum(x["exit_how"] == "stop" for x in done),
+                "note": MY_STRATEGY_NOTE}
+    except requests.RequestException:
+        return {"available": False, "signals": [], "reason": "Price source slow — try again in a moment."}
+    except Exception as e:
+        log.exception("my-strategy failed")
+        return {"available": False, "signals": [], "reason": f"{type(e).__name__}: {e}"}
+
+
 @app.get("/api/model-markers")
 def model_markers(market: str, timeframe: str, sure: int = 62, horizon: str = "long", every: int = 0):
     """Prediction-model arrows for the chart (where the model is ≥ `sure`% sure).

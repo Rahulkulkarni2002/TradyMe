@@ -191,3 +191,45 @@ if __name__ == "__main__":
             out += run(mk, tf, R, a.trend)
     RESULTS.mkdir(parents=True, exist_ok=True)
     (RESULTS / f"user_indecision_sr_{a.trend}_{'-'.join(mk)}.json").write_text(json.dumps(out, indent=1, default=float))
+
+
+def live_signals(df: pd.DataFrame, timeframe: str) -> list[dict]:
+    """Strategy 1 on the candles of the live chart (the version that tested best: SELL at a major resistance in a
+    down-trend). One trade at a time, exactly like the test. `df` = closed candles only."""
+    if len(df) < 2 * K + 60:
+        return []
+    R = 3.0 if timeframe == "1h" else 2.0
+    s = setups(df, "structure")
+    o, h, l, c = (df[k].to_numpy(float) for k in ("open", "high", "low", "close"))
+    atr = s["atr"].to_numpy()
+    n, free_from, out = len(df), 0, []
+    step = int((df.index[1] - df.index[0]).total_seconds())
+    for i in np.flatnonzero(s["at_res"].to_numpy() & (s["trend"].to_numpy() == -1)):
+        if i < free_from:
+            continue
+        pending = i + 1 >= n                               # signal on the newest closed candle: entry = next open
+        entry = float(c[i]) if pending else float(o[i + 1])
+        stop = float(h[i] + BUFFER * atr[i])
+        risk = stop - entry
+        if not risk > 0:
+            continue
+        target = entry - R * risk
+        how, x = "open", n - 1
+        if not pending:
+            hit_s = np.flatnonzero(h[i + 1:] >= stop)
+            hit_t = np.flatnonzero(l[i + 1:] <= target)
+            a = hit_s[0] if len(hit_s) else 10 ** 9
+            b = hit_t[0] if len(hit_t) else 10 ** 9
+            if a <= b and a < 10 ** 9:
+                how, x = "stop", i + 1 + a
+            elif b < 10 ** 9:
+                how, x = "target", i + 1 + b
+        exit_px = stop if how == "stop" else target if how == "target" else float(c[-1])
+        t0 = int(df.index[i].timestamp())
+        out.append({"time": t0 + (0 if pending else step), "signal_time": t0, "action": "SELL", "price": entry,
+                    "stop": stop, "target": target, "rr": R, "pending": bool(pending),
+                    "confirmed": bool(not pending and c[i + 1] < l[i]),
+                    "exit_time": int(df.index[x].timestamp()), "exit_how": how,
+                    "exit_pct": float((entry - exit_px) / entry * 100), "window_candles": int(max(1, x - i))})
+        free_from = n if how == "open" else x + 1
+    return out

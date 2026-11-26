@@ -201,3 +201,11 @@ def test_supertrend_strategy_selectable(client):
     assert "supertrend_kivanc" in codes
     r = c.post("/api/backtest", json={"market": "BTC", "timeframe": "1h", "strategy": "supertrend_kivanc", "days": 120})
     assert r.status_code == 200
+
+
+def test_my_strategy_endpoint(client):
+    c, _ = client
+    r = c.get("/api/my-strategy", params={"market": "GOLD", "timeframe": "1h"}).json()
+    assert r["available"] and "signals" in r
+    for s in r["signals"]:                       # a SELL: stop above the entry, target below it, at 1:3 on 1 hour
+        assert s["action"] == "SELL" and s["stop"] > s["price"] > s["target"] and s["rr"] == 3.0

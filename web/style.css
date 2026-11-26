@@ -476,3 +476,7 @@ body.chart-max .tv-side { top: 8px; }
 .recent-closed .rc-row { font-size: .76rem; padding: 4px 0; border-bottom: 1px solid var(--line); }
 .recent-closed .rc-row:last-child { border-bottom: 0; }
 .app-version { font-size: .7rem; color: var(--muted); text-align: right; padding: 0 4px; }
+
+.mystrat-card .ms-live { margin-bottom: 4px; }
+.mystrat-card .ms-row { margin-bottom: 6px; }
+.mystrat-card .ms-note { margin-top: 6px; font-size: .72rem; }
