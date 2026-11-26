@@ -101,11 +101,33 @@
     if (boxes.length) drawBoxes(boxes);
     if (analog) drawAnalog(analog);
     if (plan) drawPlan(plan);
+    // a small ✕ on every drawing removes just that one
+    const closeBtn = (cx, cy, d) => {
+      const g = el("g", { class: "draw-x" });
+      g.style.pointerEvents = "auto"; g.style.cursor = "pointer";
+      g.appendChild(el("circle", { cx, cy, r: 8, fill: "#ffffff", stroke: color, "stroke-width": 1.5 }));
+      const t = el("text", { x: cx, y: cy + 3.6, fill: color, "font-size": 11, "font-weight": 800, "text-anchor": "middle", stroke: "none" });
+      t.textContent = "✕"; g.appendChild(t);
+      const tip = el("title", {}); tip.textContent = "Remove this drawing"; g.appendChild(tip);
+      g.addEventListener("pointerdown", (e) => {            // pointerdown: the layer is redrawn many times a second
+        e.stopPropagation(); e.preventDefault();
+        const k = drawings.indexOf(d);
+        if (k >= 0) { drawings.splice(k, 1); save(); render(); }
+      });
+      svg.appendChild(g);
+    };
+    const inView = (v, max) => Math.max(12, Math.min(max - 12, v));
     for (const d of [...drawings, ...(draft ? [draft] : [])]) {
       const x1 = x(d.a.time), y1 = y(d.a.price);
-      if (x1 == null || y1 == null) continue;
+      const mine = d !== draft;
       const style = { stroke: color, "stroke-width": 2, fill: "none" };
-      if (d.type === "hline") { svg.appendChild(el("line", { x1: 0, x2: W, y1, y2: y1, ...style, "stroke-dasharray": "6 4" })); continue; }
+      if (d.type === "hline") {
+        if (y1 == null) continue;
+        svg.appendChild(el("line", { x1: 0, x2: W, y1, y2: y1, ...style, "stroke-dasharray": "6 4" }));
+        if (mine) closeBtn(Math.max(20, W - 120), y1, d);    // just left of the price scale
+        continue;
+      }
+      if (x1 == null || y1 == null) continue;
       const x2 = x(d.b.time), y2 = y(d.b.price);
       if (x2 == null || y2 == null) continue;
       if (d.type === "line") svg.appendChild(el("line", { x1, y1, x2, y2, ...style }));
@@ -113,6 +135,11 @@
         height: Math.abs(y2 - y1), ...style, fill: color, "fill-opacity": 0.1 }));
       if (d.type === "circle") svg.appendChild(el("ellipse", { cx: (x1 + x2) / 2, cy: (y1 + y2) / 2, rx: Math.abs(x2 - x1) / 2,
         ry: Math.abs(y2 - y1) / 2, ...style, fill: color, "fill-opacity": 0.08 }));
+      if (!mine) continue;
+      const H = svg.clientHeight || 400;
+      if (d.type === "line") { const rightEnd = x2 >= x1; closeBtn(inView(rightEnd ? x2 : x1, W - 96), inView(rightEnd ? y2 : y1, H), d); }
+      else if (d.type === "rect") closeBtn(inView(Math.max(x1, x2), W - 96), inView(Math.min(y1, y2), H), d);
+      else if (d.type === "circle") closeBtn(inView((x1 + x2) / 2, W - 96), inView(Math.min(y1, y2), H), d);
     }
   }
 
