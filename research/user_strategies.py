@@ -7,8 +7,10 @@ STRATEGY 1 · "Indecision candle at support / resistance"
   1. Trending market only, not sideways. Trend = the staircase of the last two swing highs and swing lows:
      lower highs AND lower lows = down-trend, higher highs AND higher lows = up-trend, anything else = sideways.
      (--trend adx uses the earlier rule instead: ADX ≥ 20 and EMA 50 on one side of EMA 200.)
-  2. Major levels: swing highs = resistance, swing lows = support; a level is "major" when price turned there
-     at least twice in the last 300 candles. A swing is only known 5 candles after it happened (no peeking).
+  2. Major levels: BIG swing highs = resistance, big swing lows = support (a swing must be the highest / lowest
+     of the 20 candles on each side); a level is "major" when price turned there at least twice in the last
+     600 candles. A swing is only known 20 candles after it happened (no peeking). The trend staircase uses
+     the same big swings.
   3. Signal candle = indecision candle (doji, spinning top, high-wave, dragonfly, gravestone): body ≤ 30% of the
      candle, candle not tiny (≥ half a normal candle), its wick touches a major level and it closes on the
      right side of it. Colour does not matter.
@@ -41,11 +43,13 @@ from . import features, store
 from .league import RESULTS
 from .trend_strategy import _adx
 
-K, LOOKBACK, TOL, BUFFER, MAX_BARS = 5, 300, 0.3, 0.1, 300
+K, LOOKBACK, TOL, BUFFER, MAX_BARS = 20, 600, 0.3, 0.1, 300
+# K = how big a swing must be to count: a swing high is the highest candle among the K candles on each side.
+# K = 20 gives the big, obvious levels a trader would draw by hand (K = 5 also picked up small wiggles).
 PERIODS = [("2015–2024", None, "2025-01-01"), ("2025", "2025-01-01", "2026-01-01"), ("2026", "2026-01-01", None)]
 
 
-def setups(df: pd.DataFrame, trend_rule: str = "structure") -> pd.DataFrame:
+def setups(df: pd.DataFrame, trend_rule: str = "structure", K: int = K) -> pd.DataFrame:
     """For every candle: is it an indecision candle at a major resistance (+1 side = sell) or support?"""
     o, h, l, c = (df[k].to_numpy(float) for k in ("open", "high", "low", "close"))
     n = len(df)
@@ -146,15 +150,15 @@ def summarise(t: pd.DataFrame) -> dict:
     return out
 
 
-def run(markets: list[str], tf: str, R: float, trend_rule: str = "structure") -> list[dict]:
+def run(markets: list[str], tf: str, R: float, trend_rule: str = "structure", swing: int = K) -> list[dict]:
     data = {}
     for code in markets:
         df = features.candles(store.load_prices(code), tf)
         m = get_market(code)
-        data[code] = (df, setups(df, trend_rule), (m.fee_bps + m.slippage_bps) / 10_000)
+        data[code] = (df, setups(df, trend_rule, swing), (m.fee_bps + m.slippage_bps) / 10_000)
     rows = []
     rule = "trend = staircase of swing highs and lows" if trend_rule == "structure" else "trend = ADX ≥ 20 + EMA 50/200"
-    print(f"\n🕯️  Indecision candle at support / resistance · {tf} · target 1:{R:g} · {rule} · {', '.join(markets)}", flush=True)
+    print(f"\n🕯️  Indecision candle at support / resistance · {tf} · target 1:{R:g} · {rule} · swings of {swing} candles · {', '.join(markets)}", flush=True)
     print(f"   {'trend':<14}{'entry':<10}{'side':<6}" + "".join(f"{p[0] + ': trades · right · avg R (before costs)':<44}" for p in PERIODS))
     for trend_mode in ("with trend", "against trend", "any trending"):
         for confirm in (False, True):
@@ -183,14 +187,16 @@ if __name__ == "__main__":
     ap.add_argument("--timeframes", nargs="+", default=["15m", "1h", "30m", "10m", "5m"])
     ap.add_argument("--trend", default="structure", choices=["structure", "adx"],
                     help="structure = higher highs & higher lows / lower highs & lower lows (Rahul's rule); adx = ADX ≥ 20 + EMAs")
+    ap.add_argument("--swing", type=int, default=K,
+                    help="how big a swing must be to make a level (candles on each side); 20 = major levels, 5 = also small ones")
     a = ap.parse_args()
     mk = [m.upper() for m in a.markets if (store.PRICES / f"{m.upper()}_5m.parquet").exists()]
     out = []
     for tf in a.timeframes:
         for R in ((3.0, 4.0) if tf == "1h" else (2.0,)):
-            out += run(mk, tf, R, a.trend)
+            out += run(mk, tf, R, a.trend, a.swing)
     RESULTS.mkdir(parents=True, exist_ok=True)
-    (RESULTS / f"user_indecision_sr_{a.trend}_{'-'.join(mk)}.json").write_text(json.dumps(out, indent=1, default=float))
+    (RESULTS / f"user_indecision_sr_{a.trend}_swing{a.swing}_{'-'.join(mk)}.json").write_text(json.dumps(out, indent=1, default=float))
 
 
 def live_signals(df: pd.DataFrame, timeframe: str) -> list[dict]:
