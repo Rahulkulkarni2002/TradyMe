@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css?v=33">
+  <link rel="stylesheet" href="/static/style.css?v=35">
   <script src="/static/vendor/lightweight-charts.standalone.production.js"></script>
 </head>
 <body data-tab="trade">
@@ -99,6 +99,8 @@
           <span class="tv-sep"></span>
           <div class="ind-wrap"><button id="ind-btn" class="tv-btn" title="Indicators">📈 Indicators</button>
             <div id="ind-menu" class="ind-menu hidden"></div></div>
+          <div class="ind-wrap"><button id="strat-btn" class="tv-btn" title="Your strategies">🕯️ Strategies</button>
+            <div id="strat-menu" class="ind-menu hidden"></div></div>
           <div class="draw-tools tv-draw" id="draw-tools">
             <button data-tool="line" title="Trend line — drag">╱</button>
             <button data-tool="hline" title="Horizontal level — click">―</button>
@@ -126,7 +128,6 @@
               <div class="mm-label">Extras on the chart</div>
               <button class="mm-toggle" id="plan-toggle">🎯 Stop &amp; targets</button>
               <button class="mm-toggle" id="analog-toggle">🔮 Look-alike forecast</button>
-              <button class="mm-toggle" id="mystrat-toggle" title="Your strategy: an indecision candle at a major resistance in a down-trend → SELL, stop above the wick, target 1:3 on 1 hour (1:2 on shorter candles)">🕯️ My strategy (sell at resistance)</button>
               <button class="mm-toggle" id="box-toggle">📦 Trade boxes</button>
               <button class="mm-toggle" id="draw-patterns">📐 Chart patterns</button>
               <button class="mm-toggle" id="levels-toggle">┅ Support / resistance</button>
@@ -174,7 +175,7 @@
             </section>
 
             <section class="side-card mystrat-card hidden" id="mystrat-card">
-              <div class="side-head">🕯️ My strategy <span class="muted" id="mystrat-score"></span></div>
+              <div class="side-head">🕯️ My strategies</div>
               <div id="mystrat-body" class="small"></div>
             </section>
 
@@ -330,7 +331,7 @@
 
   <div id="tip" class="tip hidden"></div>
   <div id="toast" class="toast hidden"></div>
-  <script src="/static/app.js?v=54"></script>
+  <script src="/static/app.js?v=55"></script>
   <script src="/static/draw.js?v=14"></script>
   <script src="/static/indicators.js?v=5"></script>
 </body>

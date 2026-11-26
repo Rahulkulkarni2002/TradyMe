@@ -622,44 +622,76 @@ $("#levels-toggle").addEventListener("click", () => {
   showLevels = !showLevels; try { localStorage.setItem("showLevels", showLevels ? "1" : "0"); } catch {}
   $("#levels-toggle").classList.toggle("on", showLevels); if (lastSuggestion) renderChart(lastSuggestion);
 });
-// ───────────────────────── 🕯️ my strategy: indecision candle at resistance → SELL ─────────────────────────
-let myStrat = null;
-let showMyStrat = (() => { try { return localStorage.getItem("showMyStrat") !== "0"; } catch { return true; } })();
-$("#mystrat-toggle").classList.toggle("on", showMyStrat);
-$("#mystrat-toggle").addEventListener("click", () => {
-  showMyStrat = !showMyStrat; try { localStorage.setItem("showMyStrat", showMyStrat ? "1" : "0"); } catch {}
-  $("#mystrat-toggle").classList.toggle("on", showMyStrat); loadMyStrategy();
-});
-async function loadMyStrategy() {
-  const m = SETTINGS.market, tf = SETTINGS.timeframe, card = $("#mystrat-card");
-  if (!showMyStrat) { myStrat = null; card.classList.add("hidden"); applyMarkers(); return; }
+// ───────────────────────── 🕯️ Strategies button: the strategies you gave, shown on the chart ─────────────────────────
+let MY_STRATS = [];                  // the list (name, rule, tested result, colour)
+let myStratData = {};                // key → signals on this chart
+let myStratOn = (() => {
   try {
-    const r = await api(`/api/my-strategy?market=${m}&timeframe=${tf}`);
+    const v = localStorage.getItem("myStrategies");
+    if (v) return new Set(JSON.parse(v));
+    return new Set(localStorage.getItem("showMyStrat") === "0" ? [] : ["indecision_sr"]);
+  } catch { return new Set(["indecision_sr"]); }
+})();
+const saveMyStrats = () => { try { localStorage.setItem("myStrategies", JSON.stringify([...myStratOn])); } catch {} };
+function mySignals() {               // all signals of the ticked strategies, each tagged with its strategy
+  const out = [];
+  for (const st of MY_STRATS) if (myStratOn.has(st.key) && myStratData[st.key]?.signals)
+    for (const g of myStratData[st.key].signals) out.push({ ...g, strat: st });
+  return out;
+}
+function paintStratMenu() {
+  const m = $("#strat-menu");
+  $("#strat-btn").textContent = myStratOn.size ? `🕯️ Strategies (${[...myStratOn].filter((k) => MY_STRATS.some((s) => s.key === k)).length})` : "🕯️ Strategies";
+  m.innerHTML = `<div class="ind-group">Your strategies</div>` + (MY_STRATS.length ? MY_STRATS.map((st) =>
+    `<label class="ind-item"><input type="checkbox" data-k="${st.key}" ${myStratOn.has(st.key) ? "checked" : ""}>
+      <span><b style="color:${st.color}">▼▲</b> <b>${esc(st.name)}</b><br><span class="muted small">${esc(st.rule)}</span>
+      <br><span class="small">📊 ${esc(st.tested)}</span></span></label>`).join("") : `<p class="muted small" style="padding:8px">None yet.</p>`) +
+    `<div class="ind-foot"><span class="muted small">Tell me a new strategy and it is added here.</span><button class="btn primary small-btn" id="strat-done">Done</button></div>`;
+  m.querySelectorAll("input[data-k]").forEach((i) => i.addEventListener("change", () => {
+    i.checked ? myStratOn.add(i.dataset.k) : myStratOn.delete(i.dataset.k); saveMyStrats(); paintStratMenu(); m.classList.remove("hidden"); loadMyStrategy();
+  }));
+  m.querySelector("#strat-done").addEventListener("click", () => m.classList.add("hidden"));
+}
+$("#strat-btn").addEventListener("click", (e) => { e.stopPropagation(); paintStratMenu(); $("#strat-menu").classList.toggle("hidden"); });
+document.addEventListener("click", (e) => { const m = $("#strat-menu"); if (!m.contains(e.target) && e.target.id !== "strat-btn") m.classList.add("hidden"); });
+
+async function loadMyStrategy() {
+  const m = SETTINGS.market, tf = SETTINGS.timeframe, card = $("#mystrat-card"), body = $("#mystrat-body");
+  try {
+    if (!MY_STRATS.length) { MY_STRATS = await api("/api/my-strategies"); paintStratMenu(); $("#strat-menu").classList.add("hidden"); }
+    const on = MY_STRATS.filter((st) => myStratOn.has(st.key));
+    if (!on.length) { myStratData = {}; card.classList.add("hidden"); applyMarkers(); return; }
+    const res = await Promise.all(on.map((st) => api(`/api/my-strategy?market=${m}&timeframe=${tf}&key=${st.key}`).catch((e) => ({ available: false, reason: e.message }))));
     if (m !== SETTINGS.market || tf !== SETTINGS.timeframe) return;
-    myStrat = r.available ? r : null;
-    card.classList.remove("hidden");
-    const body = $("#mystrat-body"), mk = SETTINGS.market, when = (t) => tzFormat(t, { weekday: "short", hour: "numeric", minute: "2-digit" });
-    if (!r.available) { body.innerHTML = `<span class="muted">⚠️ ${esc(r.reason || "not available")}</span>`; $("#mystrat-score").textContent = ""; applyMarkers(); return; }
-    $("#mystrat-score").textContent = r.wins + r.losses ? `· on this chart: ${r.wins} hit target · ${r.losses} stopped` : "";
-    const best = m === "GOLD" && tf === "1h";
-    const live = r.live, last = r.signals[r.signals.length - 1];
+    myStratData = {};
+    const when = (t) => tzFormat(t, { weekday: "short", hour: "numeric", minute: "2-digit" });
     let html = "";
-    if (live) {
-      html += `<div class="ms-live"><b class="pnl-neg">▼ SELL signal</b> · ${when(live.signal_time)}${live.pending ? " · enter at the next candle" : ""}${live.confirmed ? " · confirmed ✓" : ""}</div>
-        <div class="ms-row">Entry <b>${px(mk, live.price)}</b> · Stop <b class="pnl-neg">${px(mk, live.stop)}</b> · Target <b class="pnl-pos">${px(mk, live.target)}</b> (1:${live.rr})</div>
-        <button class="btn ghost small-btn" id="mystrat-use">Use this stop &amp; target</button>`;
-    } else if (last) {
-      html += `<div class="muted">No signal right now. Last one: ${when(last.signal_time)} → ${last.exit_how === "target" ? "hit the target ✓" : "stopped out ✗"}</div>`;
-    } else html += `<div class="muted">No signal on this chart yet.</div>`;
-    html += `<div class="ms-note muted">${best ? "This is where it tested best (Gold · 1 hour)." : "It tested best on Gold · 1 hour. Here it lost money in the tests."} Paper money only.</div>`;
-    body.innerHTML = html;
-    const use = $("#mystrat-use");
-    if (use) use.addEventListener("click", () => {
-      const dec = market(mk).decimals;
-      $("#tp-stop").value = live.stop.toFixed(dec); $("#tp-target").value = live.target.toFixed(dec);
-      tpShow = true; tpLines(); tpMsg("Stop and target set from your strategy — press SELL to open the paper trade.", true);
+    on.forEach((st, i) => {
+      const r = res[i];
+      html += `<div class="ms-block"><div class="ms-name"><b style="color:${st.color}">●</b> <b>${esc(st.name)}</b></div>`;
+      if (!r.available) { html += `<div class="muted">⚠️ ${esc(r.reason || "not available")}</div></div>`; return; }
+      myStratData[st.key] = r;
+      const live = r.live, last = r.signals[r.signals.length - 1];
+      if (r.wins + r.losses) html += `<div class="muted">On this chart: ${r.wins} hit target · ${r.losses} stopped</div>`;
+      if (live) {
+        const up = live.action === "BUY";
+        html += `<div class="ms-live"><b class="${up ? "pnl-pos" : "pnl-neg"}">${up ? "▲ BUY" : "▼ SELL"} signal</b> · ${when(live.signal_time)}${live.pending ? " · enter at the next candle" : ""}${live.confirmed ? " · confirmed ✓" : ""}</div>
+          <div class="ms-row">Entry <b>${px(m, live.price)}</b> · Stop <b class="pnl-neg">${px(m, live.stop)}</b> · Target <b class="pnl-pos">${px(m, live.target)}</b> (1:${live.rr})</div>
+          <button class="btn ghost small-btn" data-use="${st.key}">Use this stop &amp; target</button>`;
+      } else if (last) html += `<div class="muted">No signal right now. Last one: ${when(last.signal_time)} → ${last.exit_how === "target" ? "hit the target ✓" : "stopped out ✗"}</div>`;
+      else html += `<div class="muted">No signal on this chart yet.</div>`;
+      const best = st.best_on && st.best_on.market === m && st.best_on.timeframe === tf;
+      const bm = st.best_on ? `${market(st.best_on.market)?.name || st.best_on.market} · ${META.timeframes.find((x) => x.code === st.best_on.timeframe)?.label || st.best_on.timeframe}` : "";
+      html += `<div class="ms-note muted">${best ? `This is where it tested best (${bm}).` : bm ? `It tested best on ${bm}.` : ""} Paper money only.</div></div>`;
     });
-  } catch (e) { myStrat = null; }
+    body.innerHTML = html; card.classList.remove("hidden");
+    body.querySelectorAll("[data-use]").forEach((b) => b.addEventListener("click", () => {
+      const live = myStratData[b.dataset.use]?.live; if (!live) return;
+      const dec = market(m).decimals;
+      $("#tp-stop").value = live.stop.toFixed(dec); $("#tp-target").value = live.target.toFixed(dec);
+      tpShow = true; tpLines(); tpMsg(`Stop and target set from your strategy — press ${live.action} to open the paper trade.`, true);
+    }));
+  } catch (e) { myStratData = {}; }
   applyMarkers();
 }
 
@@ -847,11 +879,13 @@ function applyMarkers() {
     marks.push({ time: p.time, position: p.action === "BUY" ? "belowBar" : "aboveBar", text: "?",
       color: (p.action === "BUY" ? c.buy : c.sell) + "88", shape: p.action === "BUY" ? "arrowUp" : "arrowDown" });
   }
-  if (showMyStrat && myStrat?.signals?.length) {          // 🕯️ my strategy: purple SELL arrows on the signal candles
-    for (const g of myStrat.signals) {
-      marks.push({ time: g.signal_time, position: "aboveBar", shape: "arrowDown", color: "#7c3aed", size: 1.6,
-        text: `SELL 1:${g.rr}${g.confirmed ? " ✓" : ""}` });
-      chart._arrowInfo[g.signal_time] = { ...g, time: g.signal_time, my: true, source: "🕯️ My strategy · indecision at resistance" };
+  const mine = mySignals();                               // 🕯️ your strategies: arrows in each strategy's own colour
+  if (mine.length) {
+    for (const g of mine) {
+      const up = g.action === "BUY";
+      marks.push({ time: g.signal_time, position: up ? "belowBar" : "aboveBar", shape: up ? "arrowUp" : "arrowDown",
+        color: g.strat.color, size: 1.6, text: `${g.action} 1:${g.rr}${g.confirmed ? " ✓" : ""}` });
+      chart._arrowInfo[g.signal_time] = { ...g, time: g.signal_time, my: true, source: `🕯️ ${g.strat.name}` };
     }
     marks.sort((a, b) => a.time - b.time);
   }
@@ -861,7 +895,7 @@ function applyMarkers() {
   // 📦 the same arrows as trades (only the ones with a known stop/target; "Every candle" → only the sure ones)
   if (window.TradyDraw) {
     const list = !showBoxes ? [] : src.filter((m) => m.target != null && m.stop != null && (!modelMarkers?.every || !useModel || m.strong));
-    window.TradyDraw.setBoxes(showMyStrat && myStrat?.signals ? [...list, ...myStrat.signals.filter((g) => !g.pending)] : list);
+    window.TradyDraw.setBoxes([...list, ...mine.filter((g) => !g.pending)]);
     const done = list.filter((m) => m.exit_how && m.exit_how !== "open");
     const wins = done.filter((m) => m.exit_pct > 0), tot = done.reduce((s, m) => s + m.exit_pct, 0);
     const el = $("#box-score");

@@ -480,3 +480,8 @@ body.chart-max .tv-side { top: 8px; }
 .mystrat-card .ms-live { margin-bottom: 4px; }
 .mystrat-card .ms-row { margin-bottom: 6px; }
 .mystrat-card .ms-note { margin-top: 6px; font-size: .72rem; }
+
+.mystrat-card .ms-block + .ms-block { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.mystrat-card .ms-name { margin-bottom: 3px; }
+#strat-menu { width: 380px; }
+.tv-bar .tv-btn, .tv-bar #more-btn { white-space: nowrap; }

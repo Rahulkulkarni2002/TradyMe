@@ -233,3 +233,18 @@ def live_signals(df: pd.DataFrame, timeframe: str) -> list[dict]:
                     "exit_pct": float((entry - exit_px) / entry * 100), "window_candles": int(max(1, x - i))})
         free_from = n if how == "open" else x + 1
     return out
+
+
+# Every strategy Rahul gives is registered here; the app's "Strategies" button lists them.
+STRATEGIES = {
+    "indecision_sr": {
+        "name": "Indecision candle at resistance",
+        "rule": "Down-trend (lower highs and lower lows) + a doji / spinning-top candle touching a major resistance → SELL. "
+                "Stop above the wick, target 1:3 on 1 hour (1:2 on shorter candles).",
+        "tested": "Gold · 1 hour: made money in 2025 and 2026 (about 40 trades a year), lost slightly over 2015–2024. "
+                  "Lost on crypto and on shorter candles.",
+        "best_on": {"market": "GOLD", "timeframe": "1h"},
+        "color": "#7c3aed",
+        "live": live_signals,
+    },
+}

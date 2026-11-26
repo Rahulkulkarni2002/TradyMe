@@ -205,7 +205,9 @@ def test_supertrend_strategy_selectable(client):
 
 def test_my_strategy_endpoint(client):
     c, _ = client
-    r = c.get("/api/my-strategy", params={"market": "GOLD", "timeframe": "1h"}).json()
+    lst = c.get("/api/my-strategies").json()              # the "Strategies" button lists these
+    assert any(x["key"] == "indecision_sr" and x["name"] and x["tested"] for x in lst)
+    r = c.get("/api/my-strategy", params={"market": "GOLD", "timeframe": "1h", "key": "indecision_sr"}).json()
     assert r["available"] and "signals" in r
     for s in r["signals"]:                       # a SELL: stop above the entry, target below it, at 1:3 on 1 hour
         assert s["action"] == "SELL" and s["stop"] > s["price"] > s["target"] and s["rr"] == 3.0
