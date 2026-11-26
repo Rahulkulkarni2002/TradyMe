@@ -69,14 +69,10 @@ def verdict(p, y, idx, state) -> dict:
             "auc": float(roc_auc_score(y, p)), "passed": int(won), "counted": counted, "verdict": "PASS" if ok else "FAIL"}
 
 
-def main() -> None:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--rows", type=int, default=40000, help="learning examples per market × candle size × look-ahead")
-    ap.add_argument("--markets", nargs="+")
-    a = ap.parse_args()
-    codes = [c for c in (a.markets or MARKETS) if (store.PRICES / f"{c.upper()}_5m.parquet").exists()]
-    print(f"🌍 ONE model for: {', '.join(codes)} · {len(TFS)} candle sizes · 5 look-aheads each", flush=True)
-    rng = np.random.default_rng(7)
+def collect(codes: list[str], rows: int, seed: int = 7):
+    """Learning examples (a random sample per market × candle size × look-ahead, up to the end of 2025)
+    and the full 2025 + 2026 data for testing."""
+    rng = np.random.default_rng(seed)
     train_X, train_y, train_t = [], [], []
     hold: dict = {}
     cols = None
@@ -94,7 +90,7 @@ def main() -> None:
             for tag, (H, barrier) in targets(tf).items():
                 y = labels.triple_barrier(candles, H, barrier)["label"].reindex(M.index)
                 ok = np.flatnonzero((M.index < HOLDOUT_START - GAP) & y.notna().to_numpy())
-                pick = np.sort(rng.choice(ok, min(a.rows, len(ok)), replace=False))
+                pick = np.sort(rng.choice(ok, min(rows, len(ok)), replace=False))
                 train_X.append(with_extra(M.iloc[pick], tf, kind, H, barrier))
                 train_y.append(y.iloc[pick].astype(int).to_numpy())
                 train_t.append(M.index[pick])
@@ -104,6 +100,17 @@ def main() -> None:
     Xtr = pd.concat(train_X, ignore_index=True); del train_X
     ytr = np.concatenate(train_y)
     ttr = pd.DatetimeIndex(np.concatenate([t.as_unit("ns").asi8 for t in train_t]), tz="UTC")
+    return Xtr, ytr, ttr, hold
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--rows", type=int, default=40000, help="learning examples per market × candle size × look-ahead")
+    ap.add_argument("--markets", nargs="+")
+    a = ap.parse_args()
+    codes = [c for c in (a.markets or MARKETS) if (store.PRICES / f"{c.upper()}_5m.parquet").exists()]
+    print(f"🌍 ONE model for: {', '.join(codes)} · {len(TFS)} candle sizes · 5 look-aheads each", flush=True)
+    Xtr, ytr, ttr, hold = collect(codes, a.rows)
     all_cols = list(Xtr.columns)
     print(f"🏋️  learning from {len(Xtr):,} examples, {len(all_cols)} inputs…", flush=True)
     pre25 = ttr < T25 - GAP
